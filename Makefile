@@ -1,9 +1,9 @@
 CC=g++
 CFLAGS=-c -Wall
 LDFLAGS=
-SOURCES=libsolana/solana.cpp
+SOURCES=src/solana.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=libsolana.a
+EXECUTABLE=lib/libsolana.a
 
 all: $(SOURCES) $(EXECUTABLE)
 
@@ -17,5 +17,5 @@ clean:
 	rm -f $(EXECUTABLE) $(OBJECTS)
 
 install:
-	install -m 0644 libsolana/solana.h /usr/local/include
-	install -m 0644 libsolana.a /usr/local/lib
+	install -m 0644 src/solana.h /usr/local/include
+	install -m 0644 lib/libsolana.a /usr/local/lib

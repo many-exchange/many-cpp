@@ -12,13 +12,13 @@ sudo apt install -y build-essential cmake pkg-config libssl-dev
 2. Clone the Solana C++ SDK repository from GitHub:
 
 ```
-git clone https://github.com/many-exchange/libsolana.git
+git clone https://github.com/many-exchange/solana-sdk-cpp.git
 ```
 
 3. Navigate to the repository directory:
 
 ```
-cd libsolana
+cd solana-sdk-cpp
 ```
 
 4. Build and install the Solana C++ SDK:
