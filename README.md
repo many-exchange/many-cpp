@@ -1,4 +1,4 @@
-# libsolana
+# Solana C++ SDK
 
 To get the Solana C++ SDK, you can follow the instructions in the Solana documentation. Here is a summary of the steps you need to follow:
 
