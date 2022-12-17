@@ -1,21 +1,9 @@
-CC=g++
-CFLAGS=-c -Wall
-LDFLAGS=
-SOURCES=src/solana.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=lib/libsolana.a
+CXX=clang++
+CXXFLAGS=-Wall -Wextra -std=c++17
 
-all: $(SOURCES) $(EXECUTABLE)
-
-$(EXECUTABLE): $(OBJECTS)
-	ar rcs $@ $(OBJECTS)
-
-.cpp.o:
-	$(CC) $(CFLAGS) $< -o $@
-
-clean:
-	rm -f $(EXECUTABLE) $(OBJECTS)
+test: tests/main.cpp
+	$(CXX) $(CXXFLAGS) -o bin/test tests/main.cpp
+	./bin/test
 
 install:
 	install -m 0644 src/solana.h /usr/local/include
-	install -m 0644 lib/libsolana.a /usr/local/lib

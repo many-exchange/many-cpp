@@ -21,11 +21,18 @@ git clone https://github.com/many-exchange/solana-sdk-cpp.git
 cd solana-sdk-cpp
 ```
 
-4. Build and install the Solana C++ SDK:
+4. Test the Solana C++ SDK:
 
 ```
-make
+make test
+```
+
+This will run the Solana C++ SDK unit tests.
+
+5. Install the Solana C++ SDK:
+
+```
 sudo make install
 ```
 
-This will build the Solana C++ SDK and install it on your system. You can then use the SDK in your C++ programs by including the solana.h header file.
+This will install the Solana C++ SDK on your system. You can then use the SDK in your C++ programs by including the solana.h header file.

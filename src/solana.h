@@ -1,5 +1,6 @@
 #pragma once
 
-//#include <sol/pubkey.h>
-
-int add(int a, int b);
+#include <connection.h>
+#include <keypair.h>
+#include <publickey.h>
+#include <transaction.h>

@@ -1,6 +1,3 @@
-examples/*
-
 .vscode
-
-*.o
-
+bin
+examples/*
