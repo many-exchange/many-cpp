@@ -6,7 +6,7 @@ To get the Solana C++ SDK, you can follow the instructions in the Solana documen
 
 ```
 sudo apt update
-sudo apt install -y build-essential cmake pkg-config libssl-dev
+sudo apt install libssl-dev
 ```
 
 2. Clone the Solana C++ SDK repository from GitHub:

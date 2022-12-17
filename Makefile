@@ -2,7 +2,7 @@ CXX=clang++
 CXXFLAGS=-Wall -Wextra -std=c++17
 
 test: tests/main.cpp
-	$(CXX) $(CXXFLAGS) -o bin/test tests/main.cpp
+	$(CXX) $(CXXFLAGS) -o bin/test tests/main.cpp -lcrypto -lssl
 	./bin/test
 
 install:
