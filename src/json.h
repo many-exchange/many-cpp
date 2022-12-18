@@ -10,13 +10,16 @@ namespace json {
 #define JSON_PARSE_OK     0
 #define JSON_PARSE_ERROR -1
 
-#define JSON_OBJECT 1
-#define JSON_ARRAY  2
-#define JSON_STRING 3
+#define JSON_STRINGIFY_OK     0
+#define JSON_STRINGIFY_ERROR -1
+
+#define JSON_NULL   1
+#define JSON_TRUE   2
+#define JSON_FALSE  3
 #define JSON_NUMBER 4
-#define JSON_TRUE   5
-#define JSON_FALSE  6
-#define JSON_NULL   7
+#define JSON_STRING 5
+#define JSON_ARRAY  6
+#define JSON_OBJECT 7
 /*
 typedef enum {
   JSON_NULL,
@@ -32,9 +35,8 @@ typedef enum {
 // Data structure for storing a JSON value
 typedef struct json_value_t {
   char *key;               // Key for this value (only used for objects)
-  int type;                // Type of this value (null, boolean, number, string, array, object)
+  int type;                // Type of this value (null, true, false, number, string, array, object)
   union {
-    int boolean;           // Boolean value (0 or 1)
     double number;         // Number value
     char *string;          // String value
     struct {               // Array value
@@ -49,11 +51,17 @@ typedef struct json_value_t {
   struct json_value_t *next; // Next value in the linked list
 } json_value_t;
 
+void free_json(json_value_t *value) {
+  free(value);
+  //TODO free the string
+  //TODO free object and array.
+}
+
 typedef struct json_parser {
   const char *input;
   const int length;
   int index;
-  char* error;
+  const char* error;
 } json_parser;
 
 static int parse_json_value(json_parser *parser, json_value_t *value);
@@ -213,41 +221,154 @@ int parse(const char *json, const int length, json_value_t *value) {
   return parse_json_value(&json_parser, value);
 }
 
-//TODO
-//int stringify(json_value_t *value, char *json, int *length) {
-//}
-
-/*
-    while (val) {
-      printf("%s: ", val->key);
-      switch (val->type) {
-        case 0:  // Null
-          printf("null");
-          break;
-        case 1:  // Boolean
-          printf(val->boolean ? "true" : "false");
-          break;
-        case 2:  // Number
-          printf("%.2f", val->number);
-          break;
-        case 3:  // String
-          printf("%s", val->string);
-          break;
-        case 4:  // Array
-          printf("[...]");
-          break;
-        case 5:  // Object
-          printf("{...}");
-          break;
+void print(json_value_t *value) {
+  switch (value->type)
+  {
+    case JSON_NULL:
+      printf("null");
+      break;
+    case JSON_TRUE:
+      printf("true");
+      break;
+    case JSON_FALSE:
+      printf("false");
+      break;
+    case JSON_NUMBER:
+      printf("%g", value->number);
+      break;
+    case JSON_STRING:
+      printf("\"%s\"", value->string);
+      break;
+    case JSON_ARRAY:
+    {
+      printf("[");
+      json_value_t *item = value->next;
+      for (int i = 0; i < value->array.size; i++) {
+        if (i > 0) {
+          printf(", ");
+        }
+        print(item);
+        item = item->next;
       }
-      printf("\n");
-      val = val->next;
+      printf("]");
+      break;
     }
-*/
+    case JSON_OBJECT:
+    {
+      printf("{");
+      json_value_t *item = value->next;
+      for (int i = 0; i < value->array.size; i++) {
+        if (i > 0) {
+          printf(", ");
+        }
+        printf("\"%s\"", item->key);
+        printf(": ");
+        print(item);
+        item = item->next;
+      }
+      printf("}");
+      break;
+    }
+    default:
+      throw "Invalid json type.";
+  }
+}
 
-/*
-free_json(value);
-*/
+static int stringify_json(json_value_t *value, char *buffer, int *offset, int *length) {
+  switch (value->type)
+  {
+    case JSON_NULL:
+    {
+      strncpy(&buffer[*offset], "null", 4);
+      (*offset) += 4;
+      (*length) += 4;
+      return JSON_STRINGIFY_OK;
+    }
+    case JSON_TRUE:
+    {
+      strncpy(&buffer[*offset], "true", 4);
+      (*offset) += 4;
+      (*length) += 4;
+      return JSON_STRINGIFY_OK;
+    }
+    case JSON_FALSE:
+    {
+      strncpy(&buffer[*offset], "false", 5);
+      (*offset) += 5;
+      (*length) += 5;
+      return JSON_STRINGIFY_OK;
+    }
+    case JSON_NUMBER:
+    {
+      int len = sprintf(&buffer[*offset], "%g", value->number);
+      (*offset) += len;
+      (*length) += len;
+      return JSON_STRINGIFY_OK;
+    }
+    case JSON_STRING:
+    {
+      int len = sprintf(&buffer[*offset], "\"%s\"", value->string);
+      (*offset) += len;
+      (*length) += len;
+      return JSON_STRINGIFY_OK;
+    }
+    case JSON_ARRAY:
+    {
+      sprintf(&buffer[*offset], "[");
+      (*offset)++;
+      (*length)++;
+      json_value_t *item = value->next;
+      for (int i = 0; i < value->array.size; i++) {
+        if (i > 0) {
+          sprintf(&buffer[*offset], ", ");
+          (*offset) += 2;
+          (*length) += 2;
+        }
+        stringify_json(item, buffer, offset, length);
+        item = item->next;
+      }
+      sprintf(&buffer[*offset], "]");
+      (*offset)++;
+      (*length)++;
+      return JSON_STRINGIFY_OK;
+    }
+    case JSON_OBJECT:
+    {
+      sprintf(&buffer[*offset], "{");
+      (*offset)++;
+      (*length)++;
+      json_value_t *item = value->next;
+      for (int i = 0; i < value->array.size; i++) {
+        if (i > 0) {
+          sprintf(&buffer[*offset], ", ");
+          (*offset) += 2;
+          (*length) += 2;
+        }
+        int len = sprintf(&buffer[*offset], "\"%s\"", item->key);
+        (*offset) += len;
+        (*length) += len;
+        sprintf(&buffer[*offset], ": ");
+        (*offset) += 2;
+        (*length) += 2;
+        stringify_json(item, buffer, offset, length);
+        item = item->next;
+      }
+      sprintf(&buffer[*offset], "}");
+      (*offset)++;
+      (*length)++;
+      return JSON_STRINGIFY_OK;
+    }
+    default:
+    {
+      return JSON_STRINGIFY_ERROR;
+    }
+  }
+}
+
+int stringify(json_value_t *value, char *buffer, int *length) {
+  int offset = 0;
+  return stringify_json(value, buffer, &offset, length);
+}
 
 }
 }

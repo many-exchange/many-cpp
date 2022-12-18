@@ -66,7 +66,6 @@ TEST_CASE("Parse Object") {
   assert(value.type == JSON_OBJECT);
   assert(value.object.size == 2);
   json_value_t *item = value.next;
-  std::cout << "item->key = " << item->key << std::endl;
   assert(strcmp(item->key, "a") == 0);
   assert(item->number == 1);
   item = item->next;
