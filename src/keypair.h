@@ -1,17 +1,25 @@
 #pragma once
 
+#include "publickey.h"
+
 namespace solana {
 
 class Keypair {
+
 public:
 
-    //PublicKey publicKey;
-    //PrivateKey privateKey;
+  PublicKey publicKey;
+  //PrivateKey privateKey;
 
-    Keypair() {
-    }
+  Keypair() {
+  }
 
-    //static Keypair fromFile(const std::string &path);
+  ~Keypair() {
+  }
+
+  static Keypair generate();
+
+  //static Keypair fromFile(const std::string &path);
 
 };
 
