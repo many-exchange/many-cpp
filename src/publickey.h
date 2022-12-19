@@ -2,28 +2,38 @@
 
 #include <string>
 
+#include "base58.h"
+
 namespace solana {
 
-#define SIZE_PUBKEY 32
+#define PUBLIC_KEY_LENGTH 32
 
 class PublicKey {
 
-  uint8_t x[SIZE_PUBKEY];
+  char bytes[PUBLIC_KEY_LENGTH];
 
 public:
 
   PublicKey(const std::string& value) {
-    //TODO b58tobin(value);
+    size_t length = PUBLIC_KEY_LENGTH;
+    b58tobin(bytes, &length, value.c_str(), value.length());
+  }
+
+  ~PublicKey() {
   }
 
   bool operator==(const PublicKey& other) const {
-    for (int i = 0; i < SIZE_PUBKEY; i++) {
-      if (x[i] != other.x[i]) {
+    for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+      if (bytes[i] != other.bytes[i]) {
         return false;
       }
     }
     return true;
   }
+
+  //std::string toBase58() {
+    //return Base58.encode(pubkey);
+  //}
 
 };
 
