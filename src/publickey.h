@@ -12,22 +12,18 @@ class PublicKey {
 
 public:
 
-    PublicKey(const std::string& value) {
-        //const decoded = bs58.decode(value);
-        //if (decoded.length != 32) {
-            //throw new Error(`Invalid public key input`);
-        //}
-        //this._bn = new BN(decoded);
-    }
+  PublicKey(const std::string& value) {
+    //TODO b58tobin(value);
+  }
 
-    bool operator==(const PublicKey& other) const {
-        for (int i = 0; i < SIZE_PUBKEY; i++) {
-            if (x[i] != other.x[i]) {
-                return false;
-            }
-        }
-        return true;
+  bool operator==(const PublicKey& other) const {
+    for (int i = 0; i < SIZE_PUBKEY; i++) {
+      if (x[i] != other.x[i]) {
+        return false;
+      }
     }
+    return true;
+  }
 
 };
 

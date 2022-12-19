@@ -1,5 +1,6 @@
 CXX=clang++
-CXXFLAGS=-Wall -Wextra -std=c++17
+CXX=g++
+CXXFLAGS=-g -Wall -Wextra -std=c++17 -O2
 
 test: tests/main.cpp
 	$(CXX) $(CXXFLAGS) -o bin/test tests/main.cpp -lcrypto -lssl

@@ -5,13 +5,13 @@ namespace solana {
 class Keypair {
 public:
 
-    //PublicKey publicKey;
-    //PrivateKey privateKey;
+  //PublicKey publicKey;
+  //PrivateKey privateKey;
 
-    Keypair() {
-    }
+  Keypair() {
+  }
 
-    //static Keypair fromFile(const std::string &path);
+  //static Keypair fromFile(const std::string &path);
 
 };
 

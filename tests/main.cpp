@@ -3,3 +3,5 @@
 
 #include "json/parse.h"
 #include "json/stringify.h"
+
+#include "websocket.h"
