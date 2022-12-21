@@ -13,18 +13,21 @@ TEST_CASE("Parse Null") {
   json_value_t value;
   assert(json::parse("null", 4, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_NULL);
+  free_json(&value);
 }
 
 TEST_CASE("Parse True") {
   json_value_t value;
   assert(json::parse("true", 4, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_TRUE);
+  free_json(&value);
 }
 
 TEST_CASE("Parse False") {
   json_value_t value;
   assert(json::parse("false", 5, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_FALSE);
+  free_json(&value);
 }
 
 TEST_CASE("Parse Number") {
@@ -32,6 +35,7 @@ TEST_CASE("Parse Number") {
   assert(json::parse("123", 3, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_NUMBER);
   assert(value.number == 123);
+  free_json(&value);
 }
 
 TEST_CASE("Parse String") {
@@ -39,6 +43,7 @@ TEST_CASE("Parse String") {
   assert(json::parse("\"hello\"", 7, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_STRING);
   assert(strcmp(value.string, "hello") == 0);
+  free_json(&value);
 }
 
 TEST_CASE("Parse Array") {
@@ -52,6 +57,7 @@ TEST_CASE("Parse Array") {
   assert(item->number == 2);
   item = item->next;
   assert(item->number == 3);
+  free_json(&value);
 }
 
 TEST_CASE("Parse Empty Object") {
@@ -59,6 +65,7 @@ TEST_CASE("Parse Empty Object") {
   assert(json::parse("{ }", 3, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_OBJECT);
   assert(value.object.size == 0);
+  free_json(&value);
 }
 
 TEST_CASE("Parse Object") {
@@ -72,4 +79,5 @@ TEST_CASE("Parse Object") {
   item = item->next;
   assert(strcmp(item->key, "b") == 0);
   assert(item->number == 2);
+  free_json(&value);
 }

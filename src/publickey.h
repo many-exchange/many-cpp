@@ -31,10 +31,6 @@ public:
     return true;
   }
 
-  //std::string toBase58() {
-    //return Base58.encode(pubkey);
-  //}
-
 };
 
 }

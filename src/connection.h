@@ -1,12 +1,32 @@
 #pragma once
 
+#include <assert.h>
+#include <iostream>
 #include <string>
 
+#include "http.h"
+#include "json.h"
 #include "publickey.h"
+
+using namespace solana;
+using namespace solana::json;
 
 namespace solana {
 
-enum Commitment {
+struct AccountInfo {
+  /** `true` if this account's data contains a loaded program */
+  bool executable;
+  /** Identifier of the program that owns the account */
+  PublicKey owner;
+  /** Number of lamports assigned to the account */
+  uint64_t lamports;
+  /** Optional data assigned to the account */
+  std::string data;
+  /** Optional rent epoch info for account */
+  uint64_t rentEpoch;
+};
+
+enum class Commitment {
   Processed,
   Confirmed,
   Finalized,
@@ -89,7 +109,6 @@ public:
   {
     /*
     let url = new URL(endpoint);
-    const useHttps = url.protocol === 'https:';
 
     let wsEndpoint;
     let httpHeaders;
@@ -106,8 +125,9 @@ public:
       fetchMiddleware = commitmentOrConfig.fetchMiddleware;
       disableRetryOnRateLimit = commitmentOrConfig.disableRetryOnRateLimit;
     }
-
-    this._rpcEndpoint = endpoint;
+    */
+    _rpcEndpoint = endpoint;
+    /*
     this._rpcWsEndpoint = wsEndpoint || makeWebsocketUrl(endpoint);
 
     this._rpcClient = createRpcClient(
@@ -161,32 +181,57 @@ public:
   ~Connection() {
   }
 
-  void getAccountInfo() {
+  AccountInfo* getAccountInfo(const char* publicKey) {
+
+    HttpClient httpClient(_rpcEndpoint, 443);
+    httpClient.connect();
+    assert(httpClient.is_connected());
+
+    json_object_t request;
+    request.add("jsonrpc", "2.0");
+    request.add("id", 1);
+    request.add("method", "getAccountInfo");
+    json_array_t params;
+    request.add("params", params);
+    params.add(publicKey);
+    json_object_t config;
+    params.add(config);
+    config.add("encoding", "base64");
+
+    int response_length = 0;
+    char* response = httpClient.post(request, &response_length);
+
+    httpClient.disconnect();
+
+    json_value_t result;
+    solana::json::parse(response, response_length, &result);
+
+    //TODO iterate over the result and return an account.
+
     /*
+    {"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.14.10","slot":168249796},"value":{"data":["AQAAABzjWe1aAS4E+hQrnHUaHF6Hz9CgFhuchf/TG3jN/Nj2Zi8WmEPjEQAGAQEAAAAqnl7btTwEZ5CY/3sSZRcUQ0/AjFYqmjuGEQXmctQicw==","base64"],"executable":false,"lamports":179771985948,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361}},"id":1}
     */
+
+    return nullptr;
   }
 
   /**
    * Fetch the balance for the specified public key
    */
   void getBalance(PublicKey publicKey) {
+    json_object_t request;
+    request.add("jsonrpc", "2.0");
     /*
-    const args = this._buildArgs([publicKey.toBase58()], commitment);
-    const unsafeRes = await this._rpcRequest('getBalance', args);
-    const res = create(unsafeRes, jsonRpcResultAndContext(number()));
-    if ('error' in res) {
-      throw new Error(
-        'failed to get balance for ' +
-          publicKey.toBase58() +
-          ': ' +
-          res.error.message,
-      );
-    }
-    return res.result;
+    */
+
+    /*
     */
   }
 
   void getBlock() {
+    /*
+    */
+
     /*
     */
   }
@@ -194,9 +239,15 @@ public:
   void getBlockHeight() {
     /*
     */
+
+    /*
+    */
   }
 
   void getBlockProduction() {
+    /*
+    */
+
     /*
     */
   }
@@ -204,9 +255,15 @@ public:
   void getBlockCommitment() {
     /*
     */
+
+    /*
+    */
   }
 
   void getBlocks() {
+    /*
+    */
+
     /*
     */
   }
@@ -214,9 +271,15 @@ public:
   void getBlocksWithLimit() {
     /*
     */
+
+    /*
+    */
   }
 
   void getBlockTime() {
+    /*
+    */
+
     /*
     */
   }
@@ -224,9 +287,15 @@ public:
   void getClusterNodes() {
     /*
     */
+
+    /*
+    */
   }
 
   void getEpochInfo() {
+    /*
+    */
+
     /*
     */
   }
@@ -234,9 +303,15 @@ public:
   void getEpochSchedule() {
     /*
     */
+
+    /*
+    */
   }
 
   void getFeeForMessage() {
+    /*
+    */
+
     /*
     */
   }
@@ -246,18 +321,16 @@ public:
    */
   void getFirstAvailableBlock() {
     /*
-    const unsafeRes = await this._rpcRequest('getFirstAvailableBlock', []);
-    const res = create(unsafeRes, SlotRpcResult);
-    if ('error' in res) {
-      throw new Error(
-        'failed to get first available block: ' + res.error.message,
-      );
-    }
-    return res.result;
+    */
+
+    /*
     */
   }
 
   void getGenesisHash() {
+    /*
+    */
+
     /*
     */
   }
@@ -265,9 +338,15 @@ public:
   void getHealth() {
     /*
     */
+
+    /*
+    */
   }
 
   void getHighestSnapshotSlot() {
+    /*
+    */
+
     /*
     */
   }
@@ -275,9 +354,15 @@ public:
   void getIdentity() {
     /*
     */
+
+    /*
+    */
   }
 
   void getInflationGovernor() {
+    /*
+    */
+
     /*
     */
   }
@@ -285,9 +370,15 @@ public:
   void getInflationRate() {
     /*
     */
+
+    /*
+    */
   }
 
   void getInflationReward() {
+    /*
+    */
+
     /*
     */
   }
@@ -295,9 +386,15 @@ public:
   void getLargestAccounts() {
     /*
     */
+
+    /*
+    */
   }
 
   void getLatestBlockhash() {
+    /*
+    */
+
     /*
     */
   }
@@ -305,9 +402,15 @@ public:
   void getLeaderSchedule() {
     /*
     */
+
+    /*
+    */
   }
 
   void getMaxRetransmitSlot() {
+    /*
+    */
+
     /*
     */
   }
@@ -315,9 +418,15 @@ public:
   void getMaxShredInsertSlot() {
     /*
     */
+
+    /*
+    */
   }
 
   void getMinimumBalanceForRentExemption() {
+    /*
+    */
+
     /*
     */
   }
@@ -325,9 +434,15 @@ public:
   void getMultipleAccounts() {
     /*
     */
+
+    /*
+    */
   }
 
   void getProgramAccounts() {
+    /*
+    */
+
     /*
     */
   }
@@ -335,9 +450,15 @@ public:
   void getRecentPerformanceSamples() {
     /*
     */
+
+    /*
+    */
   }
 
   void getSignaturesForAddress() {
+    /*
+    */
+
     /*
     */
   }
@@ -345,9 +466,15 @@ public:
   void getSignatureStatuses() {
     /*
     */
+
+    /*
+    */
   }
 
   void getSlot() {
+    /*
+    */
+
     /*
     */
   }
@@ -355,9 +482,15 @@ public:
   void getSlotLeader() {
     /*
     */
+
+    /*
+    */
   }
 
   void getSlotLeaders() {
+    /*
+    */
+
     /*
     */
   }
@@ -365,9 +498,15 @@ public:
   void getStakeActivation() {
     /*
     */
+
+    /*
+    */
   }
 
   void getStakeMinimumDelegation() {
+    /*
+    */
+
     /*
     */
   }
@@ -377,26 +516,9 @@ public:
    */
   void getSupply() {
     /*
-    let configArg: GetSupplyConfig = {};
-    if (typeof config === 'string') {
-      configArg = {commitment: config};
-    } else if (config) {
-      configArg = {
-        ...config,
-        commitment: (config && config.commitment) || this.commitment,
-      };
-    } else {
-      configArg = {
-        commitment: this.commitment,
-      };
-    }
+    */
 
-    const unsafeRes = await this._rpcRequest('getSupply', [configArg]);
-    const res = create(unsafeRes, GetSupplyRpcResult);
-    if ('error' in res) {
-      throw new Error('failed to get supply: ' + res.error.message);
-    }
-    return res.result;
+    /*
     */
   }
 
@@ -405,19 +527,16 @@ public:
    */
   void getTokenAccountBalance(PublicKey tokenAddress) {
     /*
-    const args = this._buildArgs([tokenAddress.toBase58()], commitment);
-    const unsafeRes = await this._rpcRequest('getTokenAccountBalance', args);
-    const res = create(unsafeRes, jsonRpcResultAndContext(TokenAmountResult));
-    if ('error' in res) {
-      throw new Error(
-        'failed to get token account balance: ' + res.error.message,
-      );
-    }
-    return res.result;
+    */
+
+    /*
     */
   }
 
   void getTokenAccountsByDelegate() {
+    /*
+    */
+
     /*
     */
   }
@@ -427,29 +546,16 @@ public:
    */
   void getTokenAccountsByOwner(PublicKey ownerAddress) {
     /*
-    let _args: any[] = [ownerAddress.toBase58()];
-    if ('mint' in filter) {
-      _args.push({mint: filter.mint.toBase58()});
-    } else {
-      _args.push({programId: filter.programId.toBase58()});
-    }
+    */
 
-    const args = this._buildArgs(_args, commitment, 'base64');
-    const unsafeRes = await this._rpcRequest('getTokenAccountsByOwner', args);
-    const res = create(unsafeRes, GetTokenAccountsByOwner);
-    if ('error' in res) {
-      throw new Error(
-        'failed to get token accounts owned by account ' +
-          ownerAddress.toBase58() +
-          ': ' +
-          res.error.message,
-      );
-    }
-    return res.result;
+    /*
     */
   }
 
   void getTokenLargestAccounts() {
+    /*
+    */
+
     /*
     */
   }
@@ -459,17 +565,16 @@ public:
    */
   void getTokenSupply(PublicKey tokenMintAddress) {
     /*
-    const args = this._buildArgs([tokenMintAddress.toBase58()], commitment);
-    const unsafeRes = await this._rpcRequest('getTokenSupply', args);
-    const res = create(unsafeRes, jsonRpcResultAndContext(TokenAmountResult));
-    if ('error' in res) {
-      throw new Error('failed to get token supply: ' + res.error.message);
-    }
-    return res.result;
+    */
+
+    /*
     */
   }
 
   void getTransaction() {
+    /*
+    */
+
     /*
     */
   }
@@ -477,9 +582,15 @@ public:
   void getTransactionCount() {
     /*
     */
+
+    /*
+    */
   }
 
   void getVersion() {
+    /*
+    */
+
     /*
     */
   }
@@ -487,9 +598,15 @@ public:
   void getVoteAccounts() {
     /*
     */
+
+    /*
+    */
   }
 
   void isBlockhashValid() {
+    /*
+    */
+
     /*
     */
   }
@@ -497,9 +614,15 @@ public:
   void minimumLedgerSlot() {
     /*
     */
+
+    /*
+    */
   }
 
   void requestAirdrop() {
+    /*
+    */
+
     /*
     */
   }
@@ -507,9 +630,15 @@ public:
   void sendTransaction() {
     /*
     */
+
+    /*
+    */
   }
 
   void simulateTransaction() {
+    /*
+    */
+
     /*
     */
   }
@@ -585,29 +714,6 @@ public:
 };
 
 }
-
-
-
-/*
-export function makeWebsocketUrl(endpoint: string) {
-  let url = new URL(endpoint);
-  const useHttps = url.protocol === 'https:';
-
-  url.protocol = useHttps ? 'wss:' : 'ws:';
-  url.host = '';
-
-  // Only shift the port by +1 as a convention for ws(s) only if given endpoint
-  // is explictly specifying the endpoint port (HTTP-based RPC), assuming
-  // we're directly trying to connect to solana-validator's ws listening port.
-  // When the endpoint omits the port, we're connecting to the protocol
-  // default ports: http(80) or https(443) and it's assumed we're behind a reverse
-  // proxy which manages WebSocket upgrade and backend port redirection.
-  if (url.port !== '') {
-    url.port = String(Number(url.port) + 1);
-  }
-  return url.toString();
-}
-*/
 
 
 

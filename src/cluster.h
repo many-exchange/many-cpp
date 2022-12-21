@@ -1,37 +1,27 @@
+#pragma once
 
-//TODO
-/*
-const endpoint = {
-  http: {
-    devnet: 'http://api.devnet.solana.com',
-    testnet: 'http://api.testnet.solana.com',
-    'mainnet-beta': 'http://api.mainnet-beta.solana.com',
-  },
-  https: {
-    devnet: 'https://api.devnet.solana.com',
-    testnet: 'https://api.testnet.solana.com',
-    'mainnet-beta': 'https://api.mainnet-beta.solana.com',
-  },
+#include <stdexcept>
+#include <string>
+
+namespace solana {
+
+enum class Cluster {
+    Devnet,
+    Testnet,
+    MainnetBeta
 };
 
-export type Cluster = 'devnet' | 'testnet' | 'mainnet-beta';
-*/
-
-/**
- * Retrieves the RPC API URL for the specified cluster
- */
-/*
-export function clusterApiUrl(cluster?: Cluster, tls?: boolean): string {
-  const key = tls === false ? 'http' : 'https';
-
-  if (!cluster) {
-    return endpoint[key]['devnet'];
+std::string clusterApiUrl(Cluster cluster) {
+  switch (cluster) {
+    case Cluster::Devnet:
+      return "https://api.devnet.solana.com";
+    case Cluster::Testnet:
+      return "https://api.testnet.solana.com";
+    case Cluster::MainnetBeta:
+      return "https://api.mainnet-beta.solana.com";
+    default:
+      throw std::runtime_error("Invalid cluster.");
   }
-
-  const url = endpoint[key][cluster];
-  if (!url) {
-    throw new Error(`Unknown ${key} cluster: ${cluster}`);
-  }
-  return url;
 }
-*/
+
+}

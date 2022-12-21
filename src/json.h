@@ -34,28 +34,145 @@ typedef enum {
 
 // Data structure for storing a JSON value
 typedef struct json_value_t {
-  char *key;               // Key for this value (only used for objects)
+  const char *key;               // Key for this value (only used for objects)
   int type;                // Type of this value (null, true, false, number, string, array, object)
   union {
     double number;         // Number value
-    char *string;          // String value
+    const char *string;    // String value
     struct {               // Array value
       int size;            // Size of the array
-      //struct json_value_t *values; // Array of values
     } array;
     struct {               // Object value
       int size;            // Size of the object
-      //struct json_value_t *values; // Array of key-value pairs
     } object;
   };
   struct json_value_t *next; // Next value in the linked list
 } json_value_t;
 
 void free_json(json_value_t *value) {
-  free(value);
-  //TODO free the string
-  //TODO free object and array.
+  if (value->type == JSON_STRING) {
+    //free(value->string);
+  } else if (value->type == JSON_ARRAY) {
+    json_value_t *item = value->next;
+    for (int i = 0; i < value->array.size; i++) {
+      json_value_t *next = item->next;
+      free_json(item);
+      item = next;
+    }
+  } else if (value->type == JSON_OBJECT) {
+    json_value_t *item = value->next;
+    for (int i = 0; i < value->object.size; i++) {
+      json_value_t *next = item->next;
+      //free(item->key);
+      free_json(item);
+      item = next;
+    }
+  }
 }
+
+
+
+struct json_array_t;
+struct json_object_t;
+
+struct json_array_t {
+  json_value_t head;
+  json_value_t *tail;
+
+  json_array_t() {
+    head.key = NULL;
+    head.type = JSON_ARRAY;
+    head.array.size = 0;
+    head.next = NULL;
+    tail = &head;
+  }
+
+  void add(double number) {
+    json_value_t *item = (json_value_t*)malloc(sizeof(json_value_t));
+    item->type = JSON_NUMBER;
+    item->number = number;
+    add(item);
+  }
+
+  void add(const char* string) {
+    json_value_t *item = (json_value_t*)malloc(sizeof(json_value_t));
+    item->type = JSON_STRING;
+    item->string = string;
+    add(item);
+  }
+
+  void add(json_array_t& array);
+
+  void add(json_object_t& object);
+
+  void add(json_value_t *item) {
+    head.array.size++;
+    item->key = NULL;
+    item->next = NULL;
+    tail->next = item;
+    tail = item;
+  }
+
+};
+
+struct json_object_t {
+  json_value_t head;
+  json_value_t *tail;
+
+  json_object_t() {
+    head.key = NULL;
+    head.type = JSON_OBJECT;
+    head.object.size = 0;
+    head.next = NULL;
+    tail = &head;
+  }
+
+  void add(const char *key, double number) {
+    json_value_t *item = (json_value_t*)malloc(sizeof(json_value_t));
+    item->type = JSON_NUMBER;
+    item->number = number;
+    item->next = NULL;
+    add(key, item);
+  }
+
+  void add(const char *key, const char* string) {
+    json_value_t *item = (json_value_t*)malloc(sizeof(json_value_t));
+    item->type = JSON_STRING;
+    item->string = string;
+    add(key, item);
+  }
+
+  void add(const char *key, json_array_t& array);
+
+  void add(const char *key, json_object_t& object);
+
+  void add(const char *key, json_value_t *item) {
+    head.object.size++;
+    item->key = key;
+    item->next = NULL;
+    tail->next = item;
+    tail = item;
+  }
+
+};
+
+void json_array_t::add(json_array_t& array) {
+  add(&array.head);
+}
+
+void json_array_t::add(json_object_t& object) {
+  add(&object.head);
+}
+
+void json_object_t::add(const char *key, json_array_t& array) {
+  add(key, &array.head);
+}
+
+void json_object_t::add(const char *key, json_object_t& object) {
+  add(key, &object.head);
+}
+
+
 
 typedef struct json_parser {
   const char *input;
@@ -148,7 +265,7 @@ static int parse_json_array(json_parser *parser, json_value_t* value) {
       // End of the object reached, break out of the loop
       return JSON_PARSE_OK;
     }
-    value->object.size++;
+    value->array.size++;
     json_value_t *item = (json_value_t*)malloc(sizeof(json_value_t));
     prev->next = item;
     prev = item;
@@ -221,6 +338,8 @@ int parse(const char *json, const int length, json_value_t *value) {
   return parse_json_value(&json_parser, value);
 }
 
+
+
 void print(json_value_t *value) {
   switch (value->type)
   {
@@ -257,7 +376,7 @@ void print(json_value_t *value) {
     {
       printf("{");
       json_value_t *item = value->next;
-      for (int i = 0; i < value->array.size; i++) {
+      for (int i = 0; i < value->object.size; i++) {
         if (i > 0) {
           printf(", ");
         }
@@ -273,6 +392,8 @@ void print(json_value_t *value) {
       throw "Invalid json type.";
   }
 }
+
+
 
 static int stringify_json(json_value_t *value, char *buffer, int *offset, int *length) {
   switch (value->type)
