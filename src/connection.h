@@ -39,8 +39,8 @@ public:
 
   Connection(std::string endpoint, Commitment commitment)
     : _commitment(commitment)
+    , _rpcEndpoint(endpoint)
   {
-    _rpcEndpoint = endpoint;
   }
 
   ~Connection() {
