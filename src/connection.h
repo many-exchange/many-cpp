@@ -182,51 +182,6 @@ public:
   ~Connection() {
   }
 
-  void* _rpcRequest(json_object_t& request) {
-    HttpClient httpClient(_rpcEndpoint, 443);
-
-    httpClient.connect();
-    assert(httpClient.is_connected());
-
-    int response_length = 0;
-    char* response_buffer = httpClient.post(request, &response_length);
-
-    httpClient.disconnect();
-
-    char* response_content = strstr(response_buffer, "\r\n\r\n") + 4;
-
-    json_value_t response;
-    solana::json::parse(response_content, response_content - response_buffer, &response);
-
-    if (response.type != JSON_OBJECT) {
-      return nullptr;
-    }
-    json_value_t* item = response.object.items;
-    for (int i = 0; i < response.object.size; i++) {
-      if (item->key == "result") {
-        json_value_t* result = item;
-        if (result->type != JSON_OBJECT) {
-          return nullptr;
-        }
-        json_value_t* item2 = result->object.items;
-        for (int j = 0; j < result->object.size; j++) {
-          if (item2->key == "context") {
-
-            std::cout << item2->key << " " << item2->type << std::endl;
-
-          } else if (item2->key == "value") {
-
-            std::cout << item2->key << " " << item2->type << std::endl;
-
-          }
-          item2 = item2->next;
-        }
-      }
-      item = item->next;
-    }
-    assert(item == NULL);
-  }
-
   /**
    * Returns all information associated with the account of provided Pubkey
   */
@@ -242,19 +197,6 @@ public:
     params.add(config);
     config.add("encoding", "base64");
     http::http_response_t response = http::post(_rpcEndpoint, request);
-    /*
-    http::http_response_t response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "getAccountInfo"},
-      {"params", {
-        pubkey.toBase58(),
-        {
-          {"encoding", "base64"},
-        },
-      }},
-    });
-    */
     json_value_t result;
     json::parse(response.body, result);
     json_value_t* value = (*(result["result"]))["value"];
