@@ -260,7 +260,8 @@ public:
     int header_length = 0;
 
 
-    char* line = strtok(_recv_buffer, "\r\n");
+    char* saveptr;
+    char* line = strtok_r(_recv_buffer, "\r\n", &saveptr);
     while (line != nullptr) {
       if (line[0] == '{') {
         header_length = (int)(line - _recv_buffer);
@@ -279,7 +280,7 @@ public:
           content_length = std::stoi(val);
         }
       }
-      line = strtok(nullptr, "\r\n");
+      line = strtok_r(nullptr, "\r\n", &saveptr);
     }
 
     while (*recv_length < header_length + content_length) {
