@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <iostream>
+#include <map>
 #include <string>
 
 #include "http.h"
@@ -13,8 +14,10 @@ using namespace solana::http;
 
 namespace solana {
 
-struct Context {
-  uint64_t slot;
+enum class Commitment {
+  Processed,
+  Confirmed,
+  Finalized,
 };
 
 struct AccountInfo {
@@ -30,10 +33,44 @@ struct AccountInfo {
   uint64_t rentEpoch;
 };
 
-enum class Commitment {
-  Processed,
-  Confirmed,
-  Finalized,
+struct Context {
+  uint64_t slot;
+};
+
+struct KeyedAccountInfo {
+  PublicKey accountId;
+  AccountInfo accountInfo;
+};
+
+struct Logs {
+  //TODO
+  //err: TransactionError | null;
+  std::vector<std::string> logs;
+  std::string signature;
+};
+
+struct SlotInfo {
+  /** Currently processing slot */
+  uint64_t slot;
+  /** Parent of the current slot */
+  uint64_t parent;
+  /** The root block of the current slot's fork */
+  uint64_t root;
+};
+
+struct AccountChangeSubscriptionInfo {
+  PublicKey accountId;
+  std::function<void(Context context, AccountInfo accountInfo)> callback;
+};
+
+struct LogsSubscriptionInfo {
+  PublicKey accountId;
+  std::function<void(Context context, Logs logs)> callback;
+};
+
+struct ProgramAccountChangeSubscriptionInfo {
+  PublicKey programId;
+  std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback;
 };
 
 class Connection {
@@ -42,6 +79,11 @@ class Connection {
   std::string _rpcWsEndpoint;
   //HttpClient _rpcClient;
   WebSocketClient _rpcWebSocket;
+
+  std::map<int, AccountChangeSubscriptionInfo> _accountChangeSubscriptions;
+  std::map<int, LogsSubscriptionInfo> _logsSubscriptions;
+  std::map<int, ProgramAccountChangeSubscriptionInfo> _programAccountChangeSubscriptions;
+  std::map<int, std::function<void(Context context, SlotInfo slotInfo)>> _slotSubscriptions;
 
   static std::string makeWebsocketUrl(std::string endpoint) {
     auto url = endpoint;
@@ -575,14 +617,14 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
 
   // Subscription Websocket
 
-  int onAccountChange(PublicKey account, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-    //_rpcWebSocket
+  int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    //TODO _rpcWebSocket
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "accountSubscribe"},
       {"params", {
-        account.toBase58(),
+        accountId.toBase58(),
         {
           {"encoding", "base64"},
           {"commitment", _commitment},
@@ -590,68 +632,67 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
       }},
     });
     int subscriptionId = response["result"].get<int>();
-    //TODO cache this along with the callback.
-    /*
-    const id = ++this._accountChangeSubscriptionCounter;
-    this._accountChangeSubscriptions[id] = {
-      publicKey: publicKey.toBase58(),
-      callback,
-      commitment,
-      subscriptionId: null,
-    };
-    this._updateSubscriptions();
-    */
+    _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
     return subscriptionId;
   }
 
   bool removeAccountChangeListener(int subscriptionId) {
-    //_rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "accountUnsubscribe"},
-      {"params", {
-        subscriptionId,
-      }},
-    });
-    //TODO remove the subscription and callback.
-    return response["result"].get<bool>();
+    //TODO _rpcWebSocket
+    if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
+      auto response = http::post(_rpcEndpoint, {
+        {"jsonrpc", "2.0"},
+        {"id", 1},
+        {"method", "accountUnsubscribe"},
+        {"params", {
+          subscriptionId,
+        }},
+      });
+      _accountChangeSubscriptions.erase(subscriptionId);
+      return response["result"].get<bool>();
+    }
+    return false;
   }
 
-  int onLogs() {
-    //_rpcWebSocket
+  int onLogs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
+    //TODO _rpcWebSocket
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "logsSubscribe"},
       {"params", {
-        "all",
+        "mentions",
+        {
+          {"mentions", accountId.toBase58()},
+        },
         {
           {"commitment", _commitment},
         },
       }},
     });
     int subscriptionId = response["result"].get<int>();
-    //TODO
+    _logsSubscriptions[subscriptionId] = { accountId, callback };
     return subscriptionId;
   }
 
   bool removeOnLogsListener(int subscriptionId) {
-    //_rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "logsUnsubscribe"},
-      {"params", {
-        subscriptionId,
-      }},
-    });
-    //TODO remove the subscription and callback.
-    return response["result"].get<bool>();
+    //TODO _rpcWebSocket
+    if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
+      auto response = http::post(_rpcEndpoint, {
+        {"jsonrpc", "2.0"},
+        {"id", 1},
+        {"method", "logsUnsubscribe"},
+        {"params", {
+          subscriptionId,
+        }},
+      });
+      _logsSubscriptions.erase(subscriptionId);
+      return response["result"].get<bool>();
+    }
+    return false;
   }
 
-  int onProgramAccountChange(PublicKey programId) {
-    //_rpcWebSocket
+  int onProgramAccountChange(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
+    //TODO _rpcWebSocket
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -665,48 +706,54 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
       }},
     });
     int subscriptionId = response["result"].get<int>();
-    //TODO
+    _programAccountChangeSubscriptions[subscriptionId] = { programId, callback };
     return subscriptionId;
   }
 
   bool removeProgramAccountChangeListener(int subscriptionId) {
-    //_rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "programUnsubscribe"},
-      {"params", {
-        subscriptionId,
-      }},
-    });
-    //TODO remove the subscription and callback.
-    return response["result"].get<bool>();
+    //TODO _rpcWebSocket
+    if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
+      auto response = http::post(_rpcEndpoint, {
+        {"jsonrpc", "2.0"},
+        {"id", 1},
+        {"method", "programUnsubscribe"},
+        {"params", {
+          subscriptionId,
+        }},
+      });
+      _programAccountChangeSubscriptions.erase(subscriptionId);
+      return response["result"].get<bool>();
+    }
+    return false;
   }
 
-  int onSlotChange() {
-    //_rpcWebSocket
+  int onSlotChange(std::function<void(Context context, SlotInfo slotInfo)> callback) {
+    //TODO _rpcWebSocket
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "slotSubscribe"},
     });
     int subscriptionId = response["result"].get<int>();
-    //TODO
+    _slotSubscriptions[subscriptionId] = callback;
     return subscriptionId;
   }
 
   bool removeSlotChangeListener(int subscriptionId) {
-    //_rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "slotUnsubscribe"},
-      {"params", {
-        subscriptionId,
-      }},
-    });
-    //TODO remove the subscription and callback.
-    return response["result"].get<bool>();
+    //TODO _rpcWebSocket
+    if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
+      auto response = http::post(_rpcEndpoint, {
+        {"jsonrpc", "2.0"},
+        {"id", 1},
+        {"method", "slotUnsubscribe"},
+        {"params", {
+          subscriptionId,
+        }},
+      });
+      _slotSubscriptions.erase(subscriptionId);
+      return response["result"].get<bool>();
+    }
+    return false;
   }
 
 };
