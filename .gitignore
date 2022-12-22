@@ -3,3 +3,4 @@
 examples/get_account_info
 
 tests/json/parse
+tests/json/stringify

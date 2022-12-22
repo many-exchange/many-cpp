@@ -234,7 +234,6 @@ public:
     memcpy(&_send_buffer[send_length], _send_payload_buffer, content_length);
     send_length += content_length;
 
-    std::cout << _send_buffer << std::endl;
     write(_send_buffer, send_length);
 
     (*recv_length) = read(_recv_buffer, sizeof(_recv_buffer));

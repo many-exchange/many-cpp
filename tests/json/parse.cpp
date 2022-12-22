@@ -51,7 +51,7 @@ TEST_CASE("Parse Array") {
   assert(json::parse("[1, 2, 3]", 9, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_ARRAY);
   assert(value.array.size == 3);
-  json_value_t *item = value.next;
+  json_value_t *item = value.array.items;
   assert(item->number == 1);
   item = item->next;
   assert(item->number == 2);
@@ -73,7 +73,7 @@ TEST_CASE("Parse Object") {
   assert(json::parse("{\"a\": 1, \"b\": 2}", 16, &value) == JSON_PARSE_OK);
   assert(value.type == JSON_OBJECT);
   assert(value.object.size == 2);
-  json_value_t *item = value.next;
+  json_value_t *item = value.object.items;
   assert(strcmp(item->key, "a") == 0);
   assert(item->number == 1);
   item = item->next;

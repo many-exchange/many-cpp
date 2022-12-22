@@ -184,8 +184,6 @@ public:
   AccountInfo* getAccountInfo(const char* publicKey) {
 
     HttpClient httpClient(_rpcEndpoint, 443);
-    httpClient.connect();
-    assert(httpClient.is_connected());
 
     json_object_t request;
     request.add("jsonrpc", "2.0");
@@ -198,18 +196,46 @@ public:
     params.add(config);
     config.add("encoding", "base64");
 
+    httpClient.connect();
+    assert(httpClient.is_connected());
+
     int response_length = 0;
     char* response = httpClient.post(request, &response_length);
 
     httpClient.disconnect();
 
-    json_value_t result;
-    solana::json::parse(response, response_length, &result);
+    char* payload = strstr(response, "\r\n\r\n") + 4;
 
-    //TODO iterate over the result and return an account.
+    std::cout << payload << std::endl;
+
+    json_value_t message;
+    solana::json::parse(payload, payload - response, &message);
+
+    if (message.type != JSON_OBJECT) {
+      return nullptr;
+    }
+    json_value_t* item = message.object.items;
+    for (int i = 0; i < message.object.size; i++) {
+      if (strcmp(item->key, "result") == 0) {
+        json_value_t* result = item;
+
+        if (result->type != JSON_OBJECT) {
+          return nullptr;
+        }
+        json_value_t* item2 = result->object.items;
+        for (int j = 0; j < result->object.size; j++) {
+
+          std::cout << item2->key << " " << item2->type << std::endl;
+
+          item2 = item2->next;
+        }
+      }
+      item = item->next;
+    }
+    assert(item == NULL);
 
     /*
-    {"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.14.10","slot":168249796},"value":{"data":["AQAAABzjWe1aAS4E+hQrnHUaHF6Hz9CgFhuchf/TG3jN/Nj2Zi8WmEPjEQAGAQEAAAAqnl7btTwEZ5CY/3sSZRcUQ0/AjFYqmjuGEQXmctQicw==","base64"],"executable":false,"lamports":179771985948,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361}},"id":1}
+    {"context":{"apiVersion":"1.14.10","slot":168249796},"value":{"data":["AQAAABzjWe1aAS4E+hQrnHUaHF6Hz9CgFhuchf/TG3jN/Nj2Zi8WmEPjEQAGAQEAAAAqnl7btTwEZ5CY/3sSZRcUQ0/AjFYqmjuGEQXmctQicw==","base64"],"executable":false,"lamports":179771985948,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361}}
     */
 
     return nullptr;
