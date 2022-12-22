@@ -9,6 +9,7 @@
 #include "publickey.h"
 
 using namespace solana;
+using namespace solana::http;
 using namespace solana::json;
 
 namespace solana {
@@ -21,7 +22,7 @@ struct AccountInfo {
   /** Number of lamports assigned to the account */
   uint64_t lamports;
   /** Optional data assigned to the account */
-  std::string data;
+  const char* data;
   /** Optional rent epoch info for account */
   uint64_t rentEpoch;
 };
@@ -181,64 +182,90 @@ public:
   ~Connection() {
   }
 
-  AccountInfo* getAccountInfo(const char* publicKey) {
-
+  void* _rpcRequest(json_object_t& request) {
     HttpClient httpClient(_rpcEndpoint, 443);
-
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
-    request.add("id", 1);
-    request.add("method", "getAccountInfo");
-    json_array_t params;
-    request.add("params", params);
-    params.add(publicKey);
-    json_object_t config;
-    params.add(config);
-    config.add("encoding", "base64");
 
     httpClient.connect();
     assert(httpClient.is_connected());
 
     int response_length = 0;
-    char* response = httpClient.post(request, &response_length);
+    char* response_buffer = httpClient.post(request, &response_length);
 
     httpClient.disconnect();
 
-    char* payload = strstr(response, "\r\n\r\n") + 4;
+    char* response_content = strstr(response_buffer, "\r\n\r\n") + 4;
 
-    std::cout << payload << std::endl;
+    json_value_t response;
+    solana::json::parse(response_content, response_content - response_buffer, &response);
 
-    json_value_t message;
-    solana::json::parse(payload, payload - response, &message);
-
-    if (message.type != JSON_OBJECT) {
+    if (response.type != JSON_OBJECT) {
       return nullptr;
     }
-    json_value_t* item = message.object.items;
-    for (int i = 0; i < message.object.size; i++) {
-      if (strcmp(item->key, "result") == 0) {
+    json_value_t* item = response.object.items;
+    for (int i = 0; i < response.object.size; i++) {
+      if (item->key == "result") {
         json_value_t* result = item;
-
         if (result->type != JSON_OBJECT) {
           return nullptr;
         }
         json_value_t* item2 = result->object.items;
         for (int j = 0; j < result->object.size; j++) {
+          if (item2->key == "context") {
 
-          std::cout << item2->key << " " << item2->type << std::endl;
+            std::cout << item2->key << " " << item2->type << std::endl;
 
+          } else if (item2->key == "value") {
+
+            std::cout << item2->key << " " << item2->type << std::endl;
+
+          }
           item2 = item2->next;
         }
       }
       item = item->next;
     }
     assert(item == NULL);
+  }
 
+  /**
+   * Returns all information associated with the account of provided Pubkey
+  */
+  AccountInfo getAccountInfo(PublicKey publicKey) {
+    json_object_t request;
+    request.add("jsonrpc", "2.0");
+    request.add("id", 1);
+    request.add("method", "getAccountInfo");
+    json_array_t params;
+    request.add("params", params);
+    params.add(publicKey.toBase58());
+    json_object_t config;
+    params.add(config);
+    config.add("encoding", "base64");
+    http::http_response_t response = http::post(_rpcEndpoint, request);
     /*
-    {"context":{"apiVersion":"1.14.10","slot":168249796},"value":{"data":["AQAAABzjWe1aAS4E+hQrnHUaHF6Hz9CgFhuchf/TG3jN/Nj2Zi8WmEPjEQAGAQEAAAAqnl7btTwEZ5CY/3sSZRcUQ0/AjFYqmjuGEQXmctQicw==","base64"],"executable":false,"lamports":179771985948,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361}}
+    http::http_response_t response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getAccountInfo"},
+      {"params", {
+        pubkey.toBase58(),
+        {
+          {"encoding", "base64"},
+        },
+      }},
+    });
     */
-
-    return nullptr;
+    json_value_t result;
+    json::parse(response.body, result);
+    json_value_t* value = (*(result["result"]))["value"];
+    auto accountInfo = AccountInfo {
+      (*value)["executable"]->type == JSON_TRUE,
+      PublicKey((*value)["owner"]->string.value),
+      (*value)["lamports"]->number,
+      (*value)["data"]->string.value,
+      (*value)["rentEpoch"]->number,
+    };
+    return accountInfo;
   }
 
   /**

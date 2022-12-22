@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <iostream>
+#include <map>
 #include <netdb.h>
 #include <openssl/err.h>
 #include <openssl/sha.h>
@@ -18,6 +19,29 @@
 #include "json.h"
 
 namespace solana {
+namespace http {
+
+struct http_request_t {
+  std::string method;
+  std::string url;
+  std::string body;
+  std::string content_type;
+  std::map<std::string, std::string> headers;
+};
+
+struct http_response_t {
+  int status_code;
+  std::string body;
+};
+
+http_response_t post(const std::string url, solana::json::json_object_t& request) {
+
+  return { .status_code = 200, .body = "" };
+
+}
+
+
+
 
 class HttpClient {
   const std::string _interface;
@@ -245,4 +269,5 @@ public:
 
 };
 
+}
 }

@@ -10,13 +10,15 @@ namespace solana {
 
 class PublicKey {
 
+  const char* value;
+
   char bytes[PUBLIC_KEY_LENGTH];
 
 public:
 
-  PublicKey(const std::string& value) {
+  PublicKey(const char* value) : value(value) {
     size_t length = PUBLIC_KEY_LENGTH;
-    b58tobin(bytes, &length, value.c_str(), value.length());
+    b58tobin(bytes, &length, value, strlen(value));
   }
 
   ~PublicKey() {
@@ -29,6 +31,10 @@ public:
       }
     }
     return true;
+  }
+
+  const char* toBase58() {
+    return value;
   }
 
 };
