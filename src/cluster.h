@@ -6,9 +6,9 @@
 namespace solana {
 
 enum class Cluster {
-    Devnet,
-    Testnet,
-    MainnetBeta
+  Devnet,
+  Testnet,
+  MainnetBeta
 };
 
 std::string clusterApiUrl(Cluster cluster) {

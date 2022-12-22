@@ -1,6 +1,8 @@
 .vscode/settings.json
 
 examples/get_account_info
+examples/get_balance
+examples/get_cluster_nodes
 
 tests/json/parse
 tests/json/stringify

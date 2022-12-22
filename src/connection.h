@@ -48,7 +48,7 @@ public:
 
   /**
    * Returns all information associated with the account of provided Pubkey
-  */
+   */
   AccountInfo getAccountInfo(PublicKey publicKey) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
@@ -90,12 +90,16 @@ public:
 
   /**
    * Returns information about all the nodes participating in the cluster
-  */
-  void getClusterNodes() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0", "id":1, "method":"getClusterNodes"}
-'    */
+   */
+  int getClusterNodes() {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getClusterNodes"},
+    });
+    auto result = response["result"];
+
+    std::cout << result.dump() << std::endl;
 
     /*
 {
@@ -111,6 +115,8 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   ],
   "id": 1
 }    */
+
+      return 0;
   }
 
   /**
@@ -262,7 +268,7 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
 
   /**
    * Returns the current slot leader
-  */
+   */
   void getSlotLeader() {
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
@@ -279,7 +285,7 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
 
   /**
    * Returns the slot leaders for a given slot range
-  */
+   */
   void getSlotLeaders() {
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '

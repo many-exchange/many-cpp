@@ -7,7 +7,6 @@
 #include <iostream>
 #include <map>
 #include <netdb.h>
-#include <nlohmann/json.hpp>
 #include <openssl/err.h>
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
@@ -16,6 +15,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
+
+#include "json.h"
 
 using json = nlohmann::json;
 
@@ -32,7 +33,7 @@ class HttpClient {
   SSL *_ssl;
 
   char _send_buffer[65536];
-  char _recv_buffer[65536];
+  char _recv_buffer[65536 * 16];
 
   bool write(const char *data, size_t length) {
     int ret = SSL_write(_ssl, data, (int)length);
@@ -44,14 +45,30 @@ class HttpClient {
     return true;
   }
 
-  int read(char *data, size_t length) {
-    int ret = SSL_read(_ssl, data, (int)length);
-    if (ret <= 0) {
-      std::cerr << "Error: SSL_read() failed" << std::endl;
+  bool can_read() {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(_socket, &readfds);
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    int ret = select(_socket + 1, &readfds, NULL, NULL, &timeout);
+    if (ret == -1) {
+      std::cerr << "Error: select() failed" << std::endl;
       disconnect();
       return false;
     }
-    return true;
+    return ret > 0;
+  }
+
+  int read(char *data, int length) {
+    int ret = SSL_read(_ssl, data, length);
+    if (ret <= 0) {
+      std::cerr << "Error: SSL_read() failed" << std::endl;
+      disconnect();
+      return 0;
+    }
+    return ret;
   }
 
 public:
@@ -237,11 +254,39 @@ public:
 
     write(_send_buffer, send_length);
 
-    (*recv_length) = read(_recv_buffer, sizeof(_recv_buffer));
-    if (*recv_length <= 0) {
-      return nullptr;
+    *recv_length = read(&_recv_buffer[*recv_length], 8192);
+
+    int content_length = 0;
+    int header_length = 0;
+
+
+    char* line = strtok(_recv_buffer, "\r\n");
+    while (line != nullptr) {
+      if (line[0] == '{') {
+        header_length = (int)(line - _recv_buffer);
+        break;
+      }
+      char* colon = strchr(line, ':');
+      if (colon != nullptr) {
+        *colon = '\0';
+        char* value = colon + 1;
+        while (*value == ' ') {
+          value++;
+        }
+        std::string key = std::string(line);
+        if (key == "content-length" || key == "Content-Length") {
+          std::string val = std::string(value);
+          content_length = std::stoi(val);
+        }
+      }
+      line = strtok(nullptr, "\r\n");
     }
-    return _recv_buffer;
+
+    while (*recv_length < header_length + content_length) {
+      *recv_length += read(&_recv_buffer[*recv_length], 65536);
+    }
+    *recv_length -= header_length;
+    return &_recv_buffer[header_length];
   }
 
 };
@@ -255,10 +300,13 @@ json post(const std::string url, json request) {
   //TODO return error if not connected
   assert(client.is_connected());
   int response_length = 0;
-  char* response_buffer = client.post(request, &response_length);
+  char* response = client.post(request, &response_length);
   client.disconnect();
-  char* response_content = strstr(response_buffer, "\r\n\r\n") + 4;
-  return json::parse(std::string(response_content, response_content - response_buffer));
+
+  //std::cout << response << std::endl;
+  //std::cout << "response_length = " << response_length << std::endl;
+
+  return json::parse(std::string(response, response_length));
 }
 
 }
