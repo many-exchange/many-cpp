@@ -118,10 +118,11 @@ public:
    * Returns the leader schedule for an epoch
   */
   void getLeaderSchedule() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"getLeaderSchedule"}
-'    */
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getLeaderSchedule"},
+    });
 
     /*
 {
@@ -142,6 +143,25 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the account information for a list of Pubkeys.
   */
   void getMultipleAccounts() {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getMultipleAccounts"},
+      {"params", {
+        {
+          "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg",
+          "4fYNw3dojWmQ4dXtSGE9epjRGy9pFSx62YypT7avPYvA"
+        },
+        {
+          {"encoding", "base64"},
+          {"dataSlice", {
+            {"offset", 0},
+            {"length", 0},
+          }},
+        },
+      }},
+    });
+
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -195,22 +215,43 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns all accounts owned by the provided program Pubkey
   */
   void getProgramAccounts() {
-    /*
-    */
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getProgramAccounts"},
+      {"params", {
+        "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+      }},
+    });
 
     /*
-    */
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "account": {
+        "data": "2R9jLfiAQ9bgdcw6h8s44439",
+        "executable": false,
+        "lamports": 15298080,
+        "owner": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+        "rentEpoch": 28
+      },
+      "pubkey": "CxELquR1gPP8wHe33gZ4QxqGB3sZ9RSwsJ2KshVewkFY"
+    }
+  ],
+  "id": 1
+}    */
   }
 
   /**
    * Returns the slot that has reached the given or default commitment level
   */
   void getSlot() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"getSlot"}
-'
-    */
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getSlot"},
+    });
 
     /*
 { "jsonrpc": "2.0", "result": 1234, "id": 1 }
@@ -221,10 +262,11 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the current slot leader
    */
   void getSlotLeader() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"getSlotLeader"}
-'    */
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getSlotLeader"},
+    });
 
     /*
 {
@@ -235,41 +277,17 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   }
 
   /**
-   * Returns the slot leaders for a given slot range
-   */
-  void getSlotLeaders() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"getSlotLeaders", "params":[100, 10]}
-'    */
-
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": [
-    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
-    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
-    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
-    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
-    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
-    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
-    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
-    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
-    "DWvDTSh3qfn88UoQTEKRV2JnLt5jtJAVoiCo3ivtMwXP",
-    "DWvDTSh3qfn88UoQTEKRV2JnLt5jtJAVoiCo3ivtMwXP"
-  ],
-  "id": 1
-}    */
-  }
-
-  /**
    * Returns the token balance of an SPL Token account.
    */
   void getTokenAccountBalance(PublicKey tokenAddress) {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0", "id":1, "method":"getTokenAccountBalance", "params": ["7fUAJdStEuGbc3sM84cKRL6yYaaSstyLSU4ve5oovLS7"]}
-'    */
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getTokenAccountBalance"},
+      {"params", {
+        tokenAddress.toBase58(),
+      }},
+    });
 
     /*
 {
@@ -293,6 +311,18 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns all SPL Token accounts by token owner.
    */
   void getTokenAccountsByOwner(PublicKey ownerAddress) {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getTokenAccountsByOwner"},
+      {"params", {
+        ownerAddress.toBase58(),
+        {
+          {"mint", "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E"},
+        },
+      }},
+    });
+
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -365,10 +395,14 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the total supply of an SPL Token type.
    */
   void getTokenSupply(PublicKey tokenMintAddress) {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0", "id":1, "method":"getTokenSupply", "params": ["3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E"]}
-'    */
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getTokenSupply"},
+      {"params", {
+        tokenMintAddress.toBase58(),
+      }},
+    });
 
     /*
 {
