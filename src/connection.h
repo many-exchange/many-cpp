@@ -5,12 +5,10 @@
 #include <string>
 
 #include "http.h"
-#include "json.h"
 #include "publickey.h"
 
 using namespace solana;
 using namespace solana::http;
-using namespace solana::json;
 
 namespace solana {
 
@@ -22,7 +20,7 @@ struct AccountInfo {
   /** Number of lamports assigned to the account */
   uint64_t lamports;
   /** Optional data assigned to the account */
-  const char* data;
+  std::string data;
   /** Optional rent epoch info for account */
   uint64_t rentEpoch;
 };
@@ -35,148 +33,14 @@ enum class Commitment {
 
 class Connection {
   Commitment _commitment;
-  /*
-  _confirmTransactionInitialTimeout?: number;
-  */
   std::string _rpcEndpoint;
-  std::string _rpcWsEndpoint;
-  /*
-  _rpcClient: RpcClient;
-  _rpcRequest: RpcRequest;
-  _rpcBatchRequest: RpcBatchRequest;
-  _rpcWebSocket: RpcWebSocketClient;
-  _rpcWebSocketConnected: boolean = false;
-  _rpcWebSocketHeartbeat: ReturnType<
-    typeof setInterval
-  > | null = null;
-  _rpcWebSocketIdleTimeout: ReturnType<
-    typeof setTimeout
-  > | null = null;
-
-  _disableBlockhashCaching: boolean = false;
-  _pollingBlockhash: boolean = false;
-  _blockhashInfo: {
-    recentBlockhash: Blockhash | null;
-    lastFetch: number;
-    simulatedSignatures: Array<string>;
-    transactionSignatures: Array<string>;
-  } = {
-    recentBlockhash: null,
-    lastFetch: 0,
-    transactionSignatures: [],
-    simulatedSignatures: [],
-  };
-
-  _accountChangeSubscriptionCounter: number = 0;
-  _accountChangeSubscriptions: {
-    [id: number]: AccountSubscriptionInfo;
-  } = {};
-
-  _programAccountChangeSubscriptionCounter: number = 0;
-  _programAccountChangeSubscriptions: {
-    [id: number]: ProgramAccountSubscriptionInfo;
-  } = {};
-
-  _rootSubscriptionCounter: number = 0;
-  _rootSubscriptions: {
-    [id: number]: RootSubscriptionInfo;
-  } = {};
-
-  _signatureSubscriptionCounter: number = 0;
-  _signatureSubscriptions: {
-    [id: number]: SignatureSubscriptionInfo;
-  } = {};
-
-  _slotSubscriptionCounter: number = 0;
-  _slotSubscriptions: {
-    [id: number]: SlotSubscriptionInfo;
-  } = {};
-
-  _logsSubscriptionCounter: number = 0;
-  _logsSubscriptions: {
-    [id: number]: LogsSubscriptionInfo;
-  } = {};
-
-  _slotUpdateSubscriptionCounter: number = 0;
-  _slotUpdateSubscriptions: {
-    [id: number]: SlotUpdateSubscriptionInfo;
-  } = {};
-  */
 
 public:
 
   Connection(std::string endpoint, Commitment commitment)
     : _commitment(commitment)
   {
-    /*
-    let url = new URL(endpoint);
-
-    let wsEndpoint;
-    let httpHeaders;
-    let fetchMiddleware;
-    let disableRetryOnRateLimit;
-    if (commitmentOrConfig && typeof commitmentOrConfig === 'string') {
-      this._commitment = commitmentOrConfig;
-    } else if (commitmentOrConfig) {
-      this._commitment = commitmentOrConfig.commitment;
-      this._confirmTransactionInitialTimeout =
-        commitmentOrConfig.confirmTransactionInitialTimeout;
-      wsEndpoint = commitmentOrConfig.wsEndpoint;
-      httpHeaders = commitmentOrConfig.httpHeaders;
-      fetchMiddleware = commitmentOrConfig.fetchMiddleware;
-      disableRetryOnRateLimit = commitmentOrConfig.disableRetryOnRateLimit;
-    }
-    */
     _rpcEndpoint = endpoint;
-    /*
-    this._rpcWsEndpoint = wsEndpoint || makeWebsocketUrl(endpoint);
-
-    this._rpcClient = createRpcClient(
-      url.toString(),
-      useHttps,
-      httpHeaders,
-      fetchMiddleware,
-      disableRetryOnRateLimit,
-    );
-    this._rpcRequest = createRpcRequest(this._rpcClient);
-    this._rpcBatchRequest = createRpcBatchRequest(this._rpcClient);
-
-    this._rpcWebSocket = new RpcWebSocketClient(this._rpcWsEndpoint, {
-      autoconnect: false,
-      max_reconnects: Infinity,
-    });
-    this._rpcWebSocket.on('open', this._wsOnOpen.bind(this));
-    this._rpcWebSocket.on('error', this._wsOnError.bind(this));
-    this._rpcWebSocket.on('close', this._wsOnClose.bind(this));
-    this._rpcWebSocket.on(
-      'accountNotification',
-      this._wsOnAccountNotification.bind(this),
-    );
-    this._rpcWebSocket.on(
-      'programNotification',
-      this._wsOnProgramAccountNotification.bind(this),
-    );
-    this._rpcWebSocket.on(
-      'slotNotification',
-      this._wsOnSlotNotification.bind(this),
-    );
-    this._rpcWebSocket.on(
-      'slotsUpdatesNotification',
-      this._wsOnSlotUpdatesNotification.bind(this),
-    );
-    this._rpcWebSocket.on(
-      'signatureNotification',
-      this._wsOnSignatureNotification.bind(this),
-    );
-    this._rpcWebSocket.on(
-      'rootNotification',
-      this._wsOnRootNotification.bind(this),
-    );
-    this._rpcWebSocket.on(
-      'logsNotification',
-      this._wsOnLogsNotification.bind(this),
-    );
-    */
   }
 
   ~Connection() {
@@ -186,24 +50,24 @@ public:
    * Returns all information associated with the account of provided Pubkey
   */
   AccountInfo getAccountInfo(PublicKey publicKey) {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
-    request.add("id", 1);
-    request.add("method", "getAccountInfo");
-    json_array_t params;
-    request.add("params", params);
-    params.add(publicKey.toBase58());
-    json_object_t config;
-    params.add(config);
-    config.add("encoding", "base64");
-    json_value_t* result = http::post(_rpcEndpoint, request);
-    json_value_t* value = (*((*result)["result"]))["value"];
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getAccountInfo"},
+      {"params", {
+        publicKey.toBase58(),
+        {
+          {"encoding", "base64"},
+        },
+      }},
+    });
+    auto value = response["result"]["value"];
     auto accountInfo = AccountInfo {
-      (*value)["executable"]->type == JSON_TRUE,
-      PublicKey((*value)["owner"]->string.value),
-      (*value)["lamports"]->number,
-      (*value)["data"]->string.value,
-      (*value)["rentEpoch"]->number,
+      value["executable"].get<bool>(),
+      PublicKey(value["owner"].get<std::string>()),
+      value["lamports"].get<uint64_t>(),
+      value["data"][0].get<std::string>(),
+      value["rentEpoch"].get<uint64_t>(),
     };
     return accountInfo;
   }
@@ -212,24 +76,22 @@ public:
    * Fetch the balance for the specified public key
    */
   uint64_t getBalance(PublicKey publicKey) {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
-    request.add("id", 1);
-    request.add("method", "getBalance");
-    json_array_t params;
-    request.add("params", params);
-    params.add(publicKey.toBase58());
-    json_value_t* result = http::post(_rpcEndpoint, request);
-    json_value_t* value = (*((*result)["result"]))["value"];
-    return value->number;
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getBalance"},
+      {"params", {
+        publicKey.toBase58(),
+      }},
+    });
+    auto value = response["result"]["value"];
+    return value.get<uint64_t>();
   }
 
   /**
    * Returns information about all the nodes participating in the cluster
   */
   void getClusterNodes() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0", "id":1, "method":"getClusterNodes"}
@@ -255,8 +117,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Get the fee the network will charge for a particular Message
   */
   void getFeeForMessage() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
 {
@@ -284,8 +144,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the identity pubkey for the current node
   */
   void getIdentity() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0","id":1, "method":"getIdentity"}
@@ -303,8 +161,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the leader schedule for an epoch
   */
   void getLeaderSchedule() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0","id":1, "method":"getLeaderSchedule"}
@@ -329,8 +185,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the account information for a list of Pubkeys.
   */
   void getMultipleAccounts() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -384,8 +238,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns all accounts owned by the provided program Pubkey
   */
   void getProgramAccounts() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
     */
 
@@ -397,8 +249,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the slot that has reached the given or default commitment level
   */
   void getSlot() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0","id":1, "method":"getSlot"}
@@ -414,8 +264,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the current slot leader
   */
   void getSlotLeader() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0","id":1, "method":"getSlotLeader"}
@@ -433,8 +281,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the slot leaders for a given slot range
   */
   void getSlotLeaders() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0","id":1, "method":"getSlotLeaders", "params":[100, 10]}
@@ -463,8 +309,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the token balance of an SPL Token account.
    */
   void getTokenAccountBalance(PublicKey tokenAddress) {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0", "id":1, "method":"getTokenAccountBalance", "params": ["7fUAJdStEuGbc3sM84cKRL6yYaaSstyLSU4ve5oovLS7"]}
@@ -492,8 +336,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns all SPL Token accounts by token owner.
    */
   void getTokenAccountsByOwner(PublicKey ownerAddress) {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -566,8 +408,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the total supply of an SPL Token type.
    */
   void getTokenSupply(PublicKey tokenMintAddress) {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0", "id":1, "method":"getTokenSupply", "params": ["3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E"]}
@@ -596,8 +436,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns transaction details for a confirmed transaction
    */
   void getTransaction() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -666,8 +504,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Returns the current solana versions running on the node
    */
   void getVersion() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {"jsonrpc":"2.0","id":1, "method":"getVersion"}
@@ -682,8 +518,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Submits a signed transaction to the cluster for processing.
    */
   void sendTransaction() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -709,8 +543,6 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
    * Simulate sending a transaction
    */
   void simulateTransaction() {
-    json_object_t request;
-    request.add("jsonrpc", "2.0");
     /*
 curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   {
@@ -793,96 +625,3 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
 };
 
 }
-
-
-
-/**
- * Send and confirm a raw transaction
- *
- * If `commitment` option is not specified, defaults to 'max' commitment.
- *
- * @param {Connection} connection
- * @param {Buffer} rawTransaction
- * @param {ConfirmOptions} [options]
- * @returns {Promise<TransactionSignature>}
- */
-/*
-export async function sendAndConfirmRawTransaction(
-  connection: Connection,
-  rawTransaction: Buffer,
-  options?: ConfirmOptions,
-): Promise<TransactionSignature> {
-  const sendOptions = options && {
-    skipPreflight: options.skipPreflight,
-    preflightCommitment: options.preflightCommitment || options.commitment,
-  };
-
-  const signature = await connection.sendRawTransaction(
-    rawTransaction,
-    sendOptions,
-  );
-
-  const status = (
-    await connection.confirmTransaction(
-      signature,
-      options && options.commitment,
-    )
-  ).value;
-
-  if (status.err) {
-    throw new Error(
-      `Raw transaction ${signature} failed (${JSON.stringify(status)})`,
-    );
-  }
-
-  return signature;
-}
-*/
-
-
-
-/**
- * Sign, send and confirm a transaction.
- *
- * If `commitment` option is not specified, defaults to 'max' commitment.
- *
- * @param {Connection} connection
- * @param {Transaction} transaction
- * @param {Array<Signer>} signers
- * @param {ConfirmOptions} [options]
- * @returns {Promise<TransactionSignature>}
- */
-/*
-export async function sendAndConfirmTransaction(
-  connection: Connection,
-  transaction: Transaction,
-  signers: Array<Signer>,
-  options?: ConfirmOptions,
-): Promise<TransactionSignature> {
-  const sendOptions = options && {
-    skipPreflight: options.skipPreflight,
-    preflightCommitment: options.preflightCommitment || options.commitment,
-  };
-
-  const signature = await connection.sendTransaction(
-    transaction,
-    signers,
-    sendOptions,
-  );
-
-  const status = (
-    await connection.confirmTransaction(
-      signature,
-      options && options.commitment,
-    )
-  ).value;
-
-  if (status.err) {
-    throw new Error(
-      `Transaction ${signature} failed (${JSON.stringify(status)})`,
-    );
-  }
-
-  return signature;
-}
-*/

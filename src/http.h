@@ -7,6 +7,7 @@
 #include <iostream>
 #include <map>
 #include <netdb.h>
+#include <nlohmann/json.hpp>
 #include <openssl/err.h>
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
@@ -16,7 +17,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "json.h"
+using json = nlohmann::json;
 
 namespace solana {
 namespace http {
@@ -31,7 +32,6 @@ class HttpClient {
   SSL *_ssl;
 
   char _send_buffer[65536];
-  char _send_payload_buffer[65536];
   char _recv_buffer[65536];
 
   bool write(const char *data, size_t length) {
@@ -224,17 +224,16 @@ public:
     return true;
   }
 
-  char* post(solana::json::json_object_t& request, int* recv_length) {
-    int content_length = 0;
-    solana::json::stringify(&request.head, _send_payload_buffer, &content_length);
+  char* post(json& request, int* recv_length) {
+    std::string json_string = request.dump();
 
     int send_length = 0;
     send_length += sprintf(&_send_buffer[send_length], "POST / HTTP/1.1\r\n");
     send_length += sprintf(&_send_buffer[send_length], "Content-Type: application/json\r\n");
-    send_length += sprintf(&_send_buffer[send_length], "Content-Length: %d\r\n", content_length);
+    send_length += sprintf(&_send_buffer[send_length], "Content-Length: %d\r\n", (int)json_string.size());
     send_length += sprintf(&_send_buffer[send_length], "\r\n");
-    memcpy(&_send_buffer[send_length], _send_payload_buffer, content_length);
-    send_length += content_length;
+    memcpy(&_send_buffer[send_length], json_string.c_str(), json_string.size());
+    send_length += json_string.size();
 
     write(_send_buffer, send_length);
 
@@ -247,7 +246,10 @@ public:
 
 };
 
-solana::json::json_value_t* post(const std::string url, solana::json::json_object_t& request) {
+/**
+ * Takes a url and a json request object and returns a json response
+ */
+json post(const std::string url, json request) {
   HttpClient client(url, 443);
   client.connect();
   //TODO return error if not connected
@@ -256,9 +258,7 @@ solana::json::json_value_t* post(const std::string url, solana::json::json_objec
   char* response_buffer = client.post(request, &response_length);
   client.disconnect();
   char* response_content = strstr(response_buffer, "\r\n\r\n") + 4;
-  json_value_t *response = (json_value_t*)malloc(sizeof(json_value_t));
-  solana::json::parse(response_content, response_content - response_buffer, response);
-  return response;
+  return json::parse(std::string(response_content, response_content - response_buffer));
 }
 
 }

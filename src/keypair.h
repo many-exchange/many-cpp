@@ -27,6 +27,7 @@ struct Keypair {
     //return new Keypair(keypair);
   //}
 
+  /*
   static Keypair fromFile(const std::string &path) {
     Keypair result = {};
     std::ifstream fileStream(path);
@@ -36,6 +37,7 @@ struct Keypair {
                                  result.privateKey.data.data());
     return result;
   }
+  */
 
 };
 

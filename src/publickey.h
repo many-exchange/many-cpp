@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <string>
 
 #include "base58.h"
@@ -10,15 +11,19 @@ namespace solana {
 
 class PublicKey {
 
-  const char* value;
-
-  char bytes[PUBLIC_KEY_LENGTH];
+  // An array of bytes representing the public key
+  std::array<char, PUBLIC_KEY_LENGTH> bytes;
 
 public:
 
-  PublicKey(const char* value) : value(value) {
-    size_t length = PUBLIC_KEY_LENGTH;
-    b58tobin(bytes, &length, value, strlen(value));
+  PublicKey(const char* value) {
+    size_t size = PUBLIC_KEY_LENGTH;
+    b58tobin(bytes.data(), &size, value, 0);
+  }
+
+  PublicKey(const std::string& value) {
+    size_t size = PUBLIC_KEY_LENGTH;
+    b58tobin(bytes.data(), &size, value.c_str(), 0);
   }
 
   ~PublicKey() {
@@ -33,8 +38,12 @@ public:
     return true;
   }
 
-  const char* toBase58() {
-    return value;
+  std::string toBase58() const {
+    char temp[45];
+    memset(temp, 0, 45);
+    size_t size = 45;
+    b58enc(temp, &size, bytes.data(), bytes.size());
+    return std::string(temp, size - 1);
   }
 
 };
