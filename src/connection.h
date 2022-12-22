@@ -494,15 +494,14 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   /**
    * Returns the current solana versions running on the node
    */
-  void getVersion() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"getVersion"}
-'    */
-
-    /*
-{ "jsonrpc": "2.0", "result": { "solana-core": "1.14.3" }, "id": 1 }
-    */
+  std::string getVersion() {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getVersion"},
+    });
+    auto result = response["result"];
+    return result["solana-core"].get<std::string>();
   }
 
   /**

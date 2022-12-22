@@ -1,9 +1,7 @@
 .vscode/settings.json
 
-examples/get_account_info
-examples/get_balance
-examples/get_cluster_nodes
-examples/get_identity
+examples/*
+examples/!*.cpp
 
-tests/base64
-tests/websocket
+tests/*
+tests/!*.cpp
