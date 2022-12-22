@@ -21,28 +21,6 @@
 namespace solana {
 namespace http {
 
-struct http_request_t {
-  std::string method;
-  std::string url;
-  std::string body;
-  std::string content_type;
-  std::map<std::string, std::string> headers;
-};
-
-struct http_response_t {
-  int status_code;
-  std::string body;
-};
-
-http_response_t post(const std::string url, solana::json::json_object_t& request) {
-
-  return { .status_code = 200, .body = "" };
-
-}
-
-
-
-
 class HttpClient {
   const std::string _interface;
   const std::string _url;
@@ -268,6 +246,20 @@ public:
   }
 
 };
+
+solana::json::json_value_t* post(const std::string url, solana::json::json_object_t& request) {
+  HttpClient client(url, 443);
+  client.connect();
+  //TODO return error if not connected
+  assert(client.is_connected());
+  int response_length = 0;
+  char* response_buffer = client.post(request, &response_length);
+  client.disconnect();
+  char* response_content = strstr(response_buffer, "\r\n\r\n") + 4;
+  json_value_t *response = (json_value_t*)malloc(sizeof(json_value_t));
+  solana::json::parse(response_content, response_content - response_buffer, response);
+  return response;
+}
 
 }
 }

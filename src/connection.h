@@ -196,10 +196,8 @@ public:
     json_object_t config;
     params.add(config);
     config.add("encoding", "base64");
-    http::http_response_t response = http::post(_rpcEndpoint, request);
-    json_value_t result;
-    json::parse(response.body, result);
-    json_value_t* value = (*(result["result"]))["value"];
+    json_value_t* result = http::post(_rpcEndpoint, request);
+    json_value_t* value = (*((*result)["result"]))["value"];
     auto accountInfo = AccountInfo {
       (*value)["executable"]->type == JSON_TRUE,
       PublicKey((*value)["owner"]->string.value),
@@ -221,10 +219,8 @@ public:
     json_array_t params;
     request.add("params", params);
     params.add(publicKey.toBase58());
-    http::http_response_t response = http::post(_rpcEndpoint, request);
-    json_value_t result;
-    json::parse(response.body, result);
-    json_value_t* value = (*(result["result"]))["value"];
+    json_value_t* result = http::post(_rpcEndpoint, request);
+    json_value_t* value = (*((*result)["result"]))["value"];
     return value->number;
   }
 
