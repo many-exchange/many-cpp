@@ -46,18 +46,14 @@ class Connection {
   }
 
 public:
-
   Connection(std::string endpoint, Commitment commitment)
     : _commitment(commitment)
     , _rpcEndpoint(endpoint)
     , _rpcWsEndpoint(makeWebsocketUrl(endpoint))
     //, _rpcClient(_rpcEndpoint, 443)
-    , _rpcWebSocket(_rpcWsEndpoint, 443)
-  {
-  }
+    , _rpcWebSocket(_rpcWsEndpoint, 443) {}
 
-  ~Connection() {
-  }
+  ~Connection() {}
 
   /**
    * Returns all information associated with the account of provided Pubkey
@@ -74,6 +70,7 @@ public:
         },
       }},
     });
+
     auto value = response["result"]["value"];
     auto accountInfo = AccountInfo {
       value["executable"].get<bool>(),
@@ -82,6 +79,7 @@ public:
       value["data"][0].get<std::string>(),
       value["rentEpoch"].get<uint64_t>(),
     };
+
     return accountInfo;
   }
 
@@ -97,6 +95,7 @@ public:
         publicKey.toBase58(),
       }},
     });
+
     auto value = response["result"]["value"];
     return value.get<uint64_t>();
   }
@@ -110,6 +109,7 @@ public:
       {"id", 1},
       {"method", "getClusterNodes"},
     });
+
     auto result = response["result"];
     return result;
   }
@@ -123,6 +123,7 @@ public:
       {"id", 1},
       {"method", "getIdentity"},
     });
+
     auto identity = response["result"]["identity"];
     return PublicKey(identity.get<std::string>());
   }
@@ -130,36 +131,26 @@ public:
   /**
    * Returns the leader schedule for an epoch
   */
-  void getLeaderSchedule() {
+  json getLeaderSchedule() {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "getLeaderSchedule"},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "4Qkev8aNZcqFNSRhQzwyLMFSsi94jHqE8WNVTJzTP99F": [
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-      21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
-      39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
-      57, 58, 59, 60, 61, 62, 63
-    ]
-  },
-  "id": 1
-}    */
+    auto leaderSchedule = response["result"];
+    return leaderSchedule;
   }
 
   /**
    * Returns the account information for a list of Pubkeys.
   */
-  void getMultipleAccounts(std::vector<PublicKey> publicKeys) {
+  std::vector<AccountInfo> getMultipleAccounts(std::vector<PublicKey> publicKeys) {
     std::vector<std::string> base58Keys;
     for (auto publicKey : publicKeys) {
       base58Keys.push_back(publicKey.toBase58());
     }
+
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -168,74 +159,54 @@ public:
         base58Keys,
         {
           {"encoding", "base64"},
-          /*
-          {"dataSlice", {
-            {"offset", 0},
-            {"length", 0},
-          }},
-          */
         },
       }},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "context": {
-      "slot": 1
-    },
-    "value": [
-      {
-        "data": ["AAAAAAEAAAACtzNsyJrW0g==", "base64"],
-        "executable": false,
-        "lamports": 1000000000,
-        "owner": "11111111111111111111111111111111",
-        "rentEpoch": 2
-      },
-      {
-        "data": ["", "base64"],
-        "executable": false,
-        "lamports": 5000000000,
-        "owner": "11111111111111111111111111111111",
-        "rentEpoch": 2
-      }
-    ]
-  },
-  "id": 1
-}    */
+    std::vector<AccountInfo> accountInfos;
+    auto accounts = response["result"]["value"];
+    for (auto account : accounts) {
+      accountInfos.push_back(AccountInfo {
+        account["executable"].get<bool>(),
+        PublicKey(account["owner"].get<std::string>()),
+        account["lamports"].get<uint64_t>(),
+        account["data"][0].get<std::string>(),
+        account["rentEpoch"].get<uint64_t>(),
+      });
+    }
+
+    return accountInfos;
   }
 
   /**
    * Returns all accounts owned by the provided program Pubkey
   */
-  void getProgramAccounts() {
+  std::vector<AccountInfo> getProgramAccounts(PublicKey programId) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "getProgramAccounts"},
       {"params", {
-        "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+        programId.toBase58(),
+        {
+          {"encoding", "base64"},
+        }
       }},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": [
-    {
-      "account": {
-        "data": "2R9jLfiAQ9bgdcw6h8s44439",
-        "executable": false,
-        "lamports": 15298080,
-        "owner": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
-        "rentEpoch": 28
-      },
-      "pubkey": "CxELquR1gPP8wHe33gZ4QxqGB3sZ9RSwsJ2KshVewkFY"
+    std::vector<AccountInfo> accountInfos;
+    auto accounts = response["result"];
+    for (auto account : accounts) {
+      accountInfos.push_back(AccountInfo {
+        account["executable"].get<bool>(),
+        PublicKey(account["owner"].get<std::string>()),
+        account["lamports"].get<uint64_t>(),
+        account["data"][0].get<std::string>(),
+        account["rentEpoch"].get<uint64_t>(),
+      });
     }
-  ],
-  "id": 1
-}    */
+
+    return accountInfos;
   }
 
   /**
