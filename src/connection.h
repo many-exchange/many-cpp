@@ -91,76 +91,27 @@ public:
   /**
    * Returns information about all the nodes participating in the cluster
    */
-  int getClusterNodes() {
+  json getClusterNodes() {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "getClusterNodes"},
     });
     auto result = response["result"];
-
-    std::cout << result.dump() << std::endl;
-
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": [
-    {
-      "gossip": "10.239.6.48:8001",
-      "pubkey": "9QzsJf7LPLj8GkXbYT3LFDKqsj2hHG7TA3xinJHu8epQ",
-      "rpc": "10.239.6.48:8899",
-      "tpu": "10.239.6.48:8856",
-      "version": "1.0.0 c375ce1f"
-    }
-  ],
-  "id": 1
-}    */
-
-      return 0;
-  }
-
-  /**
-   * Get the fee the network will charge for a particular Message
-  */
-  void getFeeForMessage() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-{
-  "id":1,
-  "jsonrpc":"2.0",
-  "method":"getFeeForMessage",
-  "params":[
-    "AQABAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQAA",
-    {
-      "commitment":"processed"
-    }
-  ]
-}
-'    */
-
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": { "context": { "slot": 5068 }, "value": 5000 },
-  "id": 1
-}    */
+    return result;
   }
 
   /**
    * Returns the identity pubkey for the current node
-  */
-  void getIdentity() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {"jsonrpc":"2.0","id":1, "method":"getIdentity"}
-'    */
-
-    /*
- {
-  "jsonrpc": "2.0",
-  "result": { "identity": "2r1F4iWqVcb8M1DbAjQuFpebkQHY9hcVU4WuW2DJBppN" },
-  "id": 1
-}   */
+   */
+  PublicKey getIdentity() {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getIdentity"},
+    });
+    auto identity = response["result"]["identity"];
+    return PublicKey(identity.get<std::string>());
   }
 
   /**
