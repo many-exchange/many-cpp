@@ -2,12 +2,16 @@
 
 #include <algorithm>
 #include <arpa/inet.h>
+#include <array>
+#include <assert.h>
 #include <fcntl.h>
+#include <iostream>
 #include <netdb.h>
 #include <openssl/err.h>
 #include <openssl/sha.h>
 #include <openssl/ssl.h>
 #include <string>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
