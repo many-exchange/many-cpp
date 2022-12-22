@@ -13,6 +13,10 @@ using namespace solana::http;
 
 namespace solana {
 
+struct Context {
+  uint64_t slot;
+};
+
 struct AccountInfo {
   /** `true` if this account's data contains a loaded program */
   bool executable;
@@ -571,36 +575,138 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
 
   // Subscription Websocket
 
-  int accountSubscribe() {
-    return -1;
+  int onAccountChange(PublicKey account, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "accountSubscribe"},
+      {"params", {
+        account.toBase58(),
+        {
+          {"encoding", "base64"},
+          {"commitment", _commitment},
+        },
+      }},
+    });
+    int subscriptionId = response["result"].get<int>();
+    //TODO cache this along with the callback.
+    /*
+    const id = ++this._accountChangeSubscriptionCounter;
+    this._accountChangeSubscriptions[id] = {
+      publicKey: publicKey.toBase58(),
+      callback,
+      commitment,
+      subscriptionId: null,
+    };
+    this._updateSubscriptions();
+    */
+    return subscriptionId;
   }
 
-  int accountUnsubscribe() {
-    return -1;
+  bool removeAccountChangeListener(int subscriptionId) {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "accountUnsubscribe"},
+      {"params", {
+        subscriptionId,
+      }},
+    });
+    //TODO remove the subscription and callback.
+    return response["result"].get<bool>();
   }
 
-  int logsSubscribe() {
-    return -1;
+  int onLogs() {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "logsSubscribe"},
+      {"params", {
+        "all",
+        {
+          {"commitment", _commitment},
+        },
+      }},
+    });
+    int subscriptionId = response["result"].get<int>();
+    //TODO
+    return subscriptionId;
   }
 
-  int logsUnsubscribe() {
-    return -1;
+  bool removeOnLogsListener(int subscriptionId) {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "logsUnsubscribe"},
+      {"params", {
+        subscriptionId,
+      }},
+    });
+    //TODO remove the subscription and callback.
+    return response["result"].get<bool>();
   }
 
-  int programSubscribe() {
-    return -1;
+  int onProgramAccountChange(PublicKey programId) {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "programSubscribe"},
+      {"params", {
+        programId.toBase58(),
+        {
+          {"encoding", "base64"},
+          {"commitment", _commitment},
+        },
+      }},
+    });
+    int subscriptionId = response["result"].get<int>();
+    //TODO
+    return subscriptionId;
   }
 
-  int programUnsubscribe() {
-    return -1;
+  bool removeProgramAccountChangeListener(int subscriptionId) {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "programUnsubscribe"},
+      {"params", {
+        subscriptionId,
+      }},
+    });
+    //TODO remove the subscription and callback.
+    return response["result"].get<bool>();
   }
 
-  int slotSubscribe() {
-    return -1;
+  int onSlotChange() {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "slotSubscribe"},
+    });
+    int subscriptionId = response["result"].get<int>();
+    //TODO
+    return subscriptionId;
   }
 
-  int slotUnsubscribe() {
-    return -1;
+  bool removeSlotChangeListener(int subscriptionId) {
+    //_rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "slotUnsubscribe"},
+      {"params", {
+        subscriptionId,
+      }},
+    });
+    //TODO remove the subscription and callback.
+    return response["result"].get<bool>();
   }
 
 };
