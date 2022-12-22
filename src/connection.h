@@ -6,6 +6,7 @@
 
 #include "http.h"
 #include "publickey.h"
+#include "websocket.h"
 
 using namespace solana;
 using namespace solana::http;
@@ -34,12 +35,24 @@ enum class Commitment {
 class Connection {
   Commitment _commitment;
   std::string _rpcEndpoint;
+  std::string _rpcWsEndpoint;
+  //HttpClient _rpcClient;
+  WebSocketClient _rpcWebSocket;
+
+  static std::string makeWebsocketUrl(std::string endpoint) {
+    auto url = endpoint;
+    url.replace(0, 4, "ws");
+    return url;
+  }
 
 public:
 
   Connection(std::string endpoint, Commitment commitment)
     : _commitment(commitment)
     , _rpcEndpoint(endpoint)
+    , _rpcWsEndpoint(makeWebsocketUrl(endpoint))
+    //, _rpcClient(_rpcEndpoint, 443)
+    , _rpcWebSocket(_rpcWsEndpoint, 443)
   {
   }
 
@@ -142,46 +155,28 @@ public:
   /**
    * Returns the account information for a list of Pubkeys.
   */
-  void getMultipleAccounts() {
+  void getMultipleAccounts(std::vector<PublicKey> publicKeys) {
+    std::vector<std::string> base58Keys;
+    for (auto publicKey : publicKeys) {
+      base58Keys.push_back(publicKey.toBase58());
+    }
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "getMultipleAccounts"},
       {"params", {
-        {
-          "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg",
-          "4fYNw3dojWmQ4dXtSGE9epjRGy9pFSx62YypT7avPYvA"
-        },
+        base58Keys,
         {
           {"encoding", "base64"},
+          /*
           {"dataSlice", {
             {"offset", 0},
             {"length", 0},
           }},
+          */
         },
       }},
     });
-
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "getMultipleAccounts",
-    "params": [
-      [
-        "vines1vzrYbzLMRdu58ou5XTby4qAqVRLmqo36NKPTg",
-        "4fYNw3dojWmQ4dXtSGE9epjRGy9pFSx62YypT7avPYvA"
-      ],
-      {
-        "dataSlice": {
-          "offset": 0,
-          "length": 0
-        }
-      }
-    ]
-  }
-'    */
 
     /*
 {
@@ -507,19 +502,18 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   /**
    * Submits a signed transaction to the cluster for processing.
    */
-  void sendTransaction() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "sendTransaction",
-    "params": [
-      "4hXTCkRzt9WyecNzV1XPgCDfGAZzQKNxLXgynz5QDuWWPSAZBZSHptvWRL3BjCvzUXRdKvHL2b7yGrRQcWyaqsaBCncVG7BFggS8w9snUts67BSh3EqKpXLUm5UMHfD7ZBe9GhARjbNQMLJ1QD3Spr6oMTBU6EhdB4RD8CP2xUxr2u3d6fos36PD98XS6oX8TQjLpsMwncs5DAMiD4nNnR8NBfyghGCWvCVifVwvA8B8TJxE1aiyiv2L429BCWfyzAme5sZW8rDb14NeCQHhZbtNqfXhcp2tAnaAT"
-    ]
-  }
-'
-    */
+  void sendTransaction(std::string signedTransaction) {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "sendTransaction"},
+      {"params", {
+        signedTransaction,
+        {
+          {"encoding", "base64"},
+        },
+      }},
+    });
 
     /*
 {
@@ -532,21 +526,18 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
   /**
    * Simulate sending a transaction
    */
-  void simulateTransaction() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "simulateTransaction",
-    "params": [
-      "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAEDArczbMia1tLmq7zz4DinMNN0pJ1JtLdqIJPUw3YrGCzYAMHBsgN27lcgB6H2WQvFgyZuJYHa46puOQo9yQ8CVQbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCp20C7Wj2aiuk5TReAXo+VTVg8QTHjs0UjNMMKCvpzZ+ABAgEBARU=",
-      {
-        "encoding":"base64",
-      }
-    ]
-  }
-'    */
+  void simulateTransaction(std::string signedTransaction) {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "simulateTransaction"},
+      {"params", {
+        signedTransaction,
+        {
+          {"encoding", "base64"},
+        },
+      }},
+    });
 
     /*
 {
