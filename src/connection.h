@@ -194,6 +194,7 @@ class Connection {
   }
 
 public:
+
   Connection(std::string endpoint, Commitment commitment)
     : _commitment(commitment)
     , _rpcEndpoint(endpoint)
@@ -202,6 +203,12 @@ public:
     , _rpcWebSocket(_rpcWsEndpoint, 443) {}
 
   ~Connection() {}
+
+  Connection() = delete;
+  Connection(const Connection&) = delete;
+  Connection(Connection&&) = delete;
+  Connection& operator=(const Connection&) = delete;
+  Connection& operator=(Connection&&) = delete;
 
   /**
    * Returns all information associated with the account of provided Pubkey

@@ -14,6 +14,7 @@ class PublicKey {
   std::array<char, PUBLIC_KEY_LENGTH> bytes;
 
 public:
+
   PublicKey() {
     for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
       bytes[i] = 0;
