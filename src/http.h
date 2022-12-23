@@ -156,7 +156,7 @@ private:
       std::cerr << "CONNECT FAILED" << std::endl;
       std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
       std::cerr << "  tcp_address = " << tcp_address << std::endl;
-      std::cerr << "  tcp_port = " << std::to_string(tcp_port) << std::endl;
+      std::cerr << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
       disconnect();
       return false;
     }
@@ -217,7 +217,7 @@ private:
     std::cout << "CONNECT" << std::endl;
     std::cout << "  socket = " << std::to_string(_socket) << std::endl;
     std::cout << "  tcp_address = " << tcp_address << std::endl;
-    std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl;
+    std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
 
     return true;
   }

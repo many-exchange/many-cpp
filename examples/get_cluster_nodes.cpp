@@ -6,7 +6,7 @@ int main() {
   auto connection = Connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
   auto nodes = connection.getClusterNodes();
 
-  std::cout << "nodes = " << nodes.dump() << std::endl;
+  std::cout << "nodes = " << nodes.dump() << std::endl << std::endl;
 
   return 0;
 }

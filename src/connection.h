@@ -33,6 +33,108 @@ struct AccountInfo {
   uint64_t rentEpoch;
 };
 
+struct TokenAmount {
+  /** The amount of lamports */
+  std::string amount;
+  /** The number of decimals for the token amount */
+  uint64_t decimals;
+  /** The amount of tokens as a floating point number */
+  double uiAmount;
+  /** The amount of tokens as a string */
+  std::string uiAmountString;
+};
+
+// TODO: could `TokenAccountInfo` be an extension of `AccountInfo`?
+struct TokenAccount {
+  /** The account data */
+  struct TokenAccountInfo {
+    struct TokenAccountData {
+      /* Name of token program (ex: spl-token) */
+      PublicKey program;
+      struct ParsedTokenAccountData {
+        /** The account type (ex: "account") */
+        std::string accountType;
+        struct TokenAccountBalanceInfo {
+          /** The amount of tokens */
+          TokenAmount tokenAmount;
+          /** The account this token account is delegated to */
+          PublicKey delegate;
+          /** Amount delegated */
+          TokenAmount delegatedAmount;
+          /** State of the token account (ex: "initialized") */
+          std::string state;
+          /** `true` if the account is native */
+          bool isNative;
+          /** The mint associated with this account */
+          PublicKey mint;
+          /** The account owner */
+          PublicKey owner;
+        } info;
+        /** The account type */
+        std::string type;
+      } parsed;
+      /** The length of the account data */
+      uint64_t space;
+    } data;
+    /** `true` if this account's data contains a loaded program */
+    bool executable;
+    /** Number of lamports assigned to the account */
+    uint64_t lamports;
+    /** Identifier of the program that owns the account */
+    PublicKey owner;
+    /** Optional rent epoch info for account */
+    uint64_t rentEpoch;
+  } account;
+  /** The account's public key */
+  PublicKey pubkey;
+};
+
+// TODO: comments
+struct TransactionInstruction {
+  uint64_t programIdIndex;
+  std::vector<uint8_t> data;
+  std::vector<uint64_t> accounts;
+};
+
+// TODO: comments
+struct TransactionMessage {
+  std::vector<PublicKey> accountKeys;
+  std::string recentBlockhash;
+  std::vector<TransactionInstruction> instructions;
+};
+
+// TODO: comments
+struct Transaction {
+  std::vector<std::string> signatures;
+  TransactionMessage message;
+};
+
+// TODO: comments
+struct TransactionReponse {
+  uint64_t slot;
+  Transaction transaction;
+  uint64_t blocktime;
+  // TODO: finish this typedef https://docs.solana.com/developing/clients/jsonrpc-api#gettransaction
+};
+
+struct SimulatedTransactionResponse {
+  /* Error if transaction failed */
+  std::string err;
+  /* Array of log messages the transaction instructions output during execution */
+  std::vector<std::string> logs;
+  /* Array of accounts with the same length as the accounts.addresses array in the request */
+  std::vector<AccountInfo> accounts;
+  /* The number of compute budget units consumed during the processing of this transaction */
+  uint64_t unitsConsumed;
+  /* The return data for the simulated transaction */
+  struct ReturnData {
+    /* The program that generated the return data */
+    PublicKey programId;
+    /* The return data itself */
+    std::string data;
+  } returnData;
+};
+
 struct Context {
   uint64_t slot;
 };
@@ -103,6 +205,7 @@ public:
 
   /**
    * Returns all information associated with the account of provided Pubkey
+   * @param publicKey The public key of the desired account
    */
   AccountInfo getAccountInfo(PublicKey publicKey) {
     auto response = http::post(_rpcEndpoint, {
@@ -131,6 +234,7 @@ public:
 
   /**
    * Fetch the balance for the specified public key
+   * @param publicKey The public key for the account to query
    */
   uint64_t getBalance(PublicKey publicKey) {
     auto response = http::post(_rpcEndpoint, {
@@ -190,6 +294,7 @@ public:
 
   /**
    * Returns the account information for a list of Pubkeys.
+   * @param publicKeys The public keys of the desired accounts
   */
   std::vector<AccountInfo> getMultipleAccounts(std::vector<PublicKey> publicKeys) {
     std::vector<std::string> base58Keys;
@@ -226,6 +331,7 @@ public:
 
   /**
    * Returns all accounts owned by the provided program Pubkey
+   * @param programId The public key for the program to query
   */
   std::vector<AccountInfo> getProgramAccounts(PublicKey programId) {
     auto response = http::post(_rpcEndpoint, {
@@ -258,40 +364,36 @@ public:
   /**
    * Returns the slot that has reached the given or default commitment level
   */
-  void getSlot() {
+  uint64_t getSlot() {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "getSlot"},
     });
 
-    /*
-{ "jsonrpc": "2.0", "result": 1234, "id": 1 }
-    */
+    auto slot = response["result"];
+    return slot;
   }
 
   /**
    * Returns the current slot leader
    */
-  void getSlotLeader() {
+  std::string getSlotLeader() {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "getSlotLeader"},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": "ENvAW7JScgYq6o4zKZwewtkzzJgDzuJAFxYasvmEQdpS",
-  "id": 1
-}    */
+    auto slotLeader = response["result"];
+    return slotLeader;
   }
 
   /**
    * Returns the token balance of an SPL Token account.
+   * @param tokenAddress The public key for the token account to query
    */
-  void getTokenAccountBalance(PublicKey tokenAddress) {
+  TokenAmount getTokenAccountBalance(PublicKey tokenAddress) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -301,28 +403,21 @@ public:
       }},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "context": {
-      "slot": 1114
-    },
-    "value": {
-      "amount": "9864",
-      "decimals": 2,
-      "uiAmount": 98.64,
-      "uiAmountString": "98.64"
-    },
-    "id": 1
-  }
-}    */
+    auto tokenBalance = response["result"]["value"];
+    return {
+      tokenBalance["amount"].get<std::string>(),
+      tokenBalance["decimals"].get<uint64_t>(),
+      tokenBalance["uiAmount"].get<double>(),
+      tokenBalance["uiAmountString"].get<std::string>(),
+    };
   }
 
   /**
    * Returns all SPL Token accounts by token owner.
+   * @param ownerAddress The owner of the token accounts
+   * @param mintAddress The mint of the token accounts
    */
-  void getTokenAccountsByOwner(PublicKey ownerAddress) {
+  std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress, PublicKey mintAddress) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -330,83 +425,64 @@ public:
       {"params", {
         ownerAddress.toBase58(),
         {
-          {"mint", "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E"},
+          {"mint", mintAddress.toBase58()},
         },
+        {
+          {"encoding", "jsonParsed"},
+        }
       }},
     });
 
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "getTokenAccountsByOwner",
-    "params": [
-      "4Qkev8aNZcqFNSRhQzwyLMFSsi94jHqE8WNVTJzTP99F",
-      {
-        "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E"
-      },
-      {
-        "encoding": "jsonParsed"
-      }
-    ]
-  }
-'    */
-
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "context": {
-      "slot": 1114
-    },
-    "value": [
-      {
-        "account": {
-          "data": {
-            "program": "spl-token",
-            "parsed": {
-              "accountType": "account",
-              "info": {
-                "tokenAmount": {
-                  "amount": "1",
-                  "decimals": 1,
-                  "uiAmount": 0.1,
-                  "uiAmountString": "0.1"
+    std::vector<TokenAccount> tokenAccounts;
+    auto accounts = response["result"]["value"];
+    for (auto account : accounts) {
+      auto tokenAccount = account["account"]["data"]["parsed"]["info"];
+      tokenAccounts.push_back(TokenAccount {
+        {
+          {
+            PublicKey(account["account"]["data"]["program"].get<std::string>()),
+            {
+              account["account"]["data"]["parsed"]["accountType"].get<std::string>(),
+              {
+                {
+                  account["data"]["parsed"]["info"]["tokenAmount"]["amount"].get<std::string>(),
+                  account["data"]["parsed"]["info"]["tokenAmount"]["decimals"].get<uint64_t>(),
+                  account["data"]["parsed"]["info"]["tokenAmount"]["uiAmount"].get<double>(),
+                  account["data"]["parsed"]["info"]["tokenAmount"]["uiAmountString"].get<std::string>(),
                 },
-                "delegate": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
-                "delegatedAmount": {
-                  "amount": "1",
-                  "decimals": 1,
-                  "uiAmount": 0.1,
-                  "uiAmountString": "0.1"
+                PublicKey(account["data"]["parsed"]["info"]["delegate"].get<std::string>()),
+                {
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["amount"].get<std::string>(),
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["decimals"].get<uint64_t>(),
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["uiAmount"].get<double>(),
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["uiAmountString"].get<std::string>(),
                 },
-                "state": "initialized",
-                "isNative": false,
-                "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E",
-                "owner": "4Qkev8aNZcqFNSRhQzwyLMFSsi94jHqE8WNVTJzTP99F"
+                account["data"]["parsed"]["info"]["state"].get<std::string>(),
+                account["data"]["parsed"]["info"]["isNative"].get<bool>(),
+                PublicKey(account["data"]["parsed"]["info"]["mint"].get<std::string>()),
+                PublicKey(account["data"]["parsed"]["info"]["owner"].get<std::string>()),
               },
-              "type": "account"
+              account["account"]["data"]["parsed"]["type"].get<std::string>(),
             },
-            "space": 165
+            account["account"]["data"]["space"].get<uint64_t>(),
           },
-          "executable": false,
-          "lamports": 1726080,
-          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          "rentEpoch": 4
+          account["account"]["executable"].get<bool>(),
+          account["account"]["lamports"].get<uint64_t>(),
+          PublicKey(account["account"]["owner"].get<std::string>()),
+          account["account"]["rentEpoch"].get<uint64_t>(),
         },
-        "pubkey": "C2gJg6tKpQs41PRS1nC8aw3ZKNZK3HQQZGVrDFDup5nx"
-      }
-    ]
-  },
-  "id": 1
-}    */
+        PublicKey(account["pubkey"].get<std::string>()),
+      });
+    }
+
+    return tokenAccounts;
   }
 
   /**
    * Returns the total supply of an SPL Token type.
+   * @param tokenMintAddress The token mint to query
    */
-  void getTokenSupply(PublicKey tokenMintAddress) {
+  TokenAmount getTokenSupply(PublicKey tokenMintAddress) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -416,41 +492,30 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
       }},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "context": {
-      "slot": 1114
-    },
-    "value": {
-      "amount": "100000",
-      "decimals": 2,
-      "uiAmount": 1000,
-      "uiAmountString": "1000"
-    }
-  },
-  "id": 1
-}
-    */
+    auto tokenSupply = response["result"]["value"];
+    return {
+      tokenSupply["amount"].get<std::string>(),
+      tokenSupply["decimals"].get<uint64_t>(),
+      tokenSupply["uiAmount"].get<double>(),
+      tokenSupply["uiAmountString"].get<std::string>(),
+    };
   }
 
   /**
    * Returns transaction details for a confirmed transaction
    */
-  void getTransaction() {
-    /*
-curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
-  {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "getTransaction",
-    "params": [
-      "2nBhEBYYvfaAe16UMNqRHre4YNSskvuYgx3M6E4JP1oDYvZEJHvoPzyUidNgNX5r9sTyN1J9UxtbCXy2rqYcuyuv",
-      "json"
-    ]
-  }
-'    */
+  void getTransaction(std::string transactionSignature) {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getTransaction"},
+      {"params", {
+        transactionSignature
+      }},
+    });
+
+    auto transaction = response["result"]["transaction"];
+    // TODO: finish this method once the typedefs are finished
 
     /*
 {
@@ -512,14 +577,17 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
       {"id", 1},
       {"method", "getVersion"},
     });
+
     auto result = response["result"];
     return result["solana-core"].get<std::string>();
   }
 
   /**
    * Submits a signed transaction to the cluster for processing.
+   * @param signedTransaction The signed transaction to submit
    */
-  void sendTransaction(std::string signedTransaction) {
+  // TODO: add an example?
+  std::string sendTransaction(std::string signedTransaction) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -532,200 +600,176 @@ curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
       }},
     });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": "2id3YC2jK9G5Wo2phDx4gJVAew8DcY5NAojnVuao8rkxwPYPe8cSwE5GzhEgJA2y8fVjDEo6iR6ykBvDxrTQrtpb",
-  "id": 1
-}    */
+    auto signature = response["result"];
+    return signature.get<std::string>();
   }
 
   /**
    * Simulate sending a transaction
+   * @param signedTransaction The signed transaction to simulate
    */
-  void simulateTransaction(std::string signedTransaction) {
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "simulateTransaction"},
-      {"params", {
-        signedTransaction,
-        {
-          {"encoding", "base64"},
-        },
-      }},
-    });
+  // TODO: finish this return value
+  // SimulatedTransactionResponse simulateTransaction(std::string signedTransaction) {
+  //   auto response = http::post(_rpcEndpoint, {
+  //     {"jsonrpc", "2.0"},
+  //     {"id", 1},
+  //     {"method", "simulateTransaction"},
+  //     {"params", {
+  //       signedTransaction,
+  //       {
+  //         {"encoding", "base64"},
+  //       },
+  //     }},
+  //   });
 
-    /*
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "context": {
-      "slot": 218
-    },
-    "value": {
-      "err": null,
-      "accounts": null,
-      "logs": [
-        "Program 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri invoke [1]",
-        "Program 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri consumed 2366 of 1400000 compute units",
-        "Program return: 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri KgAAAAAAAAA=",
-        "Program 83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri success"
-      ],
-      "returnData": {
-        "data": [
-          "Kg==",
-          "base64"
-        ],
-        "programId": "83astBRguLMdt2h5U1Tpdq5tjFoJ6noeGwaY3mDLVcri"
-      },
-      "unitsConsumed": 2366
-    }
-  },
-  "id": 1
-}    */
-  }
+  //   auto result = response["result"]["value"];
+  //   return {
+  //     result["err"].get<std::string>(),
+  //     result["logs"].get<std::vector<std::string>>(),
+  //     
+  //   };
+  // }
 
   // Subscription Websocket
 
-  int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-    //TODO _rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "accountSubscribe"},
-      {"params", {
-        accountId.toBase58(),
-        {
-          {"encoding", "base64"},
-          {"commitment", _commitment},
-        },
-      }},
-    });
-    int subscriptionId = response["result"].get<int>();
-    _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
-    return subscriptionId;
-  }
+  // int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+  //   //TODO _rpcWebSocket
+  //   auto response = http::post(_rpcEndpoint, {
+  //     {"jsonrpc", "2.0"},
+  //     {"id", 1},
+  //     {"method", "accountSubscribe"},
+  //     {"params", {
+  //       accountId.toBase58(),
+  //       {
+  //         {"encoding", "base64"},
+  //         {"commitment", _commitment},
+  //       },
+  //     }},
+  //   });
+  //   int subscriptionId = response["result"].get<int>();
+  //   _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
+  //   return subscriptionId;
+  // }
 
-  bool removeAccountChangeListener(int subscriptionId) {
-    //TODO _rpcWebSocket
-    if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
-      auto response = http::post(_rpcEndpoint, {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "accountUnsubscribe"},
-        {"params", {
-          subscriptionId,
-        }},
-      });
-      _accountChangeSubscriptions.erase(subscriptionId);
-      return response["result"].get<bool>();
-    }
-    return false;
-  }
+  // bool removeAccountChangeListener(int subscriptionId) {
+  //   //TODO _rpcWebSocket
+  //   if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
+  //     auto response = http::post(_rpcEndpoint, {
+  //       {"jsonrpc", "2.0"},
+  //       {"id", 1},
+  //       {"method", "accountUnsubscribe"},
+  //       {"params", {
+  //         subscriptionId,
+  //       }},
+  //     });
+  //     _accountChangeSubscriptions.erase(subscriptionId);
+  //     return response["result"].get<bool>();
+  //   }
+  //   return false;
+  // }
 
-  int onLogs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
-    //TODO _rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "logsSubscribe"},
-      {"params", {
-        "mentions",
-        {
-          {"mentions", accountId.toBase58()},
-        },
-        {
-          {"commitment", _commitment},
-        },
-      }},
-    });
-    int subscriptionId = response["result"].get<int>();
-    _logsSubscriptions[subscriptionId] = { accountId, callback };
-    return subscriptionId;
-  }
+  // int onLogs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
+  //   //TODO _rpcWebSocket
+  //   auto response = http::post(_rpcEndpoint, {
+  //     {"jsonrpc", "2.0"},
+  //     {"id", 1},
+  //     {"method", "logsSubscribe"},
+  //     {"params", {
+  //       "mentions",
+  //       {
+  //         {"mentions", accountId.toBase58()},
+  //       },
+  //       {
+  //         {"commitment", _commitment},
+  //       },
+  //     }},
+  //   });
+  //   int subscriptionId = response["result"].get<int>();
+  //   _logsSubscriptions[subscriptionId] = { accountId, callback };
+  //   return subscriptionId;
+  // }
 
-  bool removeOnLogsListener(int subscriptionId) {
-    //TODO _rpcWebSocket
-    if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
-      auto response = http::post(_rpcEndpoint, {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "logsUnsubscribe"},
-        {"params", {
-          subscriptionId,
-        }},
-      });
-      _logsSubscriptions.erase(subscriptionId);
-      return response["result"].get<bool>();
-    }
-    return false;
-  }
+  // bool removeOnLogsListener(int subscriptionId) {
+  //   //TODO _rpcWebSocket
+  //   if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
+  //     auto response = http::post(_rpcEndpoint, {
+  //       {"jsonrpc", "2.0"},
+  //       {"id", 1},
+  //       {"method", "logsUnsubscribe"},
+  //       {"params", {
+  //         subscriptionId,
+  //       }},
+  //     });
+  //     _logsSubscriptions.erase(subscriptionId);
+  //     return response["result"].get<bool>();
+  //   }
+  //   return false;
+  // }
 
-  int onProgramAccountChange(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
-    //TODO _rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "programSubscribe"},
-      {"params", {
-        programId.toBase58(),
-        {
-          {"encoding", "base64"},
-          {"commitment", _commitment},
-        },
-      }},
-    });
-    int subscriptionId = response["result"].get<int>();
-    _programAccountChangeSubscriptions[subscriptionId] = { programId, callback };
-    return subscriptionId;
-  }
+  // int onProgramAccountChange(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
+  //   //TODO _rpcWebSocket
+  //   auto response = http::post(_rpcEndpoint, {
+  //     {"jsonrpc", "2.0"},
+  //     {"id", 1},
+  //     {"method", "programSubscribe"},
+  //     {"params", {
+  //       programId.toBase58(),
+  //       {
+  //         {"encoding", "base64"},
+  //         {"commitment", _commitment},
+  //       },
+  //     }},
+  //   });
+  //   int subscriptionId = response["result"].get<int>();
+  //   _programAccountChangeSubscriptions[subscriptionId] = { programId, callback };
+  //   return subscriptionId;
+  // }
 
-  bool removeProgramAccountChangeListener(int subscriptionId) {
-    //TODO _rpcWebSocket
-    if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
-      auto response = http::post(_rpcEndpoint, {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "programUnsubscribe"},
-        {"params", {
-          subscriptionId,
-        }},
-      });
-      _programAccountChangeSubscriptions.erase(subscriptionId);
-      return response["result"].get<bool>();
-    }
-    return false;
-  }
+  // bool removeProgramAccountChangeListener(int subscriptionId) {
+  //   //TODO _rpcWebSocket
+  //   if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
+  //     auto response = http::post(_rpcEndpoint, {
+  //       {"jsonrpc", "2.0"},
+  //       {"id", 1},
+  //       {"method", "programUnsubscribe"},
+  //       {"params", {
+  //         subscriptionId,
+  //       }},
+  //     });
+  //     _programAccountChangeSubscriptions.erase(subscriptionId);
+  //     return response["result"].get<bool>();
+  //   }
+  //   return false;
+  // }
 
-  int onSlotChange(std::function<void(Context context, SlotInfo slotInfo)> callback) {
-    //TODO _rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "slotSubscribe"},
-    });
-    int subscriptionId = response["result"].get<int>();
-    _slotSubscriptions[subscriptionId] = callback;
-    return subscriptionId;
-  }
+  // int onSlotChange(std::function<void(Context context, SlotInfo slotInfo)> callback) {
+  //   //TODO _rpcWebSocket
+  //   auto response = http::post(_rpcEndpoint, {
+  //     {"jsonrpc", "2.0"},
+  //     {"id", 1},
+  //     {"method", "slotSubscribe"},
+  //   });
+  //   int subscriptionId = response["result"].get<int>();
+  //   _slotSubscriptions[subscriptionId] = callback;
+  //   return subscriptionId;
+  // }
 
-  bool removeSlotChangeListener(int subscriptionId) {
-    //TODO _rpcWebSocket
-    if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
-      auto response = http::post(_rpcEndpoint, {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "slotUnsubscribe"},
-        {"params", {
-          subscriptionId,
-        }},
-      });
-      _slotSubscriptions.erase(subscriptionId);
-      return response["result"].get<bool>();
-    }
-    return false;
-  }
+  // bool removeSlotChangeListener(int subscriptionId) {
+  //   //TODO _rpcWebSocket
+  //   if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
+  //     auto response = http::post(_rpcEndpoint, {
+  //       {"jsonrpc", "2.0"},
+  //       {"id", 1},
+  //       {"method", "slotUnsubscribe"},
+  //       {"params", {
+  //         subscriptionId,
+  //       }},
+  //     });
+  //     _slotSubscriptions.erase(subscriptionId);
+  //     return response["result"].get<bool>();
+  //   }
+  //   return false;
+  // }
 
 };
 
