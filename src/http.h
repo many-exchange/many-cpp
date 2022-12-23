@@ -72,9 +72,8 @@ class HttpClient {
   }
 
 public:
-
   HttpClient(const std::string url, int port, const std::string interface = "")
-    : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr) { }
+    : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr) {}
 
   ~HttpClient() {
     disconnect();
@@ -86,8 +85,7 @@ public:
   HttpClient& operator=(const HttpClient&) = delete;
   HttpClient& operator=(HttpClient&&) = delete;
 
-  bool is_connected()
-  {
+  bool is_connected() {
     return _socket != -1 && _ssl != nullptr;
   }
 
@@ -109,10 +107,8 @@ public:
     assert(server->h_addrtype == AF_INET);
 
     int i = 0;
-    while (server->h_addr_list[i] != NULL)
-    {
-      if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port))
-      {
+    while (server->h_addr_list[i] != NULL) {
+      if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port)) {
         return true;
       }
       i++;
@@ -122,9 +118,7 @@ public:
   }
 
 private:
-
-  bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port)
-  {
+  bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port) {
     assert(_socket == -1);
 
     _socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -151,8 +145,7 @@ private:
 
     std::string tcp_address = inet_ntoa(*addr);
 
-    if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1)
-    {
+    if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1) {
       std::cerr << "CONNECT FAILED" << std::endl;
       std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
       std::cerr << "  tcp_address = " << tcp_address << std::endl;
@@ -174,11 +167,9 @@ private:
     if (_ssl == NULL) {
       std::cerr << "Error: SSL_new() failed" << std::endl;
       int err;
-      while ((err = ERR_get_error()) != 0)
-      {
+      while ((err = ERR_get_error()) != 0) {
         char *str = ERR_error_string(err, 0);
-        if (str != nullptr)
-        {
+        if (str != nullptr) {
           std::cerr << str << std::endl;
         }
       }
@@ -194,20 +185,16 @@ private:
 
     SSL_set_tlsext_host_name(_ssl, hostname.c_str());
 
-    while (true)
-    {
+    while (true) {
       int ret = SSL_connect(_ssl);
 
-      if (ret == 1)
-      {
+      if (ret == 1) {
         break;
       }
-      else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ)
-      {
+      else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
         // Not enough data because we are using non-blocking IO.
       }
-      else
-      {
+      else {
         std::cerr << "Error: SSL_connect() failed" << std::endl;
         disconnect();
         return false;
@@ -223,7 +210,6 @@ private:
   }
 
 public:
-
   bool disconnect() {
     if (_ssl != nullptr) {
       SSL_shutdown(_ssl);
