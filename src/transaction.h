@@ -48,7 +48,6 @@ struct TransactionInstruction {
 };
 
 struct Transaction {
-
   /**
    * Signatures for the transaction.  Typically created by invoking the
    * `sign()` method
@@ -654,7 +653,6 @@ struct Transaction {
     return transaction;
   }
   */
-
 };
 
 }

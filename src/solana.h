@@ -2,9 +2,7 @@
 
 #include <string>
 
-/**
- * There are 1-billion lamports in one SOL
- */
+/* There are 1-billion lamports in one SOL */
 #define LAMPORTS_PER_SOL 1000000000
 
 #define NATIVE_MINT PublicKey("So11111111111111111111111111111111111111112")

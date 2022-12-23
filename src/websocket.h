@@ -51,19 +51,16 @@ class WebSocketClient {
   //TODO move this into the base64 header
   const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-  std::string base64_encode(unsigned char const* buf, unsigned int bufLen)
-  {
+  std::string base64_encode(unsigned char const* buf, unsigned int bufLen) {
     std::string ret;
     int i = 0;
     int j = 0;
     unsigned char char_array_3[3];
     unsigned char char_array_4[4];
 
-    while (bufLen--)
-    {
+    while (bufLen--) {
       char_array_3[i++] = *(buf++);
-      if (i == 3)
-      {
+      if (i == 3) {
         char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
         char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
         char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
@@ -75,8 +72,7 @@ class WebSocketClient {
       }
     }
 
-    if (i)
-    {
+    if (i) {
       for(j = i; j < 3; j++)
         char_array_3[j] = '\0';
 
@@ -95,8 +91,7 @@ class WebSocketClient {
     return ret;
   }
 
-  void send_message(uint8_t opcode, const char* message, size_t message_size)
-  {
+  void send_message(uint8_t opcode, const char* message, size_t message_size) {
     int send_length = 0;
 
     _send_buffer[send_length] = opcode | FIN_FLAG;
@@ -104,20 +99,17 @@ class WebSocketClient {
 
     //size_t message_size = message.size();
 
-    if (message_size <= 125)
-    {
+    if (message_size <= 125) {
       _send_buffer[send_length] = message_size | MASK_FLAG;
       send_length++;
     }
-    else if (message_size <= 65535)
-    {
+    else if (message_size <= 65535) {
       _send_buffer[send_length] = (uint8_t)(126 | MASK_FLAG);
       _send_buffer[send_length + 1] = (message_size >> 8) & 0xFF;
       _send_buffer[send_length + 2] = message_size & 0xFF;
       send_length += 3;
     }
-    else
-    {
+    else {
       std::cerr << "Message too big." << std::endl;
       disconnect();
       return;
@@ -130,8 +122,7 @@ class WebSocketClient {
     send_length += 4;
 
     //const char* msg = message.c_str();
-    for (size_t i = 0; i < message_size; ++i)
-    {
+    for (size_t i = 0; i < message_size; ++i) {
         _send_buffer[send_length + i] = message[i] ^ _send_mask[i % 4];
     }
 
@@ -140,34 +131,26 @@ class WebSocketClient {
     write(_send_buffer, send_length);
   }
 
-  bool validate_handshake(char *buffer, int length)
-  {
+  bool validate_handshake(char *buffer, int length) {
     bool accept = false;
 
     int start = 0;
     int end = 0;
-    while (end < length)
-    {
+    while (end < length) {
       end++;
 
-      if (buffer[end] == '\n')
-      {
-        if (strncmp(&buffer[start], "Connection: ", 12) == 0)
-        {
-          if (strncmp(&buffer[start], "Connection: Upgrade", 19) != 0 && strncmp(&buffer[start], "Connection: upgrade", 19) != 0)
-          {
+      if (buffer[end] == '\n') {
+        if (strncmp(&buffer[start], "Connection: ", 12) == 0) {
+          if (strncmp(&buffer[start], "Connection: Upgrade", 19) != 0 && strncmp(&buffer[start], "Connection: upgrade", 19) != 0) {
             return false;
           }
         }
-        else if (strncmp(&buffer[start], "Upgrade: ", 9) == 0)
-        {
-          if (strncmp(&buffer[start], "Upgrade: websocket", 18) != 0)
-          {
+        else if (strncmp(&buffer[start], "Upgrade: ", 9) == 0) {
+          if (strncmp(&buffer[start], "Upgrade: websocket", 18) != 0) {
             return false;
           }
         }
-        else if (strncmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0)
-        {
+        else if (strncmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0) {
           std::string key = base64_encode(_nonce.begin(), 16) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
           char sha1[20];
@@ -184,26 +167,21 @@ class WebSocketClient {
     return accept;
   }
 
-  bool write(const void* buffer, const int length)
-  {
-    if (is_connected())
-    {
+  bool write(const void* buffer, const int length) {
+    if (is_connected()) {
       return false;
     }
 
     assert(length > 0);
     int return_code = SSL_write(_ssl, buffer, length);
 
-    if (_handshake_complete)
-    {
+    if (_handshake_complete) {
       //TODO: log
     }
 
-    if (return_code <= 0)
-    {
+    if (return_code <= 0) {
         int err = SSL_get_error(_ssl, length);
-        switch (err)
-        {
+        switch (err) {
             case SSL_ERROR_WANT_WRITE:
             {
                 std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl;
@@ -239,7 +217,6 @@ class WebSocketClient {
   }
 
 public:
-
   WebSocketClient(const std::string url, int port, const std::string interface = "")
     : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr) {
     _nonce[16] = 0;
@@ -255,8 +232,7 @@ public:
   WebSocketClient& operator=(const WebSocketClient&) = delete;
   WebSocketClient& operator=(WebSocketClient&&) = delete;
 
-  bool is_connected()
-  {
+  bool is_connected() {
     return _socket != -1 && _ssl != nullptr;
   }
 
@@ -280,10 +256,8 @@ public:
     assert(server->h_addrtype == AF_INET);
 
     int i = 0;
-    while (server->h_addr_list[i] != NULL)
-    {
-      if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port, resource))
-      {
+    while (server->h_addr_list[i] != NULL) {
+      if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port, resource)) {
         return true;
       }
       i++;
@@ -293,9 +267,7 @@ public:
   }
 
 private:
-
-  bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port, const std::string& resource)
-  {
+  bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port, const std::string& resource) {
     assert(_socket == -1);
 
     _handshake_complete = false;
@@ -324,8 +296,7 @@ private:
 
     std::string tcp_address = inet_ntoa(*addr);
 
-    if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1)
-    {
+    if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1) {
       std::cerr << "CONNECT FAILED" << std::endl;
       std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
       std::cerr << "  tcp_address = " << tcp_address << std::endl;
@@ -347,11 +318,9 @@ private:
     if (_ssl == NULL) {
       std::cerr << "Error: SSL_new() failed" << std::endl;
       int err;
-      while ((err = ERR_get_error()) != 0)
-      {
+      while ((err = ERR_get_error()) != 0) {
         char *str = ERR_error_string(err, 0);
-        if (str != nullptr)
-        {
+        if (str != nullptr) {
           std::cerr << str << std::endl;
         }
       }
@@ -367,20 +336,16 @@ private:
 
     SSL_set_tlsext_host_name(_ssl, hostname.c_str());
 
-    while (true)
-    {
+    while (true) {
       int ret = SSL_connect(_ssl);
 
-      if (ret == 1)
-      {
+      if (ret == 1) {
         break;
       }
-      else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ)
-      {
+      else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
         // Not enough data because we are using non-blocking IO.
       }
-      else
-      {
+      else {
         std::cerr << "Error: SSL_connect() failed" << std::endl;
         disconnect();
         return false;
@@ -406,22 +371,18 @@ private:
 
     write(_send_buffer, send_length);
 
-    while (is_connected())
-    {
+    while (is_connected()) {
       int length;
       char *buffer = begin_read(length);
 
-      if (length > 0)
-      {
-        if (validate_handshake(buffer, length))
-        {
+      if (length > 0) {
+        if (validate_handshake(buffer, length)) {
           end_read(0);
           _handshake_complete = true;
           *((uint32_t *)_send_mask) = rand();
           return true;
         }
-        else
-        {
+        else {
           end_read(0);
           std::cerr << "HANDSHAKE FAILED" << std::endl;
           disconnect();
@@ -436,7 +397,6 @@ private:
   }
 
 public:
-
   bool disconnect() {
     if (_ssl != nullptr) {
       SSL_shutdown(_ssl);
@@ -454,17 +414,14 @@ public:
     return true;
   }
 
-  bool can_read()
-  {
+  bool can_read() {
     return is_connected() && _handshake_complete;
   }
 
-  char* begin_read(int& length)
-  {
+  char* begin_read(int& length) {
     length = 0;
 
-    if (!is_connected())
-    {
+    if (!is_connected()) {
       return nullptr;
     }
 
@@ -476,20 +433,16 @@ public:
     FD_SET(_socket, &readfds);
     int rv = select(_socket + 1, &readfds, NULL, NULL, &tv);
 
-    if(rv > 0 && FD_ISSET(_socket, &readfds))
-    {
+    if(rv > 0 && FD_ISSET(_socket, &readfds)) {
       length = SSL_read(_ssl, _receive_buffer, 8192);
 
-      if (length > 0)
-      {
+      if (length > 0) {
         return _receive_buffer;
       }
-      else if (length < 0)
-      {
+      else if (length < 0) {
         std::cerr << "READ FAILED" << std::endl;
 
-        switch (SSL_get_error(_ssl, length))
-        {
+        switch (SSL_get_error(_ssl, length)) {
           case SSL_ERROR_WANT_WRITE: std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl; break;
           case SSL_ERROR_WANT_READ: std::cerr << "SSL_ERROR_WANT_READ" << std::endl; break;
           case SSL_ERROR_ZERO_RETURN: std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl; break;
@@ -504,45 +457,36 @@ public:
 
       return nullptr;
     }
-    else
-    {
+    else {
       return nullptr;
     }
   }
 
-  void end_read(uint64_t timestamp)
-  {
-    if (_handshake_complete)
-    {
+  void end_read(uint64_t timestamp) {
+    if (_handshake_complete) {
       //TODO: log
     }
   }
 
-  void send_close(std::string message)
-  {
+  void send_close(std::string message) {
     send_message(OPCODE_CLOSE, message.c_str(), message.size());
   }
 
-  void send_ping(std::string message)
-  {
+  void send_ping(std::string message) {
     send_message(OPCODE_PING, message.c_str(), message.size());
   }
 
-  void send_pong(std::string message)
-  {
+  void send_pong(std::string message) {
     send_message(OPCODE_PONG, message.c_str(), message.size());
   }
 
-  void send_text(std::string message)
-  {
+  void send_text(std::string message) {
     send_message(OPCODE_TEXT, message.c_str(), message.size());
   }
 
-  void send_text(const char* message, size_t message_size)
-  {
+  void send_text(const char* message, size_t message_size) {
     send_message(OPCODE_TEXT, message, message_size);
   }
-
 };
 
 }
