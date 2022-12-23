@@ -2,12 +2,12 @@
 
 using namespace solana;
 
-// TODO: this example is not working.
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
-  auto leaderSchedule = connection.getLeaderSchedule();
+  auto leader = connection.getSlotLeader();
+  auto leaderSchedule = connection.getLeaderSchedule(leader);
 
-  std::cout << "leaderSchedule: " << leaderSchedule << std::endl << std::endl;
+  std::cout << "leaderSchedule: " << leaderSchedule.dump() << std::endl << std::endl;
 
   return 0;
 }
