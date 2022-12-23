@@ -20,11 +20,6 @@ public:
     }
   }
 
-  PublicKey(const char* value) {
-    size_t size = PUBLIC_KEY_LENGTH;
-    b58tobin(bytes.data(), &size, value, 0);
-  }
-
   PublicKey(const std::string& value) {
     size_t size = PUBLIC_KEY_LENGTH;
     b58tobin(bytes.data(), &size, value.c_str(), 0);
