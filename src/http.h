@@ -33,7 +33,7 @@ class HttpClient {
   SSL *_ssl;
 
   char _send_buffer[65536];
-  char _recv_buffer[65536 * 16];
+  char _recv_buffer[8388608];
 
   bool write(const char *data, size_t length) {
     int ret = SSL_write(_ssl, data, (int)length);
