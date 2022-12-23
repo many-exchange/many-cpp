@@ -10,12 +10,10 @@ namespace solana {
 #define PUBLIC_KEY_LENGTH 32
 
 class PublicKey {
-
-  // An array of bytes representing the public key
+  /* An array of bytes representing the public key */
   std::array<char, PUBLIC_KEY_LENGTH> bytes;
 
 public:
-
   PublicKey() {
     for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
       bytes[i] = 0;
@@ -33,8 +31,7 @@ public:
     }
   }
 
-  ~PublicKey() {
-  }
+  ~PublicKey() {}
 
   bool operator==(const PublicKey& other) const {
     for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
@@ -42,6 +39,7 @@ public:
         return false;
       }
     }
+
     return true;
   }
 
@@ -50,9 +48,9 @@ public:
     memset(temp, 0, 45);
     size_t size = 45;
     b58enc(temp, &size, bytes.data(), bytes.size());
+
     return std::string(temp, size - 1);
   }
-
 };
 
 }
