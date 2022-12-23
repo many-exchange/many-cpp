@@ -441,9 +441,8 @@ public:
   /**
    * Returns all SPL Token accounts by token owner.
    * @param ownerAddress The owner of the token accounts
-   * @param mintAddress The mint of the token accounts
    */
-  std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress, PublicKey mintAddress) {
+  std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -451,7 +450,73 @@ public:
       {"params", {
         ownerAddress.toBase58(),
         {
-          {"mint", mintAddress.toBase58()},
+          {"programId", TOKEN_PROGRAM_ID.toBase58()},
+        },
+        {
+          {"encoding", "jsonParsed"},
+        }
+      }},
+    });
+
+    std::vector<TokenAccount> tokenAccounts;
+    auto accounts = response["result"]["value"];
+    for (auto account : accounts) {
+      auto tokenAccount = account["account"]["data"]["parsed"]["info"];
+      tokenAccounts.push_back(TokenAccount {
+        {
+          {
+            PublicKey(account["account"]["data"]["program"].get<std::string>()),
+            {
+              account["account"]["data"]["parsed"]["accountType"].get<std::string>(),
+              {
+                {
+                  account["data"]["parsed"]["info"]["tokenAmount"]["amount"].get<std::string>(),
+                  account["data"]["parsed"]["info"]["tokenAmount"]["decimals"].get<uint64_t>(),
+                  account["data"]["parsed"]["info"]["tokenAmount"]["uiAmount"].get<double>(),
+                  account["data"]["parsed"]["info"]["tokenAmount"]["uiAmountString"].get<std::string>(),
+                },
+                PublicKey(account["data"]["parsed"]["info"]["delegate"].get<std::string>()),
+                {
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["amount"].get<std::string>(),
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["decimals"].get<uint64_t>(),
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["uiAmount"].get<double>(),
+                  account["data"]["parsed"]["info"]["delegatedAmount"]["uiAmountString"].get<std::string>(),
+                },
+                account["data"]["parsed"]["info"]["state"].get<std::string>(),
+                account["data"]["parsed"]["info"]["isNative"].get<bool>(),
+                PublicKey(account["data"]["parsed"]["info"]["mint"].get<std::string>()),
+                PublicKey(account["data"]["parsed"]["info"]["owner"].get<std::string>()),
+              },
+              account["account"]["data"]["parsed"]["type"].get<std::string>(),
+            },
+            account["account"]["data"]["space"].get<uint64_t>(),
+          },
+          account["account"]["executable"].get<bool>(),
+          account["account"]["lamports"].get<uint64_t>(),
+          PublicKey(account["account"]["owner"].get<std::string>()),
+          account["account"]["rentEpoch"].get<uint64_t>(),
+        },
+        PublicKey(account["pubkey"].get<std::string>()),
+      });
+    }
+
+    return tokenAccounts;
+  }
+
+  /**
+   * Returns all SPL Token accounts or a given mint by token owner.
+   * @param ownerAddress The owner of the token accounts
+   * @param mintAddress The mint of the token accounts
+   */
+  std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress, PublicKey tokenMint) {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getTokenAccountsByOwner"},
+      {"params", {
+        ownerAddress.toBase58(),
+        {
+          {"mint", tokenMint.toBase58()},
         },
         {
           {"encoding", "jsonParsed"},

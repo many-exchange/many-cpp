@@ -2,7 +2,7 @@
 
 using namespace solana;
 
-// TODO: test this example when get_token_accounts_by_owner works.
+// TODO: test this example
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
   auto tokenAccounts = connection.getTokenAccountsByOwner(PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"), NATIVE_MINT);
