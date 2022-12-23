@@ -192,7 +192,7 @@ class Connection {
   std::string _rpcEndpoint;
   std::string _rpcWsEndpoint;
   //HttpClient _rpcClient;
-  WebSocketClient _rpcWebSocket;
+  //WebSocketClient _rpcWebSocket;
 
   std::map<int, AccountChangeSubscriptionInfo> _accountChangeSubscriptions;
   std::map<int, LogsSubscriptionInfo> _logsSubscriptions;
@@ -212,7 +212,9 @@ public:
     , _rpcEndpoint(endpoint)
     , _rpcWsEndpoint(makeWebsocketUrl(endpoint))
     //, _rpcClient(_rpcEndpoint, 443)
-    , _rpcWebSocket(_rpcWsEndpoint, 443) {}
+    //, _rpcWebSocket(_rpcWsEndpoint, 443)
+  {
+  }
 
   ~Connection() {}
 
@@ -654,25 +656,26 @@ public:
   //   };
   // }
 
-  /* Subscription Websocket */
-  int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-    //TODO _rpcWebSocket
-    auto response = http::post(_rpcEndpoint, {
-      {"jsonrpc", "2.0"},
-      {"id", 1},
-      {"method", "accountSubscribe"},
-      {"params", {
-        accountId.toBase58(),
-        {
-          {"encoding", "base64"},
-          {"commitment", _commitment},
-        },
-      }},
-    });
-    int subscriptionId = response["result"].get<int>();
-    _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
-    return subscriptionId;
-  }
+  // Subscription Websocket
+
+  // int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+  //   //TODO _rpcWebSocket
+  //   auto response = http::post(_rpcEndpoint, {
+  //     {"jsonrpc", "2.0"},
+  //     {"id", 1},
+  //     {"method", "accountSubscribe"},
+  //     {"params", {
+  //       accountId.toBase58(),
+  //       {
+  //         {"encoding", "base64"},
+  //         {"commitment", _commitment},
+  //       },
+  //     }},
+  //   });
+  //   int subscriptionId = response["result"].get<int>();
+  //   _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
+  //   return subscriptionId;
+  // }
 
   bool removeAccountChangeListener(int subscriptionId) {
     //TODO _rpcWebSocket
