@@ -32,8 +32,8 @@ class HttpClient {
   SSL_CTX *_ssl_ctx;
   SSL *_ssl;
 
-  char _send_buffer[65536];
-  char _recv_buffer[8388608];
+  char* _send_buffer = nullptr;
+  char* _recv_buffer = nullptr;
 
   bool write(const char *data, size_t length) {
     int ret = SSL_write(_ssl, data, (int)length);
@@ -73,10 +73,17 @@ class HttpClient {
 
 public:
   HttpClient(const std::string url, int port, const std::string interface = "")
-    : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr) {}
+    : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr)
+  {
+    _send_buffer = (char*)malloc(65536);
+    _recv_buffer = (char*)malloc(8388608);
+  }
 
   ~HttpClient() {
     disconnect();
+
+    free(_send_buffer);
+    free(_recv_buffer);
   }
 
   HttpClient() = delete;
