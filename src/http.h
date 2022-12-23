@@ -239,6 +239,7 @@ public:
     send_length += json_string.size();
 
     write(_send_buffer, send_length);
+    std::cout << _send_buffer << std::endl << std::endl;
 
     *recv_length = read(&_recv_buffer[*recv_length], 8192);
 
