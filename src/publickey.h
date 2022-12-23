@@ -16,6 +16,12 @@ class PublicKey {
 
 public:
 
+  PublicKey() {
+    for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+      bytes[i] = 0;
+    }
+  }
+
   PublicKey(const char* value) {
     size_t size = PUBLIC_KEY_LENGTH;
     b58tobin(bytes.data(), &size, value, 0);
@@ -24,6 +30,12 @@ public:
   PublicKey(const std::string& value) {
     size_t size = PUBLIC_KEY_LENGTH;
     b58tobin(bytes.data(), &size, value.c_str(), 0);
+  }
+
+  PublicKey(const PublicKey& other) {
+    for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+      bytes[i] = other.bytes[i];
+    }
   }
 
   ~PublicKey() {
