@@ -16,8 +16,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include "base64.h"
-
 namespace solana {
 
 class WebSocketClient {

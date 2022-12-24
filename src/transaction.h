@@ -3,7 +3,6 @@
 #include <set>
 #include <vector>
 
-#include "keypair.h"
 #include "message.h"
 
 namespace solana {
