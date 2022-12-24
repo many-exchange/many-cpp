@@ -3,10 +3,14 @@
 #include <assert.h>
 #include <iostream>
 #include <map>
+#include <sodium.h>
 #include <string>
+#include <vector>
 
 #include "http.h"
+#include "keypair.h"
 #include "publickey.h"
+#include "transaction.h"
 #include "websocket.h"
 
 using namespace solana;
@@ -31,6 +35,31 @@ struct AccountInfo {
   std::string data;
   /** Optional rent epoch info for account */
   uint64_t rentEpoch;
+};
+
+struct Context {
+  uint64_t slot;
+};
+
+struct KeyedAccountInfo {
+  PublicKey accountId;
+  AccountInfo accountInfo;
+};
+
+struct Logs {
+  //TODO
+  //err: TransactionError | null;
+  std::vector<std::string> logs;
+  std::string signature;
+};
+
+struct SlotInfo {
+  /** Currently processing slot */
+  uint64_t slot;
+  /** Parent of the current slot */
+  uint64_t parent;
+  /** The root block of the current slot's fork */
+  uint64_t root;
 };
 
 struct TokenAmount {
@@ -89,32 +118,6 @@ struct TokenAccount {
 };
 
 // TODO: comments
-struct TransactionInstruction {
-  uint64_t programIdIndex;
-  std::vector<uint8_t> data;
-  std::vector<uint64_t> accounts;
-};
-
-// TODO: comments
-struct TransactionMessage {
-  std::vector<PublicKey> accountKeys;
-  std::string recentBlockhash;
-  std::vector<TransactionInstruction> instructions;
-};
-
-// TODO: comments
-struct Transaction {
-  std::vector<std::string> signatures;
-  TransactionMessage message;
-};
-
-// struct TransactionRewards {
-//   std::vector<std::string> rewards;
-//   std::string postBalance;
-//   std::string rewardType;
-// };
-
-// TODO: comments
 struct TransactionReponse {
   uint64_t slot;
   Transaction transaction;
@@ -145,31 +148,6 @@ struct SimulatedTransactionResponse {
     /* The return data itself */
     std::string data;
   } returnData;
-};
-
-struct Context {
-  uint64_t slot;
-};
-
-struct KeyedAccountInfo {
-  PublicKey accountId;
-  AccountInfo accountInfo;
-};
-
-struct Logs {
-  //TODO
-  //err: TransactionError | null;
-  std::vector<std::string> logs;
-  std::string signature;
-};
-
-struct SlotInfo {
-  /** Currently processing slot */
-  uint64_t slot;
-  /** Parent of the current slot */
-  uint64_t parent;
-  /** The root block of the current slot's fork */
-  uint64_t root;
 };
 
 struct AccountChangeSubscriptionInfo {
@@ -214,6 +192,10 @@ public:
     //, _rpcClient(_rpcEndpoint, 443)
     //, _rpcWebSocket(_rpcWsEndpoint, 443)
   {
+    auto sodium_result = sodium_init();
+    if (sodium_result == -1) {
+      throw std::runtime_error("Failed to initialize libsodium");
+    }
   }
 
   ~Connection() {}
@@ -302,7 +284,7 @@ public:
   /**
    * Returns the latest blockhash
    */
-  json getLatestBlockhash() {
+  std::string getLatestBlockhash() {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
@@ -689,16 +671,22 @@ public:
 
   /**
    * Submits a signed transaction to the cluster for processing.
-   * @param signedTransaction The signed transaction to submit
+   * @param transaction The transaction to submit
+   * @param keypair The keypair used to sign the transaction
    */
   // TODO: add an example?
-  std::string sendTransaction(std::string signedTransaction) {
+  std::string sendTransaction(Transaction& transaction, std::vector<Keypair> signers) {
+    transaction.recentBlockhash = getLatestBlockhash();
+    transaction.sign(signers);
+    std::vector<uint8_t> wireTransaction = transaction.serialize();
+    std::string encodedTransaction = base64::base64_encode(wireTransaction.data(), wireTransaction.size());
+
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
       {"id", 1},
       {"method", "sendTransaction"},
       {"params", {
-        signedTransaction,
+        encodedTransaction,
         {
           {"encoding", "base64"},
         },
@@ -737,24 +725,24 @@ public:
 
   // Subscription Websocket
 
-  // int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-  //   //TODO _rpcWebSocket
-  //   auto response = http::post(_rpcEndpoint, {
-  //     {"jsonrpc", "2.0"},
-  //     {"id", 1},
-  //     {"method", "accountSubscribe"},
-  //     {"params", {
-  //       accountId.toBase58(),
-  //       {
-  //         {"encoding", "base64"},
-  //         {"commitment", _commitment},
-  //       },
-  //     }},
-  //   });
-  //   int subscriptionId = response["result"].get<int>();
-  //   _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
-  //   return subscriptionId;
-  // }
+  int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    //TODO _rpcWebSocket
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "accountSubscribe"},
+      {"params", {
+        accountId.toBase58(),
+        {
+          {"encoding", "base64"},
+          {"commitment", _commitment},
+        },
+      }},
+    });
+    int subscriptionId = response["result"].get<int>();
+    _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
+    return subscriptionId;
+  }
 
   bool removeAccountChangeListener(int subscriptionId) {
     //TODO _rpcWebSocket
