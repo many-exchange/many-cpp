@@ -300,8 +300,22 @@ public:
   }
 
   /**
+   * Returns the latest blockhash
+   */
+  json getLatestBlockhash() {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getLatestBlockhash"},
+    });
+
+    auto blockhash = response["result"]["blockhash"];
+    return blockhash;
+  }
+
+  /**
    * Returns the leader schedule for an epoch
-  */
+   */
   json getLeaderSchedule(PublicKey leaderAddress) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
