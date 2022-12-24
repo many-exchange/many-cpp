@@ -111,6 +111,14 @@ struct Transaction {
    */
   NonceInformation* nonceInfo = nullptr;
 
+  Transaction() { }
+
+  Transaction(
+    PublicKey feePayer,
+    std::vector<TransactionInstruction> instructions,
+    std::string recentBlockhash
+  ) : feePayer(feePayer), instructions(instructions), recentBlockhash(recentBlockhash) { }
+
   /**
    * Add one or more instructions to this Transaction
    */

@@ -298,7 +298,7 @@ json post(const std::string url, json request) {
   char* response = client.post(request, &response_length);
   client.disconnect();
 
-  //std::cout << response << std::endl;
+  std::cout << response << std::endl;
   //std::cout << "response_length = " << response_length << std::endl;
 
   return json::parse(std::string(response, response_length));
