@@ -3,8 +3,6 @@
 #include <fstream>
 #include <sodium.h>
 
-#include "publickey.h"
-
 namespace solana {
 
 struct Keypair {

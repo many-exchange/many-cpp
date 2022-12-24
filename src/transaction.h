@@ -5,7 +5,6 @@
 
 #include "keypair.h"
 #include "message.h"
-#include "publickey.h"
 
 namespace solana {
 

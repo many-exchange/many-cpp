@@ -3,8 +3,6 @@
 #include <iostream>
 #include <vector>
 
-#include "publickey.h"
-
 namespace solana {
 
 int decodeLength(std::vector<uint8_t> bytes) {
