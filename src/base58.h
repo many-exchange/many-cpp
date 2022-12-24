@@ -191,3 +191,27 @@ bool b58check_enc(char *b58c, size_t *b58c_sz, uint8_t ver, const void *data, si
 
 	return b58enc(b58c, b58c_sz, buf, 1 + datasz + 4);
 }
+
+inline std::string b58decode(const std::string &b58) {
+  size_t decodedSize = b58.size() * 733 / 1000 + 1;
+  char decoded[decodedSize];
+  const bool ok = b58tobin(decoded, &decodedSize, b58.c_str(), 0);
+  if (ok) {
+    // remove zero bytes in front of result
+    size_t offset = (b58.size() * 733 / 1000 + 1) - decodedSize;
+    return std::string(decoded + offset, decodedSize);
+  } else
+    return std::string();
+}
+
+template <typename T>
+inline std::string b58encode(const T &str) {
+  size_t b58Size = str.size() * 138 / 100 + 1;
+  std::string b58(b58Size, '\0');
+  const bool ok = b58enc(b58.data(), &b58Size, str.data(), str.size());
+  if (ok) {
+    // remove zero byte at end of result
+    return std::string(b58.data(), b58Size - 1);
+  } else
+    return std::string();
+}

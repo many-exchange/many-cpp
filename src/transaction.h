@@ -1,79 +1,99 @@
 #pragma once
 
+#include <set>
 #include <vector>
 
+#include "keypair.h"
+#include "message.h"
 #include "publickey.h"
 
 namespace solana {
+
+#define SIGNATURE_LENGTH 64
+
+const std::vector<uint8_t> DEFAULT_SIGNATURE = {0};
 
 /**
  * Account metadata used to define instructions
  */
 struct AccountMeta {
-  PublicKey* pubkey;
+  /** An account's public key */
+  PublicKey pubkey;
+  /** True if an instruction requires a transaction signature matching `pubkey` */
   bool isSigner;
+  /** True if the `pubkey` can be loaded as a read-write account. */
   bool isWritable;
-};
 
-/**
- * Blockhash as Base58 string.
- */
-struct Blockhash {
-  uint8_t* value;
-};
+  AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable)
+    : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
 
-/**
- * Nonce information to be used to build an offline Transaction.
- */
-struct NonceInformation {
-  PublicKey* nonceAccount;
-  Blockhash* nonceValue;
-};
-
-/**
- * Pair of signature and corresponding public key
- */
-struct SignaturePubkeyPair {
-  uint8_t* signature;
-  PublicKey* publicKey;
+  AccountMeta(PublicKey pubkey, bool isSigner)
+    : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
 };
 
 /**
  * Transaction Instruction class
  */
 struct TransactionInstruction {
+  /**
+   * Public keys to include in this transaction
+   * Boolean represents whether this pubkey needs to sign the transaction
+   */
+  std::vector<AccountMeta> keys;
+  /**
+   * Program Id to execute
+   */
   PublicKey programId;
+  /**
+   * Program input
+   */
   std::vector<uint8_t> data;
-  std::vector<PublicKey> keys;
+
+  TransactionInstruction(
+    std::vector<AccountMeta> keys,
+    PublicKey programId,
+    std::vector<uint8_t> data
+  ) : keys(keys), programId(programId), data(data) { }
+
+  TransactionInstruction(
+    std::vector<AccountMeta> keys,
+    PublicKey programId,
+    Message message
+  ) : keys(keys), programId(programId), data(message.serialize()) { }
+
 };
 
+/**
+ * Pair of signature and corresponding public key
+ */
+struct SignaturePubkeyPair {
+  std::string signature;
+  PublicKey publicKey;
+};
+
+/**
+ * Nonce information to be used to build an offline Transaction.
+ */
+struct NonceInformation {
+  /** The current blockhash stored in the nonce */
+  std::string nonce;
+  TransactionInstruction nonceInstruction;
+};
+
+/**
+ * Transaction class
+ */
 struct Transaction {
   /**
    * Signatures for the transaction.  Typically created by invoking the
    * `sign()` method
    */
-  std::vector<SignaturePubkeyPair*> signatures;
+  std::vector<SignaturePubkeyPair> signatures;
 
   /**
    * The transaction fee payer
    */
-  PublicKey* feePayer;
-
-  /**
-   * The instructions to atomically execute
-   */
-  std::vector<TransactionInstruction*> instructions;
-
-  /**
-   * A recent transaction id. Must be populated by the caller
-   */
-  Blockhash* recentBlockhash;
-
-  /**
-   * Optional Nonce information. If populated, transaction will use a durable
-   * Nonce hash instead of a recentBlockhash. Must be populated by the caller
-   */
-  NonceInformation* nonceInfo;
+  PublicKey feePayer;
 
   /**
    * The instructions to atomically execute
@@ -81,270 +101,115 @@ struct Transaction {
   std::vector<TransactionInstruction> instructions;
 
   /**
+   * A recent transaction id. Must be populated by the caller
+   */
+  std::string recentBlockhash;
+
+  /**
+   * Optional Nonce information. If populated, transaction will use a durable
+   * Nonce hash instead of a recentBlockhash. Must be populated by the caller
+   */
+  NonceInformation* nonceInfo = nullptr;
+
+  /**
    * Add one or more instructions to this Transaction
    */
-  /*
-  add(
-    ...items: Array<
-      Transaction | TransactionInstruction | TransactionInstructionCtorFields
-    >
-  ): Transaction {
-    if (items.length === 0) {
-      throw new Error('No instructions');
+  Transaction* add(
+    std::vector<TransactionInstruction> items
+  ) {
+    if (items.size() == 0) {
+      throw std::runtime_error("No instructions");
     }
-
-    items.forEach((item: any) => {
-      if ('instructions' in item) {
-        this.instructions = this.instructions.concat(item.instructions);
-      } else if ('data' in item && 'programId' in item && 'keys' in item) {
-        this.instructions.push(item);
-      } else {
-        this.instructions.push(new TransactionInstruction(item));
-      }
-    });
+    for (auto item : items) {
+      instructions.push_back(item);
+    }
     return this;
   }
-  */
 
   /**
    * Compile transaction data
    */
-  /*
-  compileMessage(): Message {
-    const {nonceInfo} = this;
-    if (nonceInfo && this.instructions[0] != nonceInfo.nonceInstruction) {
-      this.recentBlockhash = nonceInfo.nonce;
-      this.instructions.unshift(nonceInfo.nonceInstruction);
+  Message compile_message() {
+    /*
+    if (nonceInfo && instructions[0] != nonceInfo->nonceInstruction) {
+      recentBlockhash = nonceInfo->nonce;
+      instructions.insert(instructions.begin(), nonceInfo->nonceInstruction);
     }
-    const {recentBlockhash} = this;
-    if (!recentBlockhash) {
-      throw new Error('Transaction recentBlockhash required');
+    if (recentBlockhash == nullptr) {
+      throw std::runtime_error("Transaction recentBlockhash required");
     }
-
-    if (this.instructions.length < 1) {
-      console.warn('No instructions provided');
+    if (instructions.size() < 1) {
+      std::cout << "No instructions provided";
     }
-
-    let feePayer: PublicKey;
-    if (this.feePayer) {
-      feePayer = this.feePayer;
-    } else if (this.signatures.length > 0 && this.signatures[0].publicKey) {
+    PublicKey* feePayer;
+    if (this->feePayer) {
+      feePayer = this->feePayer;
+    } else if (signatures.size() > 0 && signatures[0].publicKey) {
       // Use implicit fee payer
-      feePayer = this.signatures[0].publicKey;
+      feePayer = signatures[0].publicKey;
     } else {
-      throw new Error('Transaction fee payer required');
+      throw std::runtime_error("Transaction fee payer required");
     }
-
-    for (let i = 0; i < this.instructions.length; i++) {
-      if (this.instructions[i].programId === undefined) {
-        throw new Error(
-          `Transaction instruction index ${i} has undefined program id`,
+    for (int i = 0; i < instructions.size(); i++) {
+      if (instructions[i].programId == nullptr) {
+        throw std::runtime_error(
+          "Transaction instruction index " + std::to_string(i) + " has undefined program id"
         );
       }
     }
 
-    const programIds: string[] = [];
-    const accountMetas: AccountMeta[] = [];
-    this.instructions.forEach(instruction => {
-      instruction.keys.forEach(accountMeta => {
-        accountMetas.push({...accountMeta});
-      });
-
-      const programId = instruction.programId.toString();
-      if (!programIds.includes(programId)) {
-        programIds.push(programId);
+    std::vector<std::string> programIds;
+    std::vector<AccountMeta> accountMetas;
+    for (auto instruction : instructions) {
+      for (auto accountMeta : instruction.keys) {
+        accountMetas.push_back(accountMeta);
       }
-    });
-
-    // Append programID account metas
-    programIds.forEach(programId => {
-      accountMetas.push({
-        pubkey: new PublicKey(programId),
-        isSigner: false,
-        isWritable: false,
-      });
-    });
-
-    // Sort. Prioritizing first by signer, then by writable
-    accountMetas.sort(function (x, y) {
-      const checkSigner = x.isSigner === y.isSigner ? 0 : x.isSigner ? -1 : 1;
-      const checkWritable =
-        x.isWritable === y.isWritable ? 0 : x.isWritable ? -1 : 1;
-      return checkSigner || checkWritable;
-    });
-
-    // Cull duplicate account metas
-    const uniqueMetas: AccountMeta[] = [];
-    accountMetas.forEach(accountMeta => {
-      const pubkeyString = accountMeta.pubkey.toString();
-      const uniqueIndex = uniqueMetas.findIndex(x => {
-        return x.pubkey.toString() === pubkeyString;
-      });
-      if (uniqueIndex > -1) {
-        uniqueMetas[uniqueIndex].isWritable =
-          uniqueMetas[uniqueIndex].isWritable || accountMeta.isWritable;
-      } else {
-        uniqueMetas.push(accountMeta);
-      }
-    });
-
-    // Move fee payer to the front
-    const feePayerIndex = uniqueMetas.findIndex(x => {
-      return x.pubkey.equals(feePayer);
-    });
-    if (feePayerIndex > -1) {
-      const [payerMeta] = uniqueMetas.splice(feePayerIndex, 1);
-      payerMeta.isSigner = true;
-      payerMeta.isWritable = true;
-      uniqueMetas.unshift(payerMeta);
-    } else {
-      uniqueMetas.unshift({
-        pubkey: feePayer,
-        isSigner: true,
-        isWritable: true,
-      });
-    }
-
-    // Disallow unknown signers
-    for (const signature of this.signatures) {
-      const uniqueIndex = uniqueMetas.findIndex(x => {
-        return x.pubkey.equals(signature.publicKey);
-      });
-      if (uniqueIndex > -1) {
-        if (!uniqueMetas[uniqueIndex].isSigner) {
-          uniqueMetas[uniqueIndex].isSigner = true;
-          console.warn(
-            'Transaction references a signature that is unnecessary, ' +
-              'only the fee payer and instruction signer accounts should sign a transaction. ' +
-              'This behavior is deprecated and will throw an error in the next major version release.',
-          );
-        }
-      } else {
-        throw new Error(`unknown signer: ${signature.publicKey.toString()}`);
+      std::string programId = instruction.programId->toBase58();
+      if (std::find(programIds.begin(), programIds.end(), programId) == programIds.end()) {
+        programIds.push_back(programId);
       }
     }
-
-    let numRequiredSignatures = 0;
-    let numReadonlySignedAccounts = 0;
-    let numReadonlyUnsignedAccounts = 0;
-
-    // Split out signing from non-signing keys and count header values
-    const signedKeys: string[] = [];
-    const unsignedKeys: string[] = [];
-    uniqueMetas.forEach(({pubkey, isSigner, isWritable}) => {
-      if (isSigner) {
-        signedKeys.push(pubkey.toString());
-        numRequiredSignatures += 1;
-        if (!isWritable) {
-          numReadonlySignedAccounts += 1;
-        }
-      } else {
-        unsignedKeys.push(pubkey.toString());
-        if (!isWritable) {
-          numReadonlyUnsignedAccounts += 1;
+    std::vector<CompiledInstruction> compiled_instructions;
+    for (auto instruction : instructions) {
+      std::vector<uint8_t> accounts;
+      for (auto accountMeta : instruction.keys) {
+        int index = 0;
+        for (auto meta : accountMetas) {
+          if (meta.pubkey->toBase58() == accountMeta.pubkey->toBase58()) {
+            accounts.push_back(index);
+            break;
+          }
+          index++;
         }
       }
-    });
+      std::string programId = instruction.programId->toBase58();
+      int index = 0;
+      for (auto id : programIds) {
+        if (id == programId) {
+          break;
+        }
+        index++;
+      }
+      compiled_instructions.push_back(CompiledInstruction(
+        index,
+        accounts,
+        instruction.data
+      ));
+    }
 
-    const accountKeys = signedKeys.concat(unsignedKeys);
-    const instructions: CompiledInstruction[] = this.instructions.map(
-      instruction => {
-        const {data, programId} = instruction;
-        return {
-          programIdIndex: accountKeys.indexOf(programId.toString()),
-          accounts: instruction.keys.map(meta =>
-            accountKeys.indexOf(meta.pubkey.toString()),
-          ),
-          data: bs58.encode(data),
-        };
-      },
-    );
-
-    instructions.forEach(instruction => {
-      invariant(instruction.programIdIndex >= 0);
-      instruction.accounts.forEach(keyIndex => invariant(keyIndex >= 0));
-    });
-
-    return new Message({
-      header: {
-        numRequiredSignatures,
-        numReadonlySignedAccounts,
-        numReadonlyUnsignedAccounts,
-      },
-      accountKeys,
+    return Message(
+      MessageHeader(
+        1,
+        0,
+        0
+      ),
+      std::vector<PublicKey>{*feePayer},
       recentBlockhash,
-      instructions,
-    });
-  }
-  */
-
-  /**
-   * @internal
-   */
-  /*
-  _compile(): Message {
-    const message = this.compileMessage();
-    const signedKeys = message.accountKeys.slice(
-      0,
-      message.header.numRequiredSignatures,
+      compiled_instructions
     );
-
-    if (this.signatures.length === signedKeys.length) {
-      const valid = this.signatures.every((pair, index) => {
-        return signedKeys[index].equals(pair.publicKey);
-      });
-
-      if (valid) return message;
-    }
-
-    this.signatures = signedKeys.map(publicKey => ({
-      signature: null,
-      publicKey,
-    }));
-
-    return message;
+    */
+    throw std::runtime_error("Not implemented");
   }
-  */
-
-  /**
-   * Get a buffer of the Transaction data that need to be covered by signatures
-   */
-  /*
-  serializeMessage(): Buffer {
-    return this._compile().serialize();
-  }
-  */
-
-  /**
-   * Specify the public keys which will be used to sign the Transaction.
-   * The first signer will be used as the transaction fee payer account.
-   *
-   * Signatures can be added with either `partialSign` or `addSignature`
-   *
-   * @deprecated Deprecated since v0.84.0. Only the fee payer needs to be
-   * specified and it can be set in the Transaction constructor or with the
-   * `feePayer` property.
-   */
-  /*
-  setSigners(...signers: Array<PublicKey>) {
-    if (signers.length === 0) {
-      throw new Error('No signers');
-    }
-
-    const seen = new Set();
-    this.signatures = signers
-      .filter(publicKey => {
-        const key = publicKey.toString();
-        if (seen.has(key)) {
-          return false;
-        } else {
-          seen.add(key);
-          return true;
-        }
-      })
-      .map(publicKey => ({signature: null, publicKey}));
-  }
-  */
 
   /**
    * Sign the Transaction with the specified signers. Multiple signatures may
@@ -360,299 +225,113 @@ struct Transaction {
    *
    * The Transaction must be assigned a valid `recentBlockhash` before invoking this method
    */
-  /*
-  sign(...signers: Array<Signer>) {
-    if (signers.length === 0) {
-      throw new Error('No signers');
+  void sign(
+    std::vector<Keypair> signers
+  ) {
+    if (signers.size() == 0) {
+      throw std::runtime_error("No signers");
     }
 
     // Dedupe signers
-    const seen = new Set();
-    const uniqueSigners = [];
-    for (const signer of signers) {
-      const key = signer.publicKey.toString();
-      if (seen.has(key)) {
+    std::set<std::string> seen;
+    /*
+    std::vector<Signer*> uniqueSigners;
+    for (auto signer : signers) {
+      std::string key = signer->publicKey->toBase58();
+      if (seen.find(key) != seen.end()) {
         continue;
       } else {
-        seen.add(key);
-        uniqueSigners.push(signer);
+        seen.insert(key);
+        uniqueSigners.push_back(signer);
       }
     }
 
-    this.signatures = uniqueSigners.map(signer => ({
-      signature: null,
-      publicKey: signer.publicKey,
-    }));
-
-    const message = this._compile();
-    this._partialSign(message, ...uniqueSigners);
-    this._verifySignatures(message.serialize(), true);
-  }
-  */
-
-  /**
-   * Partially sign a transaction with the specified accounts. All accounts must
-   * correspond to either the fee payer or a signer account in the transaction
-   * instructions.
-   *
-   * All the caveats from the `sign` method apply to `partialSign`
-   */
-  /*
-  partialSign(...signers: Array<Signer>) {
-    if (signers.length === 0) {
-      throw new Error('No signers');
+    for (auto signer : uniqueSigners) {
+      signatures.push_back(SignaturePubkeyPair(
+        std::vector<uint8_t>{},
+        *signer->publicKey
+      ));
     }
 
-    // Dedupe signers
-    const seen = new Set();
-    const uniqueSigners = [];
-    for (const signer of signers) {
-      const key = signer.publicKey.toString();
-      if (seen.has(key)) {
-        continue;
-      } else {
-        seen.add(key);
-        uniqueSigners.push(signer);
-      }
-    }
-
-    const message = this._compile();
-    this._partialSign(message, ...uniqueSigners);
+    Message message = compile_message();
+    partial_sign(message, uniqueSigners);
+    verify_signatures(message.serialize(), true);
+    */
+    throw std::runtime_error("Not implemented");
   }
-  */
-
-  /**
-   * @internal
-   */
-  /*
-  _partialSign(message: Message, ...signers: Array<Signer>) {
-    const signData = message.serialize();
-    signers.forEach(signer => {
-      const signature = nacl.sign.detached(signData, signer.secretKey);
-      this._addSignature(signer.publicKey, toBuffer(signature));
-    });
-  }
-  */
-
-  /**
-   * Add an externally created signature to a transaction. The public key
-   * must correspond to either the fee payer or a signer account in the transaction
-   * instructions.
-   */
-  /*
-  addSignature(pubkey: PublicKey, signature: Buffer) {
-    this._compile(); // Ensure signatures array is populated
-    this._addSignature(pubkey, signature);
-  }
-  */
-
-  /**
-   * @internal
-   */
-  /*
-  _addSignature(pubkey: PublicKey, signature: Buffer) {
-    invariant(signature.length === 64);
-
-    const index = this.signatures.findIndex(sigpair =>
-      pubkey.equals(sigpair.publicKey),
-    );
-    if (index < 0) {
-      throw new Error(`unknown signer: ${pubkey.toString()}`);
-    }
-
-    this.signatures[index].signature = Buffer.from(signature);
-  }
-  */
-
-  /**
-   * Verify signatures of a complete, signed Transaction
-   */
-  /*
-  verifySignatures(): boolean {
-    return this._verifySignatures(this.serializeMessage(), true);
-  }
-  */
-
-  /**
-   * @internal
-   */
-  /*
-  _verifySignatures(signData: Buffer, requireAllSignatures: boolean): boolean {
-    for (const {signature, publicKey} of this.signatures) {
-      if (signature === null) {
-        if (requireAllSignatures) {
-          return false;
-        }
-      } else {
-        if (
-          !nacl.sign.detached.verify(signData, signature, publicKey.toBuffer())
-        ) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  */
 
   /**
    * Serialize the Transaction in the wire format.
    */
-  /*
-  serialize(config?: SerializeConfig): Buffer {
-    const {requireAllSignatures, verifySignatures} = Object.assign(
-      {requireAllSignatures: true, verifySignatures: true},
-      config,
-    );
-
-    const signData = this.serializeMessage();
-    if (
-      verifySignatures &&
-      !this._verifySignatures(signData, requireAllSignatures)
-    ) {
-      throw new Error('Signature verification failed');
-    }
-
-    return this._serialize(signData);
+  std::vector<uint8_t> serialize() const {
+    /*
+    Message message = compile_message();
+    return message.serialize();
+    */
+    throw std::runtime_error("Not implemented");
   }
-  */
-
-  /**
-   * @internal
-   */
-  /*
-  _serialize(signData: Buffer): Buffer {
-    const {signatures} = this;
-    const signatureCount: number[] = [];
-    shortvec.encodeLength(signatureCount, signatures.length);
-    const transactionLength =
-      signatureCount.length + signatures.length * 64 + signData.length;
-    const wireTransaction = Buffer.alloc(transactionLength);
-    invariant(signatures.length < 256);
-    Buffer.from(signatureCount).copy(wireTransaction, 0);
-    signatures.forEach(({signature}, index) => {
-      if (signature !== null) {
-        invariant(signature.length === 64, `signature has invalid length`);
-        Buffer.from(signature).copy(
-          wireTransaction,
-          signatureCount.length + index * 64,
-        );
-      }
-    });
-    signData.copy(
-      wireTransaction,
-      signatureCount.length + signatures.length * 64,
-    );
-    invariant(
-      wireTransaction.length <= PACKET_DATA_SIZE,
-      `Transaction too large: ${wireTransaction.length} > ${PACKET_DATA_SIZE}`,
-    );
-    return wireTransaction;
-  }
-  */
-
-  /**
-   * Deprecated method
-   * @internal
-   */
-  /*
-  get keys(): Array<PublicKey> {
-    invariant(this.instructions.length === 1);
-    return this.instructions[0].keys.map(keyObj => keyObj.pubkey);
-  }
-  */
-
-  /**
-   * Deprecated method
-   * @internal
-   */
-  /*
-  get programId(): PublicKey {
-    invariant(this.instructions.length === 1);
-    return this.instructions[0].programId;
-  }
-  */
-
-  /**
-   * Deprecated method
-   * @internal
-   */
-  /*
-  get data(): Buffer {
-    invariant(this.instructions.length === 1);
-    return this.instructions[0].data;
-  }
-  */
 
   /**
    * Parse a wire transaction into a Transaction object.
    */
-  /*
-  static from(buffer: Buffer | Uint8Array | Array<number>): Transaction {
+  static Transaction from(
+    std::vector<uint8_t> buffer
+  ) {
     // Slice up wire data
-    let byteArray = [...buffer];
+    std::vector<uint8_t> byteArray = buffer;
 
-    const signatureCount = shortvec.decodeLength(byteArray);
-    let signatures = [];
-    for (let i = 0; i < signatureCount; i++) {
-      const signature = byteArray.slice(0, SIGNATURE_LENGTH);
-      byteArray = byteArray.slice(SIGNATURE_LENGTH);
-      signatures.push(bs58.encode(Buffer.from(signature)));
+    int signatureCount = decodeLength(byteArray);
+    std::vector<std::string> signatures;
+    for (int i = 0; i < signatureCount; i++) {
+      std::vector<uint8_t> signature = std::vector<uint8_t>(byteArray.begin(), byteArray.begin() + SIGNATURE_LENGTH);
+      byteArray.erase(byteArray.begin(), byteArray.begin() + SIGNATURE_LENGTH);
+      signatures.push_back(b58encode(signature));
     }
 
-    return Transaction.populate(Message.from(byteArray), signatures);
+    return populate(Message::from(byteArray), signatures);
   }
-  */
 
   /**
    * Populate Transaction object from message and signatures
    */
-  /*
-  static populate(
-    message: Message,
-    signatures: Array<string> = [],
-  ): Transaction {
-    const transaction = new Transaction();
+  static Transaction populate(
+    Message message,
+    std::vector<std::string> signatures = std::vector<std::string>()
+  ) {
+    Transaction transaction;
     transaction.recentBlockhash = message.recentBlockhash;
     if (message.header.numRequiredSignatures > 0) {
       transaction.feePayer = message.accountKeys[0];
     }
-    signatures.forEach((signature, index) => {
-      const sigPubkeyPair = {
-        signature:
-          signature == bs58.encode(DEFAULT_SIGNATURE)
-            ? null
-            : bs58.decode(signature),
-        publicKey: message.accountKeys[index],
-      };
-      transaction.signatures.push(sigPubkeyPair);
-    });
+    for (auto signature : signatures) {
+      SignaturePubkeyPair sigPubkeyPair;
+      if (signature == b58encode(DEFAULT_SIGNATURE)) {
+        sigPubkeyPair.signature = "";
+      } else {
+        sigPubkeyPair.signature = b58decode(signature);
+      }
+      sigPubkeyPair.publicKey = message.accountKeys[0];
+      transaction.signatures.push_back(sigPubkeyPair);
+    }
 
-    message.instructions.forEach(instruction => {
-      const keys = instruction.accounts.map(account => {
-        const pubkey = message.accountKeys[account];
-        return {
-          pubkey,
-          isSigner:
-            transaction.signatures.some(
-              keyObj => keyObj.publicKey.toString() === pubkey.toString(),
-            ) || message.isAccountSigner(account),
-          isWritable: message.isAccountWritable(account),
-        };
-      });
-
-      transaction.instructions.push(
-        new TransactionInstruction({
-          keys,
-          programId: message.accountKeys[instruction.programIdIndex],
-          data: bs58.decode(instruction.data),
-        }),
-      );
-    });
+    for (auto instruction : message.instructions) {
+      std::vector<AccountMeta> keys;
+      for (auto account : instruction.accounts) {
+        keys.push_back(AccountMeta(
+          message.accountKeys[account],
+          false
+        ));
+      }
+      transaction.instructions.push_back(TransactionInstruction(
+        keys,
+        message.accountKeys[instruction.programIdIndex],
+        instruction.data
+      ));
+    }
 
     return transaction;
   }
-  */
+
 };
 
 }

@@ -13,6 +13,7 @@
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "-lcrypto",
                 "-lssl",
+                "-lsodium",
             ],
             "options": {
                 "cwd": "${fileDirname}"

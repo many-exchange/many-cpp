@@ -3,10 +3,14 @@
 #include <assert.h>
 #include <iostream>
 #include <map>
+#include <sodium.h>
 #include <string>
+#include <vector>
 
 #include "http.h"
+#include "keypair.h"
 #include "publickey.h"
+#include "transaction.h"
 #include "websocket.h"
 
 using namespace solana;
@@ -31,6 +35,31 @@ struct AccountInfo {
   std::string data;
   /** Optional rent epoch info for account */
   uint64_t rentEpoch;
+};
+
+struct Context {
+  uint64_t slot;
+};
+
+struct KeyedAccountInfo {
+  PublicKey accountId;
+  AccountInfo accountInfo;
+};
+
+struct Logs {
+  //TODO
+  //err: TransactionError | null;
+  std::vector<std::string> logs;
+  std::string signature;
+};
+
+struct SlotInfo {
+  /** Currently processing slot */
+  uint64_t slot;
+  /** Parent of the current slot */
+  uint64_t parent;
+  /** The root block of the current slot's fork */
+  uint64_t root;
 };
 
 struct TokenAmount {
@@ -187,31 +216,6 @@ struct SimulatedTransactionResponse {
   } returnData;
 };
 
-struct Context {
-  uint64_t slot;
-};
-
-struct KeyedAccountInfo {
-  PublicKey accountId;
-  AccountInfo accountInfo;
-};
-
-struct Logs {
-  //TODO
-  //err: TransactionError | null;
-  std::vector<std::string> logs;
-  std::string signature;
-};
-
-struct SlotInfo {
-  /** Currently processing slot */
-  uint64_t slot;
-  /** Parent of the current slot */
-  uint64_t parent;
-  /** The root block of the current slot's fork */
-  uint64_t root;
-};
-
 struct AccountChangeSubscriptionInfo {
   /* The public key of the account to subscribe to */
   PublicKey accountId;
@@ -260,6 +264,10 @@ public:
     //, _rpcClient(_rpcEndpoint, 443)
     //, _rpcWebSocket(_rpcWsEndpoint, 443)
   {
+    auto sodium_result = sodium_init();
+    if (sodium_result == -1) {
+      throw std::runtime_error("Failed to initialize libsodium");
+    }
   }
 
   ~Connection() {}
@@ -351,8 +359,22 @@ public:
   }
 
   /**
+   * Returns the latest blockhash
+   */
+  std::string getLatestBlockhash() {
+    auto response = http::post(_rpcEndpoint, {
+      {"jsonrpc", "2.0"},
+      {"id", 1},
+      {"method", "getLatestBlockhash"},
+    });
+
+    auto blockhash = response["result"]["blockhash"];
+    return blockhash;
+  }
+
+  /**
    * Returns the leader schedule for an epoch
-  */
+   */
   json getLeaderSchedule(PublicKey leaderAddress) {
     auto response = http::post(_rpcEndpoint, {
       {"jsonrpc", "2.0"},
@@ -766,7 +788,8 @@ public:
 
   /**
    * Submits a signed transaction to the cluster for processing.
-   * @param signedTransaction The signed transaction to submit
+   * @param transaction The transaction to submit
+   * @param keypair The keypair used to sign the transaction
    */
   std::string sendTransaction(std::string signedTransaction) {
     auto response = http::post(_rpcEndpoint, {
@@ -774,7 +797,7 @@ public:
       {"id", 1},
       {"method", "sendTransaction"},
       {"params", {
-        signedTransaction,
+        encodedTransaction,
         {
           {"encoding", "base64"},
         },
