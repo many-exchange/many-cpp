@@ -1,5 +1,5 @@
-#include "../src/json.h"
-#include "../src/solana.h"
+#include "../src/json.hpp"
+#include "../src/solana.hpp"
 
 using namespace solana;
 
