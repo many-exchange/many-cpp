@@ -61,6 +61,19 @@ namespace solana {
     return len;
   }
 
+  std::vector<uint8_t> encodeLength(int len) {
+    std::vector<uint8_t> bytes;
+    while (len > 0) {
+      int elem = len & 0x7f;
+      len >>= 7;
+      if (len > 0) {
+        elem |= 0x80;
+      }
+      bytes.push_back(elem);
+    }
+    return bytes;
+  }
+
   namespace base58 {
 
     /*
@@ -250,7 +263,7 @@ namespace solana {
       return b58enc(b58c, b58c_sz, buf, 1 + datasz + 4);
     }
 
-    inline std::string b58decode(const std::string &b58) {
+    inline std::string decode(const std::string &b58) {
       size_t decodedSize = b58.size() * 733 / 1000 + 1;
       char decoded[decodedSize];
       const bool ok = b58tobin(decoded, &decodedSize, b58.c_str(), 0);
@@ -573,24 +586,6 @@ namespace solana {
     accountInfo.rentEpoch = j["rentEpoch"].get<uint64_t>();
   }
 
-  /**
-   * Account metadata used to define instructions
-   */
-  struct AccountMeta {
-    /** An account's public key */
-    PublicKey pubkey;
-    /** True if an instruction requires a transaction signature matching `pubkey` */
-    bool isSigner;
-    /** True if the `pubkey` can be loaded as a read-write account. */
-    bool isWritable;
-
-    AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable)
-      : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
-
-    AccountMeta(PublicKey pubkey, bool isSigner)
-      : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
-  };
-
   struct Context {
     uint64_t slot;
   };
@@ -771,11 +766,136 @@ namespace solana {
     tokenAccount.pubkey = j["pubkey"].get<PublicKey>();
   }
 
-}
+  struct Transaction {
+    /* The transaction signatures */
+    std::vector<std::string> signatures;
+    /* The transaction message */
+    struct Message {
+      /* The message header */
+      struct Header {
+        /* The number of signatures required to validate this transaction */
+        uint8_t numRequiredSignatures;
+        /* The number of read-only signed accounts */
+        uint8_t numReadonlySignedAccounts;
+        /* The number of read-only unsigned accounts */
+        uint8_t numReadonlyUnsignedAccounts;
+      } header;
+      /* The account keys used by this transaction */
+      std::vector<PublicKey> accountKeys;
+      /* Recent blockhash */
+      std::string recentBlockhash;
+      struct Instruction {
+        /* The program id that executes this instruction */
+        PublicKey programId;
+        /**
+         * Account metadata used to define instructions
+         */
+        struct AccountMeta {
+          /** An account's public key */
+          PublicKey pubkey;
+          /** True if an instruction requires a transaction signature matching `pubkey` */
+          bool isSigner;
+          /** True if the `pubkey` can be loaded as a read-write account. */
+          bool isWritable;
+          AccountMeta() : pubkey(), isSigner(false), isWritable(false) { }
+          AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable) : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
+          AccountMeta(PublicKey pubkey, bool isSigner) : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
+          AccountMeta(PublicKey pubkey) : pubkey(pubkey), isSigner(false), isWritable(false) { }
+        };
+        /* Ordered indices into the transaction keys array indicating which accounts to pass to the program */
+        std::vector<AccountMeta> accounts;
+        /* Program input data */
+        std::vector<uint8_t> data;
+      };
+      /* The program instructions */
+      std::vector<Instruction> instructions;
 
-#include "transaction.h"
+      std::vector<uint8_t> serialize() {
+        if (recentBlockhash.empty()) {
+          throw std::runtime_error("recentBlockhash required");
+        }
+        if (instructions.empty()) {
+          throw std::runtime_error("No instructions provided");
+        }
 
-namespace solana {
+        std::vector<uint8_t> buffer;
+
+        buffer.push_back(header.numRequiredSignatures);
+        buffer.push_back(header.numReadonlySignedAccounts);
+        buffer.push_back(header.numReadonlyUnsignedAccounts);
+
+        std::vector<uint8_t> accountAddressesLength = encodeLength(accountKeys.size());
+        buffer.insert(buffer.end(), accountAddressesLength.begin(), accountAddressesLength.end());
+
+        for (PublicKey accountKey : accountKeys) {
+          std::array<uint8_t, PUBLIC_KEY_LENGTH> accountAddress = accountKey.bytes;
+          buffer.insert(buffer.end(), accountAddress.begin(), accountAddress.end());
+        }
+
+        std::string recentBlockhashBytes = base58::decode(recentBlockhash);
+        buffer.insert(buffer.end(), recentBlockhashBytes.begin(), recentBlockhashBytes.end());
+
+        std::vector<uint8_t> instructionsLength = encodeLength(instructions.size());
+        buffer.insert(buffer.end(), instructionsLength.begin(), instructionsLength.end());
+
+        for (Instruction instruction : instructions) {
+          std::array<uint8_t, PUBLIC_KEY_LENGTH>  programIdBytes = instruction.programId.bytes;
+          buffer.insert(buffer.end(), programIdBytes.begin(), programIdBytes.end());
+
+          std::vector<uint8_t> accountsLength = encodeLength(instruction.accounts.size());
+          buffer.insert(buffer.end(), accountsLength.begin(), accountsLength.end());
+
+          for (Instruction::AccountMeta accountMeta : instruction.accounts) {
+            std::array<uint8_t, PUBLIC_KEY_LENGTH>  accountMetaBytes = accountMeta.pubkey.bytes;
+            buffer.insert(buffer.end(), accountMetaBytes.begin(), accountMetaBytes.end());
+
+            uint8_t accountMetaFlags = 0;
+            if (accountMeta.isSigner) {
+              accountMetaFlags |= 1;
+            }
+            if (accountMeta.isWritable) {
+              accountMetaFlags |= 2;
+            }
+            buffer.push_back(accountMetaFlags);
+          }
+
+          std::vector<uint8_t> dataLength = encodeLength(instruction.data.size());
+          buffer.insert(buffer.end(), dataLength.begin(), dataLength.end());
+
+          buffer.insert(buffer.end(), instruction.data.begin(), instruction.data.end());
+        }
+
+        return buffer;
+      }
+
+    } message;
+
+    std::vector<uint8_t> serialize() {
+      std::vector<uint8_t> buffer;
+      std::vector<uint8_t> signaturesLength = encodeLength(signatures.size());
+      buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
+      for (auto& signature : signatures) {
+        std::string rawSignature = base58::decode(signature);
+        buffer.insert(buffer.end(), rawSignature.begin(), rawSignature.end());
+      }
+      auto serializedMessage = message.serialize();
+      buffer.insert(buffer.end(), serializedMessage.begin(), serializedMessage.end());
+      return buffer;
+    }
+
+    void sign(const std::vector<Keypair> signers) {
+      if (signers.empty()) {
+        throw std::runtime_error("No signers");
+      }
+      PublicKey feePayer = signers[0].publicKey;
+      std::vector<uint8_t> serializedMessage = message.serialize();
+      for (Keypair signer : signers) {
+        auto signature = signer.sign(serializedMessage);
+        //TODO base58 encode the message
+        signatures.push_back(signature);
+      }
+    }
+  };
 
   struct TransactionReponse {
     /* The estimated production time of when the transaction was processed. */
@@ -1848,9 +1968,9 @@ namespace solana {
         {"method", "getProgramAccounts"},
         {"params", {
           programId.toBase58(),
-          {
-            {"encoding", "base64"},
-          }
+          //{
+            //{"encoding", "base64"},
+          //}
         }},
       })["result"];
     }
@@ -1983,7 +2103,7 @@ namespace solana {
      */
     // TODO: add an example?
     std::string sendTransaction(Transaction& transaction, std::vector<Keypair> signers) {
-      transaction.recentBlockhash = getLatestBlockhash();
+      transaction.message.recentBlockhash = getLatestBlockhash();
       transaction.sign(signers);
       std::vector<uint8_t> wireTransaction = transaction.serialize();
       std::string encodedTransaction = base64::base64_encode(wireTransaction.data(), wireTransaction.size());
