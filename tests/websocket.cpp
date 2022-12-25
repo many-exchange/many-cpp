@@ -4,7 +4,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/websocket.h"
+#include "../src/json.h"
+#include "../src/solana.h"
 
 using namespace solana;
 

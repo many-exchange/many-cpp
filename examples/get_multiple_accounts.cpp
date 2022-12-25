@@ -1,3 +1,4 @@
+#include "../src/json.h"
 #include "../src/solana.h"
 
 using namespace solana;
@@ -6,9 +7,9 @@ using namespace solana;
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
   auto accountInfos = connection.getMultipleAccounts({
-    PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"), 
+    PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
     PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")});
-    
+
   for (auto accountInfo : accountInfos) {
     std::cout << "owner = " << accountInfo.owner.toBase58() << std::endl;
     std::cout << "lamports = " << accountInfo.lamports << std::endl;

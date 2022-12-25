@@ -1,3 +1,4 @@
+#include "../src/json.h"
 #include "../src/solana.h"
 
 using namespace solana;

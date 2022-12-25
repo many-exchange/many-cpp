@@ -4,7 +4,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../src/base64.h"
+#include "../src/json.h"
+#include "../src/solana.h"
 
 using namespace solana;
 
