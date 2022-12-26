@@ -1,3 +1,22 @@
+//  ____ _____ __    _____ _____ _____
+// |  __|     |  |  |  _  |   | |  _  |  Solana C++ SDK
+// |__  |  |  |  |__|     | | | |     |  version 0.0.1
+// |____|_____|_____|__|__|_|___|__|__|  https://github.com/many-exchange/solana-sdk-cpp
+//
+// base58: 67
+// base64: 282
+// http: 407
+// websockets: 703
+// solana: 1145
+//   - connection: 1846
+//     - http methods: 1887
+//     - websocket methods: 2228
+//
+// Copyright (c) 2022-2023 Many Exchange
+//
+// This program is free software: you can redistribute it 
+// and/or modify it under the terms of the standard MIT license.
+
 #pragma once
 
 #include <algorithm>
@@ -44,35 +63,6 @@ using json = nlohmann::json;
 #define SIGNATURE_LENGTH 64
 
 namespace solana {
-
-  const std::vector<uint8_t> DEFAULT_SIGNATURE = {0};
-
-  int decodeLength(std::vector<uint8_t> bytes) {
-    int len = 0;
-    int size = 0;
-    for (;;) {
-      int elem = bytes[0];
-      len |= (elem & 0x7f) << (size * 7);
-      size += 1;
-      if ((elem & 0x80) == 0) {
-        break;
-      }
-    }
-    return len;
-  }
-
-  std::vector<uint8_t> encodeLength(int len) {
-    std::vector<uint8_t> bytes;
-    while (len > 0) {
-      int elem = len & 0x7f;
-      len >>= 7;
-      if (len > 0) {
-        elem |= 0x80;
-      }
-      bytes.push_back(elem);
-    }
-    return bytes;
-  }
 
   namespace base58 {
 
@@ -414,681 +404,6 @@ namespace solana {
 
   }
 
-  struct PublicKey {
-
-    /* An array of bytes representing the public key */
-    std::array<uint8_t, PUBLIC_KEY_LENGTH> bytes;
-
-    PublicKey() {
-      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
-        bytes[i] = 0;
-      }
-    }
-
-    PublicKey(const std::string& value) {
-      size_t size = PUBLIC_KEY_LENGTH;
-      base58::b58tobin(bytes.data(), &size, value.c_str(), 0);
-    }
-
-    PublicKey(const uint8_t* value) {
-      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
-        bytes[i] = value[i];
-      }
-    }
-
-    PublicKey(const PublicKey& other) {
-      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
-        bytes[i] = other.bytes[i];
-      }
-    }
-
-    bool operator==(const PublicKey& other) const {
-      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
-        if (bytes[i] != other.bytes[i]) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    std::string toBase58() const {
-      char temp[45];
-      memset(temp, 0, 45);
-      size_t size = 45;
-      base58::b58enc(temp, &size, bytes.data(), bytes.size());
-      return std::string(temp, size - 1);
-    }
-
-  };
-
-  void from_json(const json& j, PublicKey& publicKey) {
-    publicKey = PublicKey(j.get<std::string>());
-  }
-
-  void to_json(json& j, const PublicKey& publicKey) {
-    j = publicKey.toBase58();
-  }
-
-  struct Keypair {
-
-    std::array<uint8_t, crypto_sign_SECRETKEYBYTES> secretKey;
-    PublicKey publicKey;
-
-    Keypair() {
-      for (int i = 0; i < crypto_sign_SECRETKEYBYTES; i++) {
-        secretKey[i] = 0;
-      }
-      publicKey = PublicKey();
-    }
-
-    /**
-     * Create a keypair from a raw secret key byte array.
-     *
-     * This method should only be used to recreate a keypair from a previously
-     * generated secret key. Generating keypairs from a random seed should be done
-     * with the {@link Keypair.fromSeed} method.
-     *
-     * @throws error if the provided secret key is invalid and validation is not skipped.
-     *
-     * @param secretKey secret key byte array
-     * @param options: skip secret key validation
-     */
-    Keypair(std::array<char, PUBLIC_KEY_LENGTH> secretKey, bool skipValidation = false) {
-      if (!skipValidation && crypto_sign_ed25519_sk_to_pk((unsigned char *)publicKey.bytes.data(), (unsigned char *)secretKey.data()) != 0) {
-        throw std::runtime_error("invalid secret key");
-      }
-    }
-
-    ~Keypair() {
-    }
-
-    /**
-     * Read a keypair from a file.
-     *
-     * @throws error if the keypair file cannot be read.
-     *
-     * @param path path to keypair file
-     */
-    static Keypair fromFile(const std::string &path) {
-      Keypair result = Keypair();
-      std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
-      if (file.is_open()) {
-        std::streamsize size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        if (size == crypto_sign_SECRETKEYBYTES) {
-          file.read((char *)result.secretKey.data(), size);
-          crypto_sign_ed25519_sk_to_pk((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
-        } else {
-          throw std::runtime_error("invalid secret key file");
-        }
-      } else {
-        throw std::runtime_error("could not open secret key file");
-      }
-      return result;
-    }
-
-    /**
-     * Create a keypair from a secret key seed.
-     *
-     * @throws error if the provided seed is invalid.
-     *
-     * @param seed secret key seed
-     */
-    static Keypair fromSeed(const uint8_t *seed) {
-      Keypair result = Keypair();
-      crypto_sign_seed_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data(), seed);
-      return result;
-    }
-
-    /**
-     * Create a new random keypair.
-     */
-    static Keypair generate() {
-      Keypair result = Keypair();
-      crypto_sign_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
-      return result;
-    }
-
-    /**
-     * Sign a message with the keypair's secret key.
-     *
-     * @param message message to sign
-     */
-    std::string sign(const std::vector<uint8_t> message) const {
-      uint8_t sig[crypto_sign_BYTES];
-      unsigned long long sigSize;
-      if (0 != crypto_sign_detached(sig, &sigSize, message.data(), message.size(), secretKey.data())) {
-        throw std::runtime_error("could not sign tx with private key");
-      }
-      return std::string((const char *)sig, sigSize);
-    }
-
-  };
-
-  struct AccountInfo {
-    /** `true` if this account's data contains a loaded program */
-    bool executable;
-    /** Identifier of the program that owns the account */
-    PublicKey owner;
-    /** Number of lamports assigned to the account */
-    uint64_t lamports;
-    /** Optional data assigned to the account */
-    std::string data;
-    /** Optional rent epoch info for account */
-    uint64_t rentEpoch;
-  };
-
-  void from_json(const json& j, AccountInfo& accountInfo) {
-    accountInfo.executable = j["executable"].get<bool>();
-    accountInfo.owner = j["owner"].get<PublicKey>();
-    accountInfo.lamports = j["lamports"].get<uint64_t>();
-    accountInfo.data = j["data"].get<std::string>();
-    accountInfo.rentEpoch = j["rentEpoch"].get<uint64_t>();
-  }
-
-  struct Context {
-    uint64_t slot;
-  };
-
-  struct AccountChangeSubscriptionInfo {
-    /* The public key of the account to subscribe to */
-    PublicKey accountId;
-    /* The callback function that will fire on a subscription event for the account */
-    std::function<void(Context context, AccountInfo accountInfo)> callback;
-  };
-
-  enum class Cluster {
-    Devnet,
-    Testnet,
-    MainnetBeta
-  };
-
-  std::string clusterApiUrl(Cluster cluster) {
-    switch (cluster) {
-      case Cluster::Devnet:
-        return "https://api.devnet.solana.com";
-      case Cluster::Testnet:
-        return "https://api.testnet.solana.com";
-      case Cluster::MainnetBeta:
-        return "https://api.mainnet-beta.solana.com";
-      default:
-        throw std::runtime_error("Invalid cluster.");
-    }
-  }
-
-  enum class Commitment {
-    Processed,
-    Confirmed,
-    Finalized,
-  };
-
-  struct KeyedAccountInfo {
-    PublicKey accountId;
-    AccountInfo accountInfo;
-  };
-
-  struct Logs {
-    //TODO
-    //err: TransactionError | null;
-    std::vector<std::string> logs;
-    std::string signature;
-  };
-
-  struct LogsSubscriptionInfo {
-    /* The public key of the account to subscribe to for logs */
-    PublicKey accountId;
-    /* The callback function that will fire on a subscription event for logs */
-    std::function<void(Context context, Logs logs)> callback;
-  };
-
-  struct ProgramAccountChangeSubscriptionInfo {
-    /* The public key of the program to subscribe to */
-    PublicKey programId;
-    /* The callback function that will fire on a subscription event for the program */
-    std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback;
-  };
-
-  struct SimulatedTransactionResponse {
-    /* Error if the transaction failed */
-    std::string err;
-    /* Array of log messages the transaction instructions output during execution */
-    std::vector<std::string> logs;
-    /* Array of accounts with the same length as the accounts.addresses array in the request */
-    std::vector<AccountInfo> accounts;
-    /* The number of compute budget units consumed during the processing of this transaction */
-    uint64_t unitsConsumed;
-    /* The return data for the simulated transaction */
-    struct ReturnData {
-      /* The program that generated the return data */
-      PublicKey programId;
-      /* The return data itself */
-      std::string data;
-    } returnData;
-  };
-
-  struct SlotInfo {
-    /** Currently processing slot */
-    uint64_t slot;
-    /** Parent of the current slot */
-    uint64_t parent;
-    /** The root block of the current slot's fork */
-    uint64_t root;
-  };
-
-  struct TokenAmount {
-    /** The amount of lamports */
-    std::string amount;
-    /** The number of decimals for the token amount */
-    uint64_t decimals;
-    /** The amount of tokens as a floating point number */
-    double uiAmount;
-    /** The amount of tokens as a string */
-    std::string uiAmountString;
-  };
-
-  void from_json(const json& j, TokenAmount& tokenAmount) {
-    tokenAmount.amount = j["amount"].get<std::string>();
-    tokenAmount.decimals = j["decimals"].get<uint64_t>();
-    tokenAmount.uiAmount = j["uiAmount"].get<double>();
-    tokenAmount.uiAmountString = j["uiAmountString"].get<std::string>();
-  }
-
-  struct TokenAccount {
-    /** The account data */
-    struct TokenAccountInfo {
-      struct TokenAccountData {
-        /* Name of token program (ex: spl-token) */
-        PublicKey program;
-        struct ParsedTokenAccountData {
-          /** The account type (ex: "account") */
-          std::string accountType;
-          struct TokenAccountBalanceInfo {
-            /** The amount of tokens */
-            TokenAmount tokenAmount;
-            /** The account this token account is delegated to */
-            PublicKey delegate;
-            /** Amount delegated */
-            TokenAmount delegatedAmount;
-            /** State of the token account (ex: "initialized") */
-            std::string state;
-            /** `true` if the account is native */
-            bool isNative;
-            /** The mint associated with this account */
-            PublicKey mint;
-            /** The account owner */
-            PublicKey owner;
-          } info;
-          /** The account type */
-          std::string type;
-        } parsed;
-        /** The length of the account data */
-        uint64_t space;
-      } data;
-      /** `true` if this account's data contains a loaded program */
-      bool executable;
-      /** Number of lamports assigned to the account */
-      uint64_t lamports;
-      /** Identifier of the program that owns the account */
-      PublicKey owner;
-      /** Optional rent epoch info for account */
-      uint64_t rentEpoch;
-    } account;
-    /** The account's public key */
-    PublicKey pubkey;
-  };
-
-  void from_json(const json& j, TokenAccount::TokenAccountInfo& tokenAccountInfo) {
-    tokenAccountInfo.data.program = j["data"]["program"].get<PublicKey>();
-    tokenAccountInfo.data.parsed.accountType = j["data"]["parsed"]["accountType"].get<std::string>();
-    tokenAccountInfo.data.parsed.info.tokenAmount.amount = j["data"]["parsed"]["info"]["tokenAmount"]["amount"].get<std::string>();
-    tokenAccountInfo.data.parsed.info.tokenAmount.decimals = j["data"]["parsed"]["info"]["tokenAmount"]["decimals"].get<uint64_t>();
-    tokenAccountInfo.data.parsed.info.tokenAmount.uiAmount = j["data"]["parsed"]["info"]["tokenAmount"]["uiAmount"].get<double>();
-    tokenAccountInfo.data.parsed.info.tokenAmount.uiAmountString = j["data"]["parsed"]["info"]["tokenAmount"]["uiAmountString"].get<std::string>();
-    tokenAccountInfo.data.parsed.info.delegate = j["data"]["parsed"]["info"]["delegate"].get<PublicKey>();
-    tokenAccountInfo.data.parsed.info.delegatedAmount.amount = j["data"]["parsed"]["info"]["delegatedAmount"]["amount"].get<std::string>();
-    tokenAccountInfo.data.parsed.info.delegatedAmount.decimals = j["data"]["parsed"]["info"]["delegatedAmount"]["decimals"].get<uint64_t>();
-    tokenAccountInfo.data.parsed.info.delegatedAmount.uiAmount = j["data"]["parsed"]["info"]["delegatedAmount"]["uiAmount"].get<double>();
-    tokenAccountInfo.data.parsed.info.delegatedAmount.uiAmountString = j["data"]["parsed"]["info"]["delegatedAmount"]["uiAmountString"].get<std::string>();
-    tokenAccountInfo.data.parsed.info.state = j["data"]["parsed"]["info"]["state"].get<std::string>();
-    tokenAccountInfo.data.parsed.info.isNative = j["data"]["parsed"]["info"]["isNative"].get<bool>();
-    tokenAccountInfo.data.parsed.info.mint = j["data"]["parsed"]["info"]["mint"].get<PublicKey>();
-    tokenAccountInfo.data.parsed.info.owner = j["data"]["parsed"]["info"]["owner"].get<PublicKey>();
-    tokenAccountInfo.data.parsed.type = j["data"]["parsed"]["type"].get<std::string>();
-    tokenAccountInfo.data.space = j["data"]["space"].get<uint64_t>();
-    tokenAccountInfo.executable = j["executable"].get<bool>();
-    tokenAccountInfo.lamports = j["lamports"].get<uint64_t>();
-    tokenAccountInfo.owner = j["owner"].get<PublicKey>();
-    tokenAccountInfo.rentEpoch = j["rentEpoch"].get<uint64_t>();
-  }
-
-  void from_json(const json& j, TokenAccount& tokenAccount) {
-    tokenAccount.account = j["account"].get<TokenAccount::TokenAccountInfo>();
-    tokenAccount.pubkey = j["pubkey"].get<PublicKey>();
-  }
-
-  struct Transaction {
-    /* The transaction signatures */
-    std::vector<std::string> signatures;
-    /* The transaction message */
-    struct Message {
-      /* The message header */
-      struct Header {
-        /* The number of signatures required to validate this transaction */
-        uint8_t numRequiredSignatures;
-        /* The number of read-only signed accounts */
-        uint8_t numReadonlySignedAccounts;
-        /* The number of read-only unsigned accounts */
-        uint8_t numReadonlyUnsignedAccounts;
-      } header;
-      /* The account keys used by this transaction */
-      std::vector<PublicKey> accountKeys;
-      /* Recent blockhash */
-      std::string recentBlockhash;
-      struct Instruction {
-        /* The program id that executes this instruction */
-        PublicKey programId;
-        /**
-         * Account metadata used to define instructions
-         */
-        struct AccountMeta {
-          /** An account's public key */
-          PublicKey pubkey;
-          /** True if an instruction requires a transaction signature matching `pubkey` */
-          bool isSigner;
-          /** True if the `pubkey` can be loaded as a read-write account. */
-          bool isWritable;
-          AccountMeta() : pubkey(), isSigner(false), isWritable(false) { }
-          AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable) : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
-          AccountMeta(PublicKey pubkey, bool isSigner) : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
-          AccountMeta(PublicKey pubkey) : pubkey(pubkey), isSigner(false), isWritable(false) { }
-        };
-        /* Ordered indices into the transaction keys array indicating which accounts to pass to the program */
-        std::vector<AccountMeta> accounts;
-        /* Program input data */
-        std::vector<uint8_t> data;
-      };
-      /* The program instructions */
-      std::vector<Instruction> instructions;
-
-      std::vector<uint8_t> serialize() {
-        if (recentBlockhash.empty()) {
-          throw std::runtime_error("recentBlockhash required");
-        }
-        if (instructions.empty()) {
-          throw std::runtime_error("No instructions provided");
-        }
-
-        std::vector<uint8_t> buffer;
-
-        buffer.push_back(header.numRequiredSignatures);
-        buffer.push_back(header.numReadonlySignedAccounts);
-        buffer.push_back(header.numReadonlyUnsignedAccounts);
-
-        std::vector<uint8_t> accountAddressesLength = encodeLength(accountKeys.size());
-        buffer.insert(buffer.end(), accountAddressesLength.begin(), accountAddressesLength.end());
-
-        for (PublicKey accountKey : accountKeys) {
-          std::array<uint8_t, PUBLIC_KEY_LENGTH> accountAddress = accountKey.bytes;
-          buffer.insert(buffer.end(), accountAddress.begin(), accountAddress.end());
-        }
-
-        std::string recentBlockhashBytes = base58::decode(recentBlockhash);
-        buffer.insert(buffer.end(), recentBlockhashBytes.begin(), recentBlockhashBytes.end());
-
-        std::vector<uint8_t> instructionsLength = encodeLength(instructions.size());
-        buffer.insert(buffer.end(), instructionsLength.begin(), instructionsLength.end());
-
-        for (Instruction instruction : instructions) {
-          std::array<uint8_t, PUBLIC_KEY_LENGTH>  programIdBytes = instruction.programId.bytes;
-          buffer.insert(buffer.end(), programIdBytes.begin(), programIdBytes.end());
-
-          std::vector<uint8_t> accountsLength = encodeLength(instruction.accounts.size());
-          buffer.insert(buffer.end(), accountsLength.begin(), accountsLength.end());
-
-          for (Instruction::AccountMeta accountMeta : instruction.accounts) {
-            std::array<uint8_t, PUBLIC_KEY_LENGTH>  accountMetaBytes = accountMeta.pubkey.bytes;
-            buffer.insert(buffer.end(), accountMetaBytes.begin(), accountMetaBytes.end());
-
-            uint8_t accountMetaFlags = 0;
-            if (accountMeta.isSigner) {
-              accountMetaFlags |= 1;
-            }
-            if (accountMeta.isWritable) {
-              accountMetaFlags |= 2;
-            }
-            buffer.push_back(accountMetaFlags);
-          }
-
-          std::vector<uint8_t> dataLength = encodeLength(instruction.data.size());
-          buffer.insert(buffer.end(), dataLength.begin(), dataLength.end());
-
-          buffer.insert(buffer.end(), instruction.data.begin(), instruction.data.end());
-        }
-
-        return buffer;
-      }
-
-    } message;
-
-    std::vector<uint8_t> serialize() {
-      std::vector<uint8_t> buffer;
-      std::vector<uint8_t> signaturesLength = encodeLength(signatures.size());
-      buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
-      for (auto& signature : signatures) {
-        std::string rawSignature = base58::decode(signature);
-        buffer.insert(buffer.end(), rawSignature.begin(), rawSignature.end());
-      }
-      auto serializedMessage = message.serialize();
-      buffer.insert(buffer.end(), serializedMessage.begin(), serializedMessage.end());
-      return buffer;
-    }
-
-    void sign(const std::vector<Keypair> signers) {
-      if (signers.empty()) {
-        throw std::runtime_error("No signers");
-      }
-      PublicKey feePayer = signers[0].publicKey;
-      std::vector<uint8_t> serializedMessage = message.serialize();
-      for (Keypair signer : signers) {
-        auto signature = signer.sign(serializedMessage);
-        //TODO base58 encode the message
-        signatures.push_back(signature);
-      }
-    }
-  };
-
-  struct TransactionReponse {
-    /* The estimated production time of when the transaction was processed. */
-    uint64_t blockTime;
-    /* Transaction status metadata object */
-    struct Meta {
-      /* Error if the transaction failed */
-      std::string err;
-      /* Fee this transaction was charged, as u64 integer */
-      uint64_t fee;
-      /* List of inner instructions if inner instruction recording was enabled during this transaction */
-      //TODO this should be an array of inner instruction std::string innerInstructions;
-      struct LoadedAddresses {
-        /* Ordered list of base-58 encoded addresses for writable loaded accounts */
-        std::vector<PublicKey> writable;
-        /* Ordered list of base-58 encoded addresses for read-only loaded accounts */
-        std::vector<PublicKey> readOnly;
-      } loadedAddresses;
-      /* Array of string log messages if log message recording was enabled during this transaction  */
-      std::vector<std::string> logMessages;
-      /* Array of u64 account balances from after the transaction was processed */
-      std::vector<uint64_t> postBalances;
-      /* Array of u64 account balances from before the transaction was processed */
-      std::vector<uint64_t> preBalances;
-      /* Transaction-level rewards, populated if rewards are requested */
-      struct TransactionReward {
-        /* The public key of the account that received the reward */
-        PublicKey pubkey;
-        /* The number of reward lamports credited or debited by the account */
-        uint64_t lamports;
-        /* The account balance in lamports after the reward was applied */
-        uint64_t postBalance;
-        /* The type of reward */
-        std::string rewardType;
-        /* Vote account commission when the reward was credited, only present for voting and staking rewards */
-        uint8_t commission;
-      };
-      std::vector<TransactionReward> rewards;
-    } meta;
-    /* The slot this transaction was processed in */
-    uint64_t slot;
-    /* The transaction */
-    struct Transaction {
-      /* Defines the content of the transaction */
-      struct Message {
-        /* List of base-58 encoded public keys used by the transaction, including by the instructions and for signatures.
-        The first message.header.numRequiredSignatures public keys must sign the transaction. */
-        std::vector<PublicKey> accountKeys;
-        struct Header {
-          /* The number of signatures required to validate this transaction */
-          uint8_t numRequiredSignatures;
-          /* The number of read-only signed accounts */
-          uint8_t numReadonlySignedAccounts;
-          /* The number of read-only unsigned accounts */
-          uint8_t numReadonlyUnsignedAccounts;
-        } header;
-        struct Instruction {
-          /* Ordered indices into the `message.accountKeys` array indicating which accounts to pass to the program */
-          std::vector<uint8_t> accounts;
-          /* The program input data encoded as base-58 */
-          std::string data;
-          /* Index into the `message.accountKeys` array indicating the program account that executes this instruction */
-          uint8_t programIdIndex;
-        };
-        /* List of program instructions that will be executed in sequence and committed in one atomic transaction if all succeed. */
-        std::vector<Instruction> instructions;
-        /* A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
-        std::string recentBlockhash;
-      } message;
-      /* The transaction signatures */
-      std::vector<std::string> signatures;
-    } transaction;
-  };
-
-  void from_json(const json& j, TransactionReponse::Meta::TransactionReward& rewards) {
-    j.at("commission").get_to(rewards.commission);
-    j.at("lamports").get_to(rewards.lamports);
-    j.at("postBalance").get_to(rewards.postBalance);
-    j.at("pubkey").get_to(rewards.pubkey);
-    j.at("rewardType").get_to(rewards.rewardType);
-  }
-
-  void from_json(const json& j, TransactionReponse::Meta::LoadedAddresses& loadedAddresses) {
-    j.at("readonly").get_to(loadedAddresses.readOnly);
-    j.at("writable").get_to(loadedAddresses.writable);
-  }
-
-  void from_json(const json& j, TransactionReponse::Meta& meta) {
-    if (j.at("err").is_null())
-      meta.err = "";
-    else
-      j.at("err").get_to(meta.err);
-    j.at("fee").get_to(meta.fee);
-    //TODO j.at("innerInstructions").get_to(meta.innerInstructions);
-    j.at("loadedAddresses").get_to(meta.loadedAddresses);
-    j.at("logMessages").get_to(meta.logMessages);
-    j.at("postBalances").get_to(meta.postBalances);
-    j.at("preBalances").get_to(meta.preBalances);
-    j.at("rewards").get_to(meta.rewards);
-  }
-
-  void from_json(const json& j, TransactionReponse::Transaction::Message::Header& header) {
-    j.at("numRequiredSignatures").get_to(header.numRequiredSignatures);
-    j.at("numReadonlySignedAccounts").get_to(header.numReadonlySignedAccounts);
-    j.at("numReadonlyUnsignedAccounts").get_to(header.numReadonlyUnsignedAccounts);
-  }
-
-  void from_json(const json& j, TransactionReponse::Transaction::Message::Instruction& instruction) {
-    j.at("accounts").get_to(instruction.accounts);
-    j.at("data").get_to(instruction.data);
-    j.at("programIdIndex").get_to(instruction.programIdIndex);
-  }
-
-  void from_json(const json& j, TransactionReponse::Transaction::Message& message) {
-    j.at("accountKeys").get_to(message.accountKeys);
-    j.at("header").get_to(message.header);
-    j.at("instructions").get_to(message.instructions);
-    j.at("recentBlockhash").get_to(message.recentBlockhash);
-  }
-
-  void from_json(const json& j, TransactionReponse::Transaction& transaction) {
-    j.at("message").get_to(transaction.message);
-    j.at("signatures").get_to(transaction.signatures);
-  }
-
-  void from_json(const json& j, TransactionReponse& transactionReponse) {
-    j.at("slot").get_to(transactionReponse.slot);
-    j.at("transaction").get_to(transactionReponse.transaction);
-    j.at("meta").get_to(transactionReponse.meta);
-    j.at("blockTime").get_to(transactionReponse.blockTime);
-  }
-
-  std::ostream& operator<<(std::ostream& os, const TransactionReponse& transaction) {
-    os << "slot = " << transaction.slot << std::endl << std::endl;
-    os << "signatures:" << std::endl;
-    for (auto& signature : transaction.transaction.signatures) {
-      os << "  " << signature << std::endl;
-    }
-    os << "accounts:" << std::endl;
-    for (auto& accountKey : transaction.transaction.message.accountKeys) {
-      os << "  " << accountKey.toBase58() << std::endl;
-    }
-    os << "recentBlockhash = " << transaction.transaction.message.recentBlockhash << std::endl;
-    os << "instructions:" << std::endl;
-    for (auto& instruction : transaction.transaction.message.instructions) {
-      os << "  programId index = " << instruction.programIdIndex << std::endl;
-      for (auto& account : instruction.accounts) {
-        os << "    account = " << account << std::endl;
-      }
-      for (auto& data : instruction.data) {
-        os << "    data = " << data << std::endl;
-      }
-    }
-    os << "block time = " << transaction.blockTime << std::endl;
-    os << "error = " << transaction.meta.err << std::endl;
-    os << "fee = " << transaction.meta.fee << std::endl;
-    os << "pre-balances:" << std::endl;
-    for (auto& preBalance : transaction.meta.preBalances) {
-      os << "  " << preBalance << std::endl;
-    }
-    os << "post-balances:" << std::endl;
-    for (auto& postBalance : transaction.meta.postBalances) {
-      os << "  " << postBalance << std::endl;
-    }
-    //TODO os << "inner instructions = " << transaction.meta.innerInstructions << std::endl;
-    os << "logs:" << std::endl;
-    for (auto& log : transaction.meta.logMessages) {
-      os << "  " << log << std::endl;
-    }
-    os << "rewards:" << std::endl;
-    for (auto& reward : transaction.meta.rewards) {
-      os << "  recipient = " << reward.pubkey.toBase58() << std::endl;
-      os << "  lamports = " << reward.lamports << std::endl;
-      os << "  postBalance = " << reward.postBalance << std::endl;
-      os << "  rewardType = " << reward.rewardType << std::endl;
-      os << "  commission = " << reward.commission << std::endl;
-      os << "----------------" << std::endl;
-    }
-    os << "loaded addresses:" << std::endl;
-    os << "  writable:" << std::endl;
-    for (auto& address : transaction.meta.loadedAddresses.writable) {
-      os << "    " << address.toBase58() << std::endl;
-    }
-    os << "  read only:" << std::endl;
-    for (auto& address : transaction.meta.loadedAddresses.readOnly) {
-      os << "    " << address.toBase58() << std::endl;
-    }
-    //os << "return data:" << std::endl;
-    //os << "  programId = " << transaction.meta.returnData.programId.toBase58() << std::endl;
-    //os << "  data = " <<  transaction.meta.returnData.data  << std::endl;
-    return os;
-  }
-
   namespace http {
 
     class HttpClient {
@@ -1140,8 +455,14 @@ namespace solana {
       }
 
     public:
+
       HttpClient(const std::string url, int port, const std::string interface = "")
-        : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr)
+        : _url(url), 
+        _port(port), 
+        _interface(interface), 
+        _socket(-1), 
+        _ssl_ctx(nullptr), 
+        _ssl(nullptr) 
       {
         _send_buffer = (char*)malloc(65536);
         _recv_buffer = (char*)malloc(8388608);
@@ -1193,6 +514,7 @@ namespace solana {
       }
 
     private:
+
       bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port) {
         assert(_socket == -1);
 
@@ -1285,6 +607,7 @@ namespace solana {
       }
 
     public:
+    
       bool disconnect() {
         if (_ssl != nullptr) {
           SSL_shutdown(_ssl);
@@ -1356,6 +679,9 @@ namespace solana {
 
     /**
      * Takes a url and a json request object and returns a json response
+     * 
+     * @param url The url endpoint for the POST request
+     * @param request The json request object
      */
     json post(const std::string url, json request) {
       HttpClient client(url, 443);
@@ -1532,8 +858,15 @@ namespace solana {
       }
 
     public:
+
       WebSocketClient(const std::string url, int port, const std::string interface = "")
-        : _url(url), _port(port), _interface(interface), _socket(-1), _ssl_ctx(nullptr), _ssl(nullptr) {
+        : _url(url), 
+        _port(port),
+        _interface(interface), 
+        _socket(-1), 
+        _ssl_ctx(nullptr), 
+        _ssl(nullptr) 
+      {
         _nonce[16] = 0;
       }
 
@@ -1582,6 +915,7 @@ namespace solana {
       }
 
     private:
+
       bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port, const std::string& resource) {
         assert(_socket == -1);
 
@@ -1712,6 +1046,7 @@ namespace solana {
       }
 
     public:
+
       bool disconnect() {
         if (_ssl != nullptr) {
           SSL_shutdown(_ssl);
@@ -1806,13 +1141,714 @@ namespace solana {
     };
 
   }
+  
+  //-------- Solana --------------------------------------------------------------------
+
+  enum class Cluster {
+    Devnet,
+    Testnet,
+    MainnetBeta
+  };
+
+  /**
+   * Returns a default cluster API URL for a given cluster.
+   * 
+   * @param cluster The cluster to get the default API URL for
+  */
+  std::string clusterApiUrl(Cluster cluster) {
+    switch (cluster) {
+      case Cluster::Devnet:
+        return "https://api.devnet.solana.com";
+      case Cluster::Testnet:
+        return "https://api.testnet.solana.com";
+      case Cluster::MainnetBeta:
+        return "https://api.mainnet-beta.solana.com";
+      default:
+        throw std::runtime_error("Invalid cluster.");
+    }
+  }
+
+  enum class Commitment {
+    Processed,
+    Confirmed,
+    Finalized,
+  };
+
+  struct Context {
+    uint64_t slot;
+  };
+
+  int decodeLength(std::vector<uint8_t> bytes) {
+    int len = 0;
+    int size = 0;
+    for (;;) {
+      int elem = bytes[0];
+      len |= (elem & 0x7f) << (size * 7);
+      size += 1;
+      if ((elem & 0x80) == 0) {
+        break;
+      }
+    }
+    return len;
+  }
+
+  std::vector<uint8_t> encodeLength(int len) {
+    std::vector<uint8_t> bytes;
+    while (len > 0) {
+      int elem = len & 0x7f;
+      len >>= 7;
+      if (len > 0) {
+        elem |= 0x80;
+      }
+      bytes.push_back(elem);
+    }
+    return bytes;
+  }
+
+  const std::vector<uint8_t> DEFAULT_SIGNATURE = {0};
+
+  struct PublicKey {
+    /* An array of bytes representing the public key */
+    std::array<uint8_t, PUBLIC_KEY_LENGTH> bytes;
+
+    PublicKey() {
+      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+        bytes[i] = 0;
+      }
+    }
+
+    PublicKey(const std::string& value) {
+      size_t size = PUBLIC_KEY_LENGTH;
+      base58::b58tobin(bytes.data(), &size, value.c_str(), 0);
+    }
+
+    PublicKey(const uint8_t* value) {
+      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+        bytes[i] = value[i];
+      }
+    }
+
+    PublicKey(const PublicKey& other) {
+      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+        bytes[i] = other.bytes[i];
+      }
+    }
+
+    bool operator==(const PublicKey& other) const {
+      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+        if (bytes[i] != other.bytes[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    std::string toBase58() const {
+      char temp[45];
+      memset(temp, 0, 45);
+      size_t size = 45;
+      base58::b58enc(temp, &size, bytes.data(), bytes.size());
+      return std::string(temp, size - 1);
+    }
+  };
+
+  void from_json(const json& j, PublicKey& publicKey) {
+    publicKey = PublicKey(j.get<std::string>());
+  }
+
+  void to_json(json& j, const PublicKey& publicKey) {
+    j = publicKey.toBase58();
+  }
+
+  struct Keypair {
+    std::array<uint8_t, crypto_sign_SECRETKEYBYTES> secretKey;
+    PublicKey publicKey;
+
+    Keypair() {
+      for (int i = 0; i < crypto_sign_SECRETKEYBYTES; i++) {
+        secretKey[i] = 0;
+      }
+      publicKey = PublicKey();
+    }
+
+    /**
+     * Create a keypair from a raw secret key byte array.
+     *
+     * This method should only be used to recreate a keypair from a previously
+     * generated secret key. Generating keypairs from a random seed should be done
+     * with the {@link Keypair.fromSeed} method.
+     *
+     * @throws error if the provided secret key is invalid and validation is not skipped.
+     *
+     * @param secretKey secret key byte array
+     * @param options: skip secret key validation
+     */
+    Keypair(std::array<char, PUBLIC_KEY_LENGTH> secretKey, bool skipValidation = false) {
+      if (!skipValidation && crypto_sign_ed25519_sk_to_pk((unsigned char *)publicKey.bytes.data(), (unsigned char *)secretKey.data()) != 0) {
+        throw std::runtime_error("invalid secret key");
+      }
+    }
+
+    ~Keypair() {
+    }
+
+    /**
+     * Read a keypair from a file.
+     *
+     * @throws error if the keypair file cannot be read.
+     *
+     * @param path path to keypair file
+     */
+    static Keypair fromFile(const std::string &path) {
+      Keypair result = Keypair();
+      std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
+      if (file.is_open()) {
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        if (size == crypto_sign_SECRETKEYBYTES) {
+          file.read((char *)result.secretKey.data(), size);
+          crypto_sign_ed25519_sk_to_pk((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
+        } else {
+          throw std::runtime_error("invalid secret key file");
+        }
+      } else {
+        throw std::runtime_error("could not open secret key file");
+      }
+      return result;
+    }
+
+    /**
+     * Create a keypair from a secret key seed.
+     *
+     * @throws error if the provided seed is invalid.
+     *
+     * @param seed secret key seed
+     */
+    static Keypair fromSeed(const uint8_t *seed) {
+      Keypair result = Keypair();
+      crypto_sign_seed_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data(), seed);
+      return result;
+    }
+
+    /**
+     * Create a new random keypair.
+     */
+    static Keypair generate() {
+      Keypair result = Keypair();
+      crypto_sign_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
+      return result;
+    }
+
+    /**
+     * Sign a message with the keypair's secret key.
+     *
+     * @param message message to sign
+     */
+    std::string sign(const std::vector<uint8_t> message) const {
+      uint8_t sig[crypto_sign_BYTES];
+      unsigned long long sigSize;
+      if (0 != crypto_sign_detached(sig, &sigSize, message.data(), message.size(), secretKey.data())) {
+        throw std::runtime_error("could not sign tx with private key");
+      }
+      return std::string((const char *)sig, sigSize);
+    }
+  };
+
+  struct AccountInfo {
+    /** Number of lamports assigned to this account */
+    uint64_t lamports;
+    /** Identifier of the program that owns the account */
+    PublicKey owner;
+    /** Data associated with the account */
+    std::string data;
+    /** Boolean indicating if the account contains a program (and is strictly read-only) */
+    bool executable;
+    /** The epoch at which this account will next owe rent */
+    uint64_t rentEpoch;
+  };
+
+  void from_json(const json& j, AccountInfo& accountInfo) {
+    accountInfo.executable = j["executable"].get<bool>();
+    accountInfo.owner = j["owner"].get<PublicKey>();
+    accountInfo.lamports = j["lamports"].get<uint64_t>();
+    accountInfo.data = j["data"].get<std::string>();
+    accountInfo.rentEpoch = j["rentEpoch"].get<uint64_t>();
+  }
+
+  struct AccountChangeSubscriptionInfo {
+    /* The public key of the account to subscribe to */
+    PublicKey accountId;
+    /* The callback function that will fire on a subscription event for the account */
+    std::function<void(Context context, AccountInfo accountInfo)> callback;
+  };
+
+  struct KeyedAccountInfo {
+    PublicKey accountId;
+    AccountInfo accountInfo;
+  };
+
+  struct Logs {
+    //TODO
+    //err: TransactionError | null;
+    std::vector<std::string> logs;
+    std::string signature;
+  };
+
+  struct LogsSubscriptionInfo {
+    /* The public key of the account to subscribe to for logs */
+    PublicKey accountId;
+    /* The callback function that will fire on a subscription event for logs */
+    std::function<void(Context context, Logs logs)> callback;
+  };
+
+  struct ProgramAccountChangeSubscriptionInfo {
+    /* The public key of the program to subscribe to */
+    PublicKey programId;
+    /* The callback function that will fire on a subscription event for the program */
+    std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback;
+  };
+
+  struct SimulatedTransactionResponse {
+    /* Error if the transaction failed */
+    std::string err;
+    /* Array of log messages the transaction instructions output during execution */
+    std::vector<std::string> logs;
+    /* Array of accounts with the same length as the accounts.addresses array in the request */
+    std::vector<AccountInfo> accounts;
+    /* The number of compute budget units consumed during the processing of this transaction */
+    uint64_t unitsConsumed;
+    /* The return data for the simulated transaction */
+    struct ReturnData {
+      /* The program that generated the return data */
+      PublicKey programId;
+      /* The return data itself */
+      std::string data;
+    } returnData;
+  };
+
+  struct SlotInfo {
+    /** Currently processing slot */
+    uint64_t slot;
+    /** Parent of the current slot */
+    uint64_t parent;
+    /** The root block of the current slot's fork */
+    uint64_t root;
+  };
+
+  struct TokenAmount {
+    /** The raw balance without decimals, as a string representation */
+    std::string amount;
+    /** The number of base 10 digits to the right of the decimal place */
+    uint64_t decimals;
+    /** The balance as a string, using mint-prescribed decimals */
+    std::string uiAmountString;
+  };
+
+  void from_json(const json& j, TokenAmount& tokenAmount) {
+    tokenAmount.amount = j["amount"].get<std::string>();
+    tokenAmount.decimals = j["decimals"].get<uint64_t>();
+    tokenAmount.uiAmountString = j["uiAmountString"].get<std::string>();
+  }
+
+  struct TokenAccount {
+    /** The account's Pubkey */
+    PublicKey pubkey;
+    /** The account data */
+    struct TokenAccountInfo {
+      /** Number of lamports assigned to the account */
+      uint64_t lamports;
+      /** The Pubkey of the program that owns the account */
+      PublicKey owner;
+      struct TokenAccountData {
+        /* Name of token program (ex: "spl-token") */
+        PublicKey program;
+        struct ParsedTokenAccountData {
+          /** The account type (ex: "account") */
+          std::string accountType;
+          struct TokenAccountBalanceInfo {
+            /** The amount of tokens */
+            TokenAmount tokenAmount;
+            /** The account this token account is delegated to */
+            PublicKey delegate;
+            /** Amount delegated */
+            TokenAmount delegatedAmount;
+            /** State of the token account (ex: "initialized") */
+            std::string state;
+            /** Boolean indicating if the account is native */
+            bool isNative;
+            /** The mint of the token */
+            PublicKey mint;
+            /** The Pubkey of the token account owner */
+            PublicKey owner;
+          } info;
+          /** The account type (ex: "account") */
+          std::string type;
+        } parsed;
+        /** The length of the account data */
+        uint64_t space;
+      } data;
+      /** Boolean indicating if the account contains a program (and is strictly read-only) */
+      bool executable;
+      /** The epoch at which this account will next owe rent */
+      uint64_t rentEpoch;
+    } account;
+  };
+
+  void from_json(const json& j, TokenAccount::TokenAccountInfo& tokenAccountInfo) {
+    tokenAccountInfo.data.program = j["data"]["program"].get<PublicKey>();
+    tokenAccountInfo.data.parsed.accountType = j["data"]["parsed"]["accountType"].get<std::string>();
+    tokenAccountInfo.data.parsed.info.tokenAmount.amount = j["data"]["parsed"]["info"]["tokenAmount"]["amount"].get<std::string>();
+    tokenAccountInfo.data.parsed.info.tokenAmount.decimals = j["data"]["parsed"]["info"]["tokenAmount"]["decimals"].get<uint64_t>();
+    tokenAccountInfo.data.parsed.info.tokenAmount.uiAmountString = j["data"]["parsed"]["info"]["tokenAmount"]["uiAmountString"].get<std::string>();
+    tokenAccountInfo.data.parsed.info.delegate = j["data"]["parsed"]["info"]["delegate"].get<PublicKey>();
+    tokenAccountInfo.data.parsed.info.delegatedAmount.amount = j["data"]["parsed"]["info"]["delegatedAmount"]["amount"].get<std::string>();
+    tokenAccountInfo.data.parsed.info.delegatedAmount.decimals = j["data"]["parsed"]["info"]["delegatedAmount"]["decimals"].get<uint64_t>();
+    tokenAccountInfo.data.parsed.info.delegatedAmount.uiAmountString = j["data"]["parsed"]["info"]["delegatedAmount"]["uiAmountString"].get<std::string>();
+    tokenAccountInfo.data.parsed.info.state = j["data"]["parsed"]["info"]["state"].get<std::string>();
+    tokenAccountInfo.data.parsed.info.isNative = j["data"]["parsed"]["info"]["isNative"].get<bool>();
+    tokenAccountInfo.data.parsed.info.mint = j["data"]["parsed"]["info"]["mint"].get<PublicKey>();
+    tokenAccountInfo.data.parsed.info.owner = j["data"]["parsed"]["info"]["owner"].get<PublicKey>();
+    tokenAccountInfo.data.parsed.type = j["data"]["parsed"]["type"].get<std::string>();
+    tokenAccountInfo.data.space = j["data"]["space"].get<uint64_t>();
+    tokenAccountInfo.executable = j["executable"].get<bool>();
+    tokenAccountInfo.lamports = j["lamports"].get<uint64_t>();
+    tokenAccountInfo.owner = j["owner"].get<PublicKey>();
+    tokenAccountInfo.rentEpoch = j["rentEpoch"].get<uint64_t>();
+  }
+
+  void from_json(const json& j, TokenAccount& tokenAccount) {
+    tokenAccount.account = j["account"].get<TokenAccount::TokenAccountInfo>();
+    tokenAccount.pubkey = j["pubkey"].get<PublicKey>();
+  }
+
+  struct Transaction {
+    /* The transaction signatures */
+    std::vector<std::string> signatures;
+    /* The transaction message */
+    struct Message {
+      /* The message header */
+      struct Header {
+        /* The number of signatures required to validate this transaction */
+        uint8_t numRequiredSignatures;
+        /* The number of read-only signed accounts */
+        uint8_t numReadonlySignedAccounts;
+        /* The number of read-only unsigned accounts */
+        uint8_t numReadonlyUnsignedAccounts;
+      } header;
+      /* The account keys used by this transaction */
+      std::vector<PublicKey> accountKeys;
+      /* Recent blockhash */
+      std::string recentBlockhash;
+      struct Instruction {
+        /* The program id that executes this instruction */
+        PublicKey programId;
+        /**
+         * Account metadata used to define instructions
+         */
+        struct AccountMeta {
+          /** An account's public key */
+          PublicKey pubkey;
+          /** True if an instruction requires a transaction signature matching `pubkey` */
+          bool isSigner;
+          /** True if the `pubkey` can be loaded as a read-write account. */
+          bool isWritable;
+          AccountMeta() : pubkey(), isSigner(false), isWritable(false) { }
+          AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable) : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
+          AccountMeta(PublicKey pubkey, bool isSigner) : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
+          AccountMeta(PublicKey pubkey) : pubkey(pubkey), isSigner(false), isWritable(false) { }
+        };
+        /* Ordered indices into the transaction keys array indicating which accounts to pass to the program */
+        std::vector<AccountMeta> accounts;
+        /* Program input data */
+        std::vector<uint8_t> data;
+      };
+      /* The program instructions */
+      std::vector<Instruction> instructions;
+
+      std::vector<uint8_t> serialize() {
+        if (recentBlockhash.empty()) {
+          throw std::runtime_error("recentBlockhash required");
+        }
+        if (instructions.empty()) {
+          throw std::runtime_error("No instructions provided");
+        }
+
+        std::vector<uint8_t> buffer;
+
+        buffer.push_back(header.numRequiredSignatures);
+        buffer.push_back(header.numReadonlySignedAccounts);
+        buffer.push_back(header.numReadonlyUnsignedAccounts);
+
+        std::vector<uint8_t> accountAddressesLength = encodeLength(accountKeys.size());
+        buffer.insert(buffer.end(), accountAddressesLength.begin(), accountAddressesLength.end());
+
+        for (PublicKey accountKey : accountKeys) {
+          std::array<uint8_t, PUBLIC_KEY_LENGTH> accountAddress = accountKey.bytes;
+          buffer.insert(buffer.end(), accountAddress.begin(), accountAddress.end());
+        }
+
+        std::string recentBlockhashBytes = base58::decode(recentBlockhash);
+        buffer.insert(buffer.end(), recentBlockhashBytes.begin(), recentBlockhashBytes.end());
+
+        std::vector<uint8_t> instructionsLength = encodeLength(instructions.size());
+        buffer.insert(buffer.end(), instructionsLength.begin(), instructionsLength.end());
+
+        for (Instruction instruction : instructions) {
+          std::array<uint8_t, PUBLIC_KEY_LENGTH>  programIdBytes = instruction.programId.bytes;
+          buffer.insert(buffer.end(), programIdBytes.begin(), programIdBytes.end());
+
+          std::vector<uint8_t> accountsLength = encodeLength(instruction.accounts.size());
+          buffer.insert(buffer.end(), accountsLength.begin(), accountsLength.end());
+
+          for (Instruction::AccountMeta accountMeta : instruction.accounts) {
+            std::array<uint8_t, PUBLIC_KEY_LENGTH>  accountMetaBytes = accountMeta.pubkey.bytes;
+            buffer.insert(buffer.end(), accountMetaBytes.begin(), accountMetaBytes.end());
+
+            uint8_t accountMetaFlags = 0;
+            if (accountMeta.isSigner) {
+              accountMetaFlags |= 1;
+            }
+            if (accountMeta.isWritable) {
+              accountMetaFlags |= 2;
+            }
+            buffer.push_back(accountMetaFlags);
+          }
+
+          std::vector<uint8_t> dataLength = encodeLength(instruction.data.size());
+          buffer.insert(buffer.end(), dataLength.begin(), dataLength.end());
+
+          buffer.insert(buffer.end(), instruction.data.begin(), instruction.data.end());
+        }
+
+        return buffer;
+      }
+    } message;
+
+    std::vector<uint8_t> serialize() {
+      std::vector<uint8_t> buffer;
+      std::vector<uint8_t> signaturesLength = encodeLength(signatures.size());
+      buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
+      for (auto& signature : signatures) {
+        std::string rawSignature = base58::decode(signature);
+        buffer.insert(buffer.end(), rawSignature.begin(), rawSignature.end());
+      }
+      auto serializedMessage = message.serialize();
+      buffer.insert(buffer.end(), serializedMessage.begin(), serializedMessage.end());
+      return buffer;
+    }
+
+    void sign(const std::vector<Keypair> signers) {
+      if (signers.empty()) {
+        throw std::runtime_error("No signers");
+      }
+      PublicKey feePayer = signers[0].publicKey;
+      std::vector<uint8_t> serializedMessage = message.serialize();
+      for (Keypair signer : signers) {
+        auto signature = signer.sign(serializedMessage);
+        //TODO base58 encode the message
+        signatures.push_back(signature);
+      }
+    }
+  };
+
+  struct TransactionReponse {
+    /* The slot this transaction was processed in */
+    uint64_t slot;
+    /* The transaction */
+    struct Transaction {
+      /* Defines the content of the transaction */
+      struct Message {
+        /* List of base-58 encoded public keys used by the transaction, including by the instructions and for signatures.
+        The first message.header.numRequiredSignatures public keys must sign the transaction. */
+        std::vector<PublicKey> accountKeys;
+        struct Header {
+          /* The number of signatures required to validate this transaction */
+          uint8_t numRequiredSignatures;
+          /* The number of read-only signed accounts */
+          uint8_t numReadonlySignedAccounts;
+          /* The number of read-only unsigned accounts */
+          uint8_t numReadonlyUnsignedAccounts;
+        } header;
+        struct Instruction {
+          /* Ordered indices into the `message.accountKeys` array indicating which accounts to pass to the program */
+          std::vector<uint8_t> accounts;
+          /* The program input data encoded as base-58 */
+          std::string data;
+          /* Index into the `message.accountKeys` array indicating the program account that executes this instruction */
+          uint8_t programIdIndex;
+        };
+        /* List of program instructions that will be executed in sequence and committed in one atomic transaction if all succeed. */
+        std::vector<Instruction> instructions;
+        /* A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
+        std::string recentBlockhash;
+      } message;
+      /* The transaction signatures */
+      std::vector<std::string> signatures;
+    } transaction;
+    /* The estimated production time of when the transaction was processed. */
+    uint64_t blockTime;
+    /* Transaction status metadata object */
+    struct Meta {
+      /* Error if the transaction failed */
+      std::string err;
+      /* Fee this transaction was charged, as u64 integer */
+      uint64_t fee;
+      /* List of inner instructions if inner instruction recording was enabled during this transaction */
+      //TODO this should be an array of inner instruction std::string innerInstructions;
+      struct LoadedAddresses {
+        /* Ordered list of base-58 encoded addresses for writable loaded accounts */
+        std::vector<PublicKey> writable;
+        /* Ordered list of base-58 encoded addresses for read-only loaded accounts */
+        std::vector<PublicKey> readOnly;
+      } loadedAddresses;
+      /* Array of string log messages if log message recording was enabled during this transaction  */
+      std::vector<std::string> logMessages;
+      /* Array of u64 account balances from after the transaction was processed */
+      std::vector<uint64_t> postBalances;
+      /* Array of u64 account balances from before the transaction was processed */
+      std::vector<uint64_t> preBalances;
+      /* Transaction-level rewards, populated if rewards are requested */
+      struct TransactionReward {
+        /* The public key of the account that received the reward */
+        PublicKey pubkey;
+        /* The number of reward lamports credited or debited by the account */
+        uint64_t lamports;
+        /* The account balance in lamports after the reward was applied */
+        uint64_t postBalance;
+        /* The type of reward */
+        std::string rewardType;
+        /* Vote account commission when the reward was credited, only present for voting and staking rewards */
+        uint8_t commission;
+      };
+      std::vector<TransactionReward> rewards;
+    } meta;
+  };
+
+  void from_json(const json& j, TransactionReponse::Meta::TransactionReward& rewards) {
+    j.at("commission").get_to(rewards.commission);
+    j.at("lamports").get_to(rewards.lamports);
+    j.at("postBalance").get_to(rewards.postBalance);
+    j.at("pubkey").get_to(rewards.pubkey);
+    j.at("rewardType").get_to(rewards.rewardType);
+  }
+
+  void from_json(const json& j, TransactionReponse::Meta::LoadedAddresses& loadedAddresses) {
+    j.at("readonly").get_to(loadedAddresses.readOnly);
+    j.at("writable").get_to(loadedAddresses.writable);
+  }
+
+  void from_json(const json& j, TransactionReponse::Meta& meta) {
+    if (j.at("err").is_null())
+      meta.err = "";
+    else
+      j.at("err").get_to(meta.err);
+    j.at("fee").get_to(meta.fee);
+    //TODO j.at("innerInstructions").get_to(meta.innerInstructions);
+    j.at("loadedAddresses").get_to(meta.loadedAddresses);
+    j.at("logMessages").get_to(meta.logMessages);
+    j.at("postBalances").get_to(meta.postBalances);
+    j.at("preBalances").get_to(meta.preBalances);
+    j.at("rewards").get_to(meta.rewards);
+  }
+
+  void from_json(const json& j, TransactionReponse::Transaction::Message::Header& header) {
+    j.at("numRequiredSignatures").get_to(header.numRequiredSignatures);
+    j.at("numReadonlySignedAccounts").get_to(header.numReadonlySignedAccounts);
+    j.at("numReadonlyUnsignedAccounts").get_to(header.numReadonlyUnsignedAccounts);
+  }
+
+  void from_json(const json& j, TransactionReponse::Transaction::Message::Instruction& instruction) {
+    j.at("accounts").get_to(instruction.accounts);
+    j.at("data").get_to(instruction.data);
+    j.at("programIdIndex").get_to(instruction.programIdIndex);
+  }
+
+  void from_json(const json& j, TransactionReponse::Transaction::Message& message) {
+    j.at("accountKeys").get_to(message.accountKeys);
+    j.at("header").get_to(message.header);
+    j.at("instructions").get_to(message.instructions);
+    j.at("recentBlockhash").get_to(message.recentBlockhash);
+  }
+
+  void from_json(const json& j, TransactionReponse::Transaction& transaction) {
+    j.at("message").get_to(transaction.message);
+    j.at("signatures").get_to(transaction.signatures);
+  }
+
+  void from_json(const json& j, TransactionReponse& transactionReponse) {
+    j.at("slot").get_to(transactionReponse.slot);
+    j.at("transaction").get_to(transactionReponse.transaction);
+    j.at("meta").get_to(transactionReponse.meta);
+    j.at("blockTime").get_to(transactionReponse.blockTime);
+  }
+
+  std::ostream& operator<<(std::ostream& os, const TransactionReponse& transaction) {
+    os << "slot = " << transaction.slot << std::endl << std::endl;
+    os << "signatures:" << std::endl;
+    for (auto& signature : transaction.transaction.signatures) {
+      os << "  " << signature << std::endl;
+    }
+    os << "accounts:" << std::endl;
+    for (auto& accountKey : transaction.transaction.message.accountKeys) {
+      os << "  " << accountKey.toBase58() << std::endl;
+    }
+    os << "recentBlockhash = " << transaction.transaction.message.recentBlockhash << std::endl;
+    os << "instructions:" << std::endl;
+    for (auto& instruction : transaction.transaction.message.instructions) {
+      os << "  programId index = " << instruction.programIdIndex << std::endl;
+      for (auto& account : instruction.accounts) {
+        os << "    account = " << account << std::endl;
+      }
+      for (auto& data : instruction.data) {
+        os << "    data = " << data << std::endl;
+      }
+    }
+    os << "block time = " << transaction.blockTime << std::endl;
+    os << "error = " << transaction.meta.err << std::endl;
+    os << "fee = " << transaction.meta.fee << std::endl;
+    os << "pre-balances:" << std::endl;
+    for (auto& preBalance : transaction.meta.preBalances) {
+      os << "  " << preBalance << std::endl;
+    }
+    os << "post-balances:" << std::endl;
+    for (auto& postBalance : transaction.meta.postBalances) {
+      os << "  " << postBalance << std::endl;
+    }
+    //TODO os << "inner instructions = " << transaction.meta.innerInstructions << std::endl;
+    os << "logs:" << std::endl;
+    for (auto& log : transaction.meta.logMessages) {
+      os << "  " << log << std::endl;
+    }
+    os << "rewards:" << std::endl;
+    for (auto& reward : transaction.meta.rewards) {
+      os << "  recipient = " << reward.pubkey.toBase58() << std::endl;
+      os << "  lamports = " << reward.lamports << std::endl;
+      os << "  postBalance = " << reward.postBalance << std::endl;
+      os << "  rewardType = " << reward.rewardType << std::endl;
+      os << "  commission = " << reward.commission << std::endl;
+      os << "----------------" << std::endl;
+    }
+    os << "loaded addresses:" << std::endl;
+    os << "  writable:" << std::endl;
+    for (auto& address : transaction.meta.loadedAddresses.writable) {
+      os << "    " << address.toBase58() << std::endl;
+    }
+    os << "  read only:" << std::endl;
+    for (auto& address : transaction.meta.loadedAddresses.readOnly) {
+      os << "    " << address.toBase58() << std::endl;
+    }
+    os << "return data:" << std::endl;
+    //TODO os << "  programId = " << transaction.meta.returnData.programId.toBase58() << std::endl;
+    //TODO os << "  data = " <<  transaction.meta.returnData.data  << std::endl;
+    return os;
+  }
 
   class Connection {
     Commitment _commitment;
     std::string _rpcEndpoint;
     std::string _rpcWsEndpoint;
-    //HttpClient _rpcClient;
-    //WebSocketClient _rpcWebSocket;
+    // http::HttpClient _rpcClient;
+    // websockets::WebSocketClient _rpcWebSocket;
 
     std::map<int, AccountChangeSubscriptionInfo> _accountChangeSubscriptions;
     std::map<int, LogsSubscriptionInfo> _logsSubscriptions;
@@ -1828,11 +1864,11 @@ namespace solana {
   public:
 
     Connection(std::string endpoint, Commitment commitment)
-      : _commitment(commitment)
-      , _rpcEndpoint(endpoint)
-      , _rpcWsEndpoint(makeWebsocketUrl(endpoint))
-      //, _rpcClient(_rpcEndpoint, 443)
-      //, _rpcWebSocket(_rpcWsEndpoint, 443)
+      : _commitment(commitment),
+      _rpcEndpoint(endpoint),
+      _rpcWsEndpoint(makeWebsocketUrl(endpoint))
+      // _rpcClient(_rpcEndpoint, 443),
+      // _rpcWebSocket(_rpcWsEndpoint, 443)
     {
       auto sodium_result = sodium_init();
       if (sodium_result == -1) {
@@ -1848,15 +1884,14 @@ namespace solana {
     Connection& operator=(const Connection&) = delete;
     Connection& operator=(Connection&&) = delete;
 
+    //-------- Http methods --------------------------------------------------------------------
+
     /**
-     * ================================
-     * HTTP METHODS
-     * ================================
+     * Returns all information associated with the account of provided Pubkey.
+     * 
+     * @param publicKey The Pubkey of account to query
      */
-    /**
-     * Returns all information associated with the account of provided Pubkey
-     * @param publicKey The public key of the desired account
-     */
+    // TODO null
     AccountInfo getAccountInfo(PublicKey publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -1872,8 +1907,31 @@ namespace solana {
     }
 
     /**
-     * Fetch the balance for the specified public key
-     * @param publicKey The public key for the account to query
+     * Returns all SPL Token accounts by token owner.
+     * 
+     * @param ownerAddress The Pubkey of account owner to query
+     */
+    std::vector<TokenAccount> getAllTokenAccountsByOwner(PublicKey ownerAddress) {
+      return http::post(_rpcEndpoint, {
+        {"jsonrpc", "2.0"},
+        {"id", 1},
+        {"method", "getTokenAccountsByOwner"},
+        {"params", {
+          ownerAddress.toBase58(),
+          {
+            {"programId", TOKEN_PROGRAM_ID.toBase58()},
+          },
+          {
+            {"encoding", "jsonParsed"},
+          }
+        }},
+      })["result"]["value"];
+    }
+
+    /**
+     * Returns the balance of the account of provided Pubkey.
+     * 
+     * @param publicKey The Pubkey of the account to query
      */
     uint64_t getBalance(PublicKey publicKey) {
       return http::post(_rpcEndpoint, {
@@ -1887,7 +1945,7 @@ namespace solana {
     }
 
     /**
-     * Returns information about all the nodes participating in the cluster
+     * Returns information about all the nodes participating in the cluster.
      */
     json getClusterNodes() {
       return http::post(_rpcEndpoint, {
@@ -1898,7 +1956,7 @@ namespace solana {
     }
 
     /**
-     * Returns the identity pubkey for the current node
+     * Returns the identity Pubkey of the current node.
      */
     PublicKey getIdentity() {
       return http::post(_rpcEndpoint, {
@@ -1909,7 +1967,7 @@ namespace solana {
     }
 
     /**
-     * Returns the latest blockhash
+     * Returns the latest blockhash.
      */
     std::string getLatestBlockhash() {
       return http::post(_rpcEndpoint, {
@@ -1920,7 +1978,9 @@ namespace solana {
     }
 
     /**
-     * Returns the leader schedule for an epoch
+     * Returns the schedule for a given leader, for the current epoch.
+     * 
+     * @param leaderAddress The Pubkey of the leader to query
      */
     json getLeaderSchedule(PublicKey leaderAddress) {
       return http::post(_rpcEndpoint, {
@@ -1937,8 +1997,10 @@ namespace solana {
 
     /**
      * Returns the account information for a list of Pubkeys.
-     * @param publicKeys The public keys of the desired accounts
+     * 
+     * @param publicKeys The Pubkeys of the accounts to query
     */
+   // TODO null
     std::vector<AccountInfo> getMultipleAccounts(std::vector<PublicKey> publicKeys) {
       std::vector<std::string> base58Keys;
       for (auto publicKey : publicKeys) {
@@ -1958,9 +2020,11 @@ namespace solana {
     }
 
     /**
-     * Returns all accounts owned by the provided program Pubkey
-     * @param programId The public key for the program to query
+     * Returns all accounts owned by the provided program Pubkey.
+     * 
+     * @param programId The Pubkey of the program to query
     */
+   // TODO null
     std::vector<AccountInfo> getProgramAccounts(PublicKey programId) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -1968,17 +2032,14 @@ namespace solana {
         {"method", "getProgramAccounts"},
         {"params", {
           programId.toBase58(),
-          //{
-            //{"encoding", "base64"},
-          //}
         }},
       })["result"];
     }
 
     /**
-     * Returns the slot that has reached the given or default commitment level
+     * Returns the slot that has reached the given or default commitment level.
     */
-    uint64_t getSlot() {
+    uint64_t getSlot(Commitment commitment = Commitment::Finalized) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -1987,7 +2048,7 @@ namespace solana {
     }
 
     /**
-     * Returns the current slot leader
+     * Returns the current slot leader.
      */
     PublicKey getSlotLeader() {
       return http::post(_rpcEndpoint, {
@@ -1999,7 +2060,8 @@ namespace solana {
 
     /**
      * Returns the token balance of an SPL Token account.
-     * @param tokenAddress The public key for the token account to query
+     * 
+     * @param tokenAddress The Pubkey of the token account to query
      */
     TokenAmount getTokenAccountBalance(PublicKey tokenAddress) {
       return http::post(_rpcEndpoint, {
@@ -2013,30 +2075,10 @@ namespace solana {
     }
 
     /**
-     * Returns all SPL Token accounts by token owner.
-     * @param ownerAddress The owner of the token accounts
-     */
-    std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress) {
-      return http::post(_rpcEndpoint, {
-        {"jsonrpc", "2.0"},
-        {"id", 1},
-        {"method", "getTokenAccountsByOwner"},
-        {"params", {
-          ownerAddress.toBase58(),
-          {
-            {"programId", TOKEN_PROGRAM_ID.toBase58()},
-          },
-          {
-            {"encoding", "jsonParsed"},
-          }
-        }},
-      })["result"]["value"];
-    }
-
-    /**
-     * Returns all SPL Token accounts or a given mint by token owner.
-     * @param ownerAddress The owner of the token accounts
-     * @param mintAddress The mint of the token accounts
+     * Returns SPL Token accounts for a given mint by token owner.
+     * 
+     * @param ownerAddress The Pubkey of account owner to query
+     * @param mintAddress The mint of the token to query
      */
     std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress, PublicKey tokenMint) {
       return http::post(_rpcEndpoint, {
@@ -2057,7 +2099,8 @@ namespace solana {
 
     /**
      * Returns the total supply of an SPL Token type.
-     * @param tokenMintAddress The token mint to query
+     * 
+     * @param tokenMintAddress The Pubkey of the token mint to query
      */
     TokenAmount getTokenSupply(PublicKey tokenMintAddress) {
       return http::post(_rpcEndpoint, {
@@ -2071,9 +2114,11 @@ namespace solana {
     }
 
     /**
-     * Returns transaction details for a confirmed transaction
+     * Returns transaction details for a confirmed transaction.
+     * 
      * @param transactionSignature The signature of the transaction to query
      */
+    // TODO null
     TransactionReponse getTransaction(std::string transactionSignature) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2086,7 +2131,7 @@ namespace solana {
     }
 
     /**
-     * Returns the current solana versions running on the node
+     * Returns the current solana versions running on the node.
      */
     std::string getVersion() {
       return http::post(_rpcEndpoint, {
@@ -2098,34 +2143,44 @@ namespace solana {
 
     /**
      * Submits a signed transaction to the cluster for processing.
-     * @param transaction The transaction to submit
-     * @param keypair The keypair used to sign the transaction
+     * 
+     * @param signedTransaction The signed transaction to submit
      */
-    // TODO: add an example?
-    std::string sendTransaction(Transaction& transaction, std::vector<Keypair> signers) {
-      transaction.message.recentBlockhash = getLatestBlockhash();
-      transaction.sign(signers);
-      std::vector<uint8_t> wireTransaction = transaction.serialize();
-      std::string encodedTransaction = base64::base64_encode(wireTransaction.data(), wireTransaction.size());
-
+    std::string sendTransaction(std::string signedTransaction) {
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "sendTransaction"},
         {"params", {
-          encodedTransaction,
+          signedTransaction,
           {
             {"encoding", "base64"},
           },
         }},
       });
 
-      auto signature = response["result"];
-      return signature.get<std::string>();
+      auto hash = response["result"];
+      return hash.get<std::string>();
     }
 
     /**
-     * Simulate sending a transaction
+     * Returns a signed transaction.
+     * 
+     * @param transaction The transaction to sign
+     * @param signers The keypairs to sign the transaction
+     */
+    std::string signTransaction(Transaction& transaction, std::vector<Keypair> signers) {
+      transaction.message.recentBlockhash = getLatestBlockhash();
+      transaction.sign(signers);
+      std::vector<uint8_t> wireTransaction = transaction.serialize();
+      std::string signedTransaction = base64::base64_encode(wireTransaction.data(), wireTransaction.size());
+
+      return signedTransaction;
+    }
+
+    /**
+     * Simulate sending a transaction.
+     * 
      * @param signedTransaction The signed transaction to simulate
      */
     SimulatedTransactionResponse simulateTransaction(std::string signedTransaction) {
@@ -2149,10 +2204,10 @@ namespace solana {
       std::vector<AccountInfo> accounts;
       for (auto account : response["result"]["accounts"]) {
         accounts.push_back(AccountInfo {
-          account["executable"].get<bool>(),
-          account["data"].get<std::string>(),
           account["lamports"].get<uint64_t>(),
           account["owner"].get<std::string>(),
+          account["data"].get<std::string>(),
+          account["executable"].get<bool>(),
           account["rentEpoch"].get<uint64_t>(),
         });
       }
@@ -2170,11 +2225,7 @@ namespace solana {
       };
     }
 
-    /**
-     * ================================
-     * SUBSCRIPTION WEBSOCKET METHODS
-     * ================================
-     */
+    //-------- Websocket methods --------------------------------------------------------------------
 
     int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       //TODO _rpcWebSocket
@@ -2316,4 +2367,4 @@ namespace solana {
     }
   };
 
-} // namespace solana
+}
