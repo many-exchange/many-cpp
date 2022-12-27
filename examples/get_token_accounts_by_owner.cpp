@@ -8,10 +8,10 @@ int main() {
   auto tokenAccounts = connection.getTokenAccountsByOwner(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"));
 
   for (TokenAccount tokenAccount : tokenAccounts) {
-    std::cout << "pubkey = " << tokenAccount.pubkey.toBase58() << std::endl;
-    std::cout << "owner = " << tokenAccount.account.owner.toBase58() << std::endl;
-    std::cout << "mint = " << tokenAccount.account.data.parsed.info.mint.toBase58() << std::endl;
-    std::cout << "tokens = " << tokenAccount.account.data.parsed.info.tokenAmount.as_tokens() << std::endl << std::endl;
+    std::cout << "pubkey = " << tokenAccount.pubkey.to_base58() << std::endl;
+    std::cout << "owner = " << tokenAccount.account.owner.to_base58() << std::endl;
+    std::cout << "mint = " << tokenAccount.account.data.parsed.info.mint.to_base58() << std::endl;
+    std::cout << "tokens = " << tokenAccount.account.data.parsed.info.tokenAmount.tokens() << std::endl << std::endl;
   }
 
   return 0;

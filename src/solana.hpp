@@ -5,8 +5,8 @@
 //
 // Copyright (c) 2022-2023 Many Exchange
 //
-// This program is free software: you can redistribute it 
-// and/or modify it under the terms of the standard MIT license.
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
 #pragma once
 
@@ -47,9 +47,11 @@ using json = nlohmann::json;
 #define SYSVAR_INSTRUCTIONS_PUBKEY PublicKey("Sysvar1nstructions1111111111111111111111111")
 
 #define TOKEN_PROGRAM_ID PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-#define ASSOCIATED_TOKEN_ID PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
+#define ASSOCIATED_TOKEN_PROGRAM_ID PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
 
 #define PUBLIC_KEY_LENGTH 32
+#define PRIVATE_KEY_LENGTH 64
+#define MAX_SEED_LENGTH 32
 
 #define SIGNATURE_LENGTH 64
 
@@ -685,7 +687,7 @@ namespace solana {
       char* response = client.post(request, &response_length);
       client.disconnect();
 
-      // std::cout << response << std::endl;
+      std::cout << response << std::endl << std::endl;
       // std::cout << "response_length = " << response_length << std::endl;
 
       return json::parse(std::string(response, response_length));
@@ -1167,6 +1169,12 @@ namespace solana {
     Finalized,
   };
 
+  struct ConfirmOptions {
+    Commitment commitment = Commitment::Finalized;
+    bool preflightCommitment = false;
+    bool encoding = "base64";
+  };
+
   struct Context {
     uint64_t slot;
   };
@@ -1236,12 +1244,84 @@ namespace solana {
       return true;
     }
 
-    std::string toBase58() const {
+    /**
+     * Returns the base-58 representation of the public key
+     */
+    std::string to_base58() const {
       char temp[45];
       memset(temp, 0, 45);
       size_t size = 45;
       base58::b58enc(temp, &size, bytes.data(), bytes.size());
       return std::string(temp, size - 1);
+    }
+
+    /**
+     * Returns a buffer representation of the public key
+     */
+    std::vector<uint8_t> to_buffer() const {
+      return std::vector<uint8_t>(bytes.begin(), bytes.end());
+    }
+
+    /**
+     * Check if this keypair is on the ed25519 curve
+     */
+    bool is_on_curve() const {
+      return crypto_core_ed25519_is_valid_point(bytes.data());
+    }
+
+    /**
+     * Derive a program address from seeds and a program ID.
+     * 
+     * @param seeds Seeds to use to derive the program address
+     * @param program_id Program ID to use to derive the program address
+    */
+    static std::optional<PublicKey> create_program_address(
+      const std::vector<std::vector<uint8_t>>& seeds,
+      const PublicKey& program_id
+    ) {
+      std::vector<uint8_t> buffer;
+      for (auto seed : seeds) {
+        if (seed.size() > MAX_SEED_LENGTH) {
+          throw std::runtime_error("Max seed length exceeded");
+        }
+        buffer.insert(buffer.end(), seed.begin(), seed.end());
+      }
+      buffer.insert(buffer.end(), program_id.bytes.begin(), program_id.bytes.end());
+      unsigned char hash[crypto_hash_sha256_BYTES];
+      crypto_hash_sha256(hash, buffer.data(), buffer.size());
+      PublicKey pubkey = PublicKey((uint8_t*) hash);
+      if (pubkey.is_on_curve()) {
+        std::cout << "Invalid seeds, address must fall off the curve" << std::endl;
+        return std::nullopt;
+      }
+      
+      return pubkey;
+    }
+
+    /**
+     * Find a valid program address
+     *
+     * Valid program addresses must fall off the ed25519 curve.  This function
+     * iterates a nonce until it finds one that when combined with the seeds
+     * results in a valid program address.
+     * 
+     * @param seeds Seed values used to generate the program address
+     * @param programId Program ID to generate the address for
+     */
+    static std::tuple<PublicKey, uint8_t> find_program_address(const std::vector<std::vector<uint8_t>>& seeds, const PublicKey& programId) {
+      uint8_t nonce = 255;
+      std::optional<PublicKey> address;
+      while (nonce != 0) {
+        std::vector<std::vector<uint8_t>> seedsWithNonce = seeds;
+        seedsWithNonce.push_back({nonce});
+        address = create_program_address(seedsWithNonce, programId);
+        if (address.has_value()) {
+          return std::make_tuple(address.value(), nonce);
+        } else {
+          nonce -= 1;
+        }
+      }
+      throw std::runtime_error("Unable to find a viable program address nonce");
     }
   };
 
@@ -1378,7 +1458,7 @@ namespace solana {
     /** 
      * Returns the balance as a number of tokens, with decimals applied.
      */
-    double as_tokens() {
+    double tokens() {
       return (double) amount / (double) pow(10, decimals);
     }
   };
@@ -1505,6 +1585,7 @@ namespace solana {
           bool isSigner;
           /** True if the Pubkey can be loaded as a read-write account. */
           bool isWritable;
+
           AccountMeta() : pubkey(), isSigner(false), isWritable(false) { }
           AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable) : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
           AccountMeta(PublicKey pubkey, bool isSigner) : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
@@ -1581,6 +1662,15 @@ namespace solana {
     } message;
 
     /**
+     * Add an instruction to the transaction message
+     * 
+     * @param instruction The instruction to add
+     */
+    void add(Transaction::Message::Instruction instruction) {
+      message.instructions.push_back(instruction);
+    }
+
+    /**
      * Serialize the transaction
      */
     std::vector<uint8_t> serialize() {
@@ -1616,6 +1706,12 @@ namespace solana {
     }
   };
 
+  void from_json(const json& j, Transaction::Message::Instruction::AccountMeta& accountMeta) {
+    accountMeta.pubkey = j["pubkey"].get<PublicKey>();
+    accountMeta.isSigner = j["isSigner"].get<bool>();
+    accountMeta.isWritable = j["isWritable"].get<bool>();
+  }
+
   struct TransactionResponseReturnData {
     /** The program that generated the return data */
     PublicKey programId;
@@ -1624,8 +1720,8 @@ namespace solana {
   };
 
   void from_json(const json& j, TransactionResponseReturnData& transactionReturnData) {
-    transactionReturnData.programId = j["programId"].get<std::string>();
-    transactionReturnData.data = j["data"][0].get<std::string>();
+    transactionReturnData.programId = j["programId"].get<PublicKey>();
+    transactionReturnData.data = j["data"].get<std::string>();
   }
 
   struct TransactionResponse {
@@ -1904,13 +2000,13 @@ namespace solana {
      * 
      * @param publicKey The Pubkey of account to query
      */
-    AccountInfo getAccountInfo(PublicKey publicKey) {
+    AccountInfo getAccountInfo(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getAccountInfo"},
         {"params", {
-          publicKey.toBase58(),
+          publicKey.to_base58(),
           {
             {"encoding", "base64"},
           },
@@ -1923,13 +2019,13 @@ namespace solana {
      * 
      * @param publicKey The Pubkey of the account to query
      */
-    uint64_t getBalance(PublicKey publicKey) {
+    uint64_t getBalance(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getBalance"},
         {"params", {
-          publicKey.toBase58(),
+          publicKey.to_base58(),
         }},
       })["result"]["value"];
     }
@@ -1959,7 +2055,7 @@ namespace solana {
     /**
      * Returns the latest blockhash.
      */
-    std::string getLatestBlockhash() {
+    std::string getLatestBlockhash() const {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -1972,14 +2068,14 @@ namespace solana {
      * 
      * @param leaderAddress The Pubkey of the leader to query
      */
-    json getLeaderSchedule(PublicKey leaderAddress) {
+    json getLeaderSchedule(const PublicKey& leaderAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getLeaderSchedule"},
         {"params", {
           {
-            {"identity", leaderAddress.toBase58()},
+            {"identity", leaderAddress.to_base58()},
           },
         }},
       })["result"];
@@ -1990,10 +2086,10 @@ namespace solana {
      * 
      * @param publicKeys The Pubkeys of the accounts to query
     */
-    std::vector<AccountInfo> getMultipleAccounts(std::vector<PublicKey> publicKeys) {
+    std::vector<AccountInfo> getMultipleAccounts(const std::vector<PublicKey>& publicKeys) {
       std::vector<std::string> base58Keys;
       for (auto publicKey : publicKeys) {
-        base58Keys.push_back(publicKey.toBase58());
+        base58Keys.push_back(publicKey.to_base58());
       }
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2013,13 +2109,13 @@ namespace solana {
      * 
      * @param programId The Pubkey of the program to query
     */
-    std::vector<AccountInfo> getProgramAccounts(PublicKey programId) {
+    std::vector<AccountInfo> getProgramAccounts(const PublicKey& programId) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getProgramAccounts"},
         {"params", {
-          programId.toBase58(),
+          programId.to_base58(),
         }},
       })["result"];
     }
@@ -2027,7 +2123,7 @@ namespace solana {
     /**
      * Returns the slot that has reached the given or default commitment level.
     */
-    uint64_t getSlot(Commitment commitment = Commitment::Finalized) {
+    uint64_t getSlot(const Commitment& commitment = Commitment::Finalized) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2051,13 +2147,13 @@ namespace solana {
      * 
      * @param tokenAddress The Pubkey of the token account to query
      */
-    TokenBalance getTokenAccountBalance(PublicKey tokenAddress) {
+    TokenBalance getTokenAccountBalance(const PublicKey& tokenAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountBalance"},
         {"params", {
-          tokenAddress.toBase58(),
+          tokenAddress.to_base58(),
         }},
       })["result"]["value"];
     }
@@ -2067,15 +2163,15 @@ namespace solana {
      * 
      * @param ownerAddress The Pubkey of account owner to query
      */
-    std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress) {
+    std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountsByOwner"},
         {"params", {
-          ownerAddress.toBase58(),
+          ownerAddress.to_base58(),
           {
-            {"programId", TOKEN_PROGRAM_ID.toBase58()},
+            {"programId", TOKEN_PROGRAM_ID.to_base58()},
           },
           {
             {"encoding", "jsonParsed"},
@@ -2090,15 +2186,15 @@ namespace solana {
      * @param ownerAddress The Pubkey of account owner to query
      * @param mintAddress The mint of the token to query
      */
-    std::vector<TokenAccount> getTokenAccountsByOwner(PublicKey ownerAddress, PublicKey tokenMint) {
+    std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountsByOwner"},
         {"params", {
-          ownerAddress.toBase58(),
+          ownerAddress.to_base58(),
           {
-            {"mint", tokenMint.toBase58()},
+            {"mint", tokenMint.to_base58()},
           },
           {
             {"encoding", "jsonParsed"},
@@ -2112,13 +2208,13 @@ namespace solana {
      * 
      * @param tokenMintAddress The Pubkey of the token mint to query
      */
-    TokenBalance getTokenSupply(PublicKey tokenMintAddress) {
+    TokenBalance getTokenSupply(const PublicKey& tokenMintAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenSupply"},
         {"params", {
-          tokenMintAddress.toBase58(),
+          tokenMintAddress.to_base58(),
         }},
       })["result"]["value"];
     }
@@ -2128,7 +2224,7 @@ namespace solana {
      * 
      * @param transactionSignature The signature of the transaction to query
      */
-    TransactionResponse getTransaction(std::string transactionSignature) {
+    TransactionResponse getTransaction(const std::string& transactionSignature) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2156,13 +2252,13 @@ namespace solana {
      * @param recipientAddress The Pubkey to airdrop lamports to
      * @param lamports The number of lamports to airdrop
     */
-    std::string requestAirdrop(PublicKey recipientAddress, uint64_t lamports = LAMPORTS_PER_SOL) {
+    std::string requestAirdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "requestAirdrop"},
         {"params", {
-          recipientAddress.toBase58(),
+          recipientAddress.to_base58(),
           lamports,
         }},
       })["result"].get<std::string>();
@@ -2173,7 +2269,7 @@ namespace solana {
      * 
      * @param signedTransaction The signed transaction to submit
      */
-    std::string sendTransaction(std::string signedTransaction) {
+    std::string sendTransaction(const std::string& signedTransaction) const {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2193,7 +2289,7 @@ namespace solana {
      * @param transaction The transaction to sign
      * @param signers The keypairs to sign the transaction
      */
-    std::string signTransaction(Transaction& transaction, std::vector<Keypair> signers) {
+    std::string signTransaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
       transaction.message.recentBlockhash = getLatestBlockhash();
       transaction.sign(signers);
       std::vector<uint8_t> wireTransaction = transaction.serialize();
@@ -2205,7 +2301,7 @@ namespace solana {
      * 
      * @param signedTransaction The signed transaction to simulate
      */
-    SimulatedTransactionResponse simulateTransaction(std::string signedTransaction) {
+    SimulatedTransactionResponse simulateTransaction(const std::string& signedTransaction) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2228,7 +2324,7 @@ namespace solana {
         {"id", 1},
         {"method", "accountSubscribe"},
         {"params", {
-          accountId.toBase58(),
+          accountId.to_base58(),
           {
             {"encoding", "base64"},
             {"commitment", _commitment},
@@ -2266,7 +2362,7 @@ namespace solana {
         {"params", {
           "mentions",
           {
-            {"mentions", accountId.toBase58()},
+            {"mentions", accountId.to_base58()},
           },
           {
             {"commitment", _commitment},
@@ -2302,7 +2398,7 @@ namespace solana {
         {"id", 1},
         {"method", "programSubscribe"},
         {"params", {
-          programId.toBase58(),
+          programId.to_base58(),
           {
             {"encoding", "base64"},
             {"commitment", _commitment},
