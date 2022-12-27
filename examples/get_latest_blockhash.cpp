@@ -5,9 +5,9 @@ using namespace solana;
 
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
-  auto balance = connection.getBalance(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"));
+  auto latestBlockhash = connection.getLatestBlockhash();
 
-  std::cout << "balance = " << balance << std::endl << std::endl;
+  std::cout << "latest blockhash = " << latestBlockhash << std::endl << std::endl;
 
   return 0;
 }

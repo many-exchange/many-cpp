@@ -3,12 +3,12 @@
 
 using namespace solana;
 
-// TODO: this example is not working.
+// TODO: not sure if this is working.
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
   auto tokenSupply = connection.getTokenSupply(NATIVE_MINT);
 
-  std::cout << "token supply = " << tokenSupply.uiAmount << std::endl << std::endl;
+  std::cout << "token supply = " << tokenSupply.as_tokens() << std::endl << std::endl;
 
   return 0;
 }
