@@ -1287,6 +1287,8 @@ namespace solana {
         buffer.insert(buffer.end(), seed.begin(), seed.end());
       }
       buffer.insert(buffer.end(), program_id.bytes.begin(), program_id.bytes.end());
+      std::string ProgramDerivedAddress = "ProgramDerivedAddress";
+      buffer.insert(buffer.end(), ProgramDerivedAddress.begin(), ProgramDerivedAddress.end());
       unsigned char hash[crypto_hash_sha256_BYTES];
       crypto_hash_sha256(hash, buffer.data(), buffer.size());
       PublicKey pubkey = PublicKey((uint8_t*) hash);
