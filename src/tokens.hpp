@@ -166,7 +166,7 @@ namespace solana {
       );
 
       std::string signedTx = connection.signTransaction(tx, {payer});
-      std::string signature = connection.sendTransaction(signedTx);
+      SendTransactionResult result = connection.sendTransaction(signedTx);
 
       return associatedToken;
     }

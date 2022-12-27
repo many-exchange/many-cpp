@@ -450,12 +450,12 @@ namespace solana {
     public:
 
       HttpClient(const std::string url, int port, const std::string interface = "")
-        : _url(url), 
-        _port(port), 
-        _interface(interface), 
-        _socket(-1), 
-        _ssl_ctx(nullptr), 
-        _ssl(nullptr) 
+        : _url(url),
+        _port(port),
+        _interface(interface),
+        _socket(-1),
+        _ssl_ctx(nullptr),
+        _ssl(nullptr)
       {
         _send_buffer = (char*)malloc(65536);
         _recv_buffer = (char*)malloc(8388608);
@@ -600,7 +600,7 @@ namespace solana {
       }
 
     public:
-    
+
       bool disconnect() {
         if (_ssl != nullptr) {
           SSL_shutdown(_ssl);
@@ -672,7 +672,7 @@ namespace solana {
 
     /**
      * Takes a url and a json request object and returns a json response
-     * 
+     *
      * @param url The url endpoint for the POST request
      * @param request The json request object
      */
@@ -855,12 +855,12 @@ namespace solana {
     public:
 
       WebSocketClient(const std::string url, int port, const std::string interface = "")
-        : _url(url), 
+        : _url(url),
         _port(port),
-        _interface(interface), 
-        _socket(-1), 
-        _ssl_ctx(nullptr), 
-        _ssl(nullptr) 
+        _interface(interface),
+        _socket(-1),
+        _ssl_ctx(nullptr),
+        _ssl(nullptr)
       {
         _nonce[16] = 0;
       }
@@ -1136,7 +1136,7 @@ namespace solana {
     };
 
   }
-  
+
   //-------- Solana --------------------------------------------------------------------
 
   enum class Cluster {
@@ -1147,7 +1147,7 @@ namespace solana {
 
   /**
    * Returns a default cluster API URL for a given cluster.
-   * 
+   *
    * @param cluster The cluster to get the default API URL for
   */
   std::string clusterApiUrl(Cluster cluster) {
@@ -1271,7 +1271,7 @@ namespace solana {
 
     /**
      * Derive a program address from seeds and a program ID.
-     * 
+     *
      * @param seeds Seeds to use to derive the program address
      * @param program_id Program ID to use to derive the program address
     */
@@ -1294,7 +1294,7 @@ namespace solana {
         std::cout << "Invalid seeds, address must fall off the curve" << std::endl;
         return std::nullopt;
       }
-      
+
       return pubkey;
     }
 
@@ -1304,7 +1304,7 @@ namespace solana {
      * Valid program addresses must fall off the ed25519 curve.  This function
      * iterates a nonce until it finds one that when combined with the seeds
      * results in a valid program address.
-     * 
+     *
      * @param seeds Seed values used to generate the program address
      * @param programId Program ID to generate the address for
      */
@@ -1441,7 +1441,7 @@ namespace solana {
       accountInfo = AccountInfo();
       return;
     }
-    
+
     accountInfo.lamports = j["lamports"].get<uint64_t>();
     accountInfo.owner = j["owner"].get<PublicKey>();
     accountInfo.data = j["data"][0].get<std::string>();
@@ -1455,7 +1455,7 @@ namespace solana {
     /** The number of base 10 digits to the right of the decimal place */
     uint64_t decimals;
 
-    /** 
+    /**
      * Returns the balance as a number of tokens, with decimals applied.
      */
     double tokens() {
@@ -1663,7 +1663,7 @@ namespace solana {
 
     /**
      * Add an instruction to the transaction message
-     * 
+     *
      * @param instruction The instruction to add
      */
     void add(Transaction::Message::Instruction instruction) {
@@ -1688,14 +1688,14 @@ namespace solana {
 
     /**
      * Sign the transaction
-     * 
+     *
      * @param signers The keypairs to sign the transaction with
      */
     void sign(const std::vector<Keypair> signers) {
       if (signers.empty()) {
         throw std::runtime_error("No signers");
       }
-      
+
       PublicKey feePayer = signers[0].publicKey;
       std::vector<uint8_t> serializedMessage = message.serialize();
       for (Keypair signer : signers) {
@@ -1952,6 +1952,29 @@ namespace solana {
     std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback;
   };
 
+  struct SendTransactionError {
+    int64_t code;
+    std::string message;
+  };
+
+  struct SendTransactionResult {
+    std::optional<std::string> signature;
+    std::optional<SendTransactionError> error;
+  };
+
+  void from_json(const json& j, SendTransactionError& t) {
+    j.at("code").get_to(t.code);
+    j.at("message").get_to(t.message);
+  }
+
+  void from_json(const json& j, SendTransactionResult& t) {
+    if (j.contains("result")) {
+      t.signature = j["result"].get<std::string>();
+    } else if (j.contains("error")) {
+      t.error = j["error"];
+    }
+  }
+
   class Connection {
     Commitment _commitment;
     std::string _rpcEndpoint;
@@ -1997,7 +2020,7 @@ namespace solana {
 
     /**
      * Returns all information associated with the account of provided Pubkey.
-     * 
+     *
      * @param publicKey The Pubkey of account to query
      */
     AccountInfo getAccountInfo(const PublicKey& publicKey) {
@@ -2016,7 +2039,7 @@ namespace solana {
 
     /**
      * Returns the balance of the account of provided Pubkey.
-     * 
+     *
      * @param publicKey The Pubkey of the account to query
      */
     uint64_t getBalance(const PublicKey& publicKey) {
@@ -2065,7 +2088,7 @@ namespace solana {
 
     /**
      * Returns the schedule for a given leader, for the current epoch.
-     * 
+     *
      * @param leaderAddress The Pubkey of the leader to query
      */
     json getLeaderSchedule(const PublicKey& leaderAddress) {
@@ -2083,7 +2106,7 @@ namespace solana {
 
     /**
      * Returns the account information for a list of Pubkeys.
-     * 
+     *
      * @param publicKeys The Pubkeys of the accounts to query
     */
     std::vector<AccountInfo> getMultipleAccounts(const std::vector<PublicKey>& publicKeys) {
@@ -2106,7 +2129,7 @@ namespace solana {
 
     /**
      * Returns all accounts owned by the provided program Pubkey.
-     * 
+     *
      * @param programId The Pubkey of the program to query
     */
     std::vector<AccountInfo> getProgramAccounts(const PublicKey& programId) {
@@ -2144,7 +2167,7 @@ namespace solana {
 
     /**
      * Returns the token balance of an SPL Token account.
-     * 
+     *
      * @param tokenAddress The Pubkey of the token account to query
      */
     TokenBalance getTokenAccountBalance(const PublicKey& tokenAddress) {
@@ -2160,7 +2183,7 @@ namespace solana {
 
     /**
      * Returns all SPL Token accounts by token owner.
-     * 
+     *
      * @param ownerAddress The Pubkey of account owner to query
      */
     std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress) {
@@ -2182,7 +2205,7 @@ namespace solana {
 
     /**
      * Returns SPL Token accounts for a given mint by token owner.
-     * 
+     *
      * @param ownerAddress The Pubkey of account owner to query
      * @param mintAddress The mint of the token to query
      */
@@ -2205,7 +2228,7 @@ namespace solana {
 
     /**
      * Returns the total supply of an SPL Token type.
-     * 
+     *
      * @param tokenMintAddress The Pubkey of the token mint to query
      */
     TokenBalance getTokenSupply(const PublicKey& tokenMintAddress) {
@@ -2221,7 +2244,7 @@ namespace solana {
 
     /**
      * Returns transaction details for a confirmed transaction.
-     * 
+     *
      * @param transactionSignature The signature of the transaction to query
      */
     TransactionResponse getTransaction(const std::string& transactionSignature) {
@@ -2248,7 +2271,7 @@ namespace solana {
 
     /**
      * Requests an airdrop of lamports to a Pubkey
-     * 
+     *
      * @param recipientAddress The Pubkey to airdrop lamports to
      * @param lamports The number of lamports to airdrop
     */
@@ -2266,10 +2289,10 @@ namespace solana {
 
     /**
      * Submits a signed transaction to the cluster for processing.
-     * 
+     *
      * @param signedTransaction The signed transaction to submit
      */
-    std::string sendTransaction(const std::string& signedTransaction) const {
+    SendTransactionResult sendTransaction(const std::string& signedTransaction) const {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2280,12 +2303,12 @@ namespace solana {
             {"encoding", "base64"},
           },
         }},
-      })["result"].get<std::string>();
+      });
     }
 
     /**
      * Returns a signed transaction.
-     * 
+     *
      * @param transaction The transaction to sign
      * @param signers The keypairs to sign the transaction
      */
@@ -2298,7 +2321,7 @@ namespace solana {
 
     /**
      * Simulate sending a transaction.
-     * 
+     *
      * @param signedTransaction The signed transaction to simulate
      */
     SimulatedTransactionResponse simulateTransaction(const std::string& signedTransaction) {

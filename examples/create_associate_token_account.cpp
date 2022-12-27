@@ -11,9 +11,11 @@ int main() {
   std::string tx_hash = connection.requestAirdrop(keypair.publicKey);
   std::cout << "tx_hash = " << tx_hash << std::endl << std::endl;
 
-  sleep(3);
-
-  uint64_t lamports = connection.getBalance(keypair.publicKey);
+  uint64_t lamports = 0;
+  while (lamports == 0) {
+    sleep(3);
+    lamports = connection.getBalance(keypair.publicKey);
+  }
   std::cout << "lamports = " << lamports << std::endl << std::endl;
 
   PublicKey associatedTokenAccount = token::create_associated_token_account(
