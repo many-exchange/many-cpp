@@ -3,9 +3,8 @@
 
 using namespace solana;
 
-// TODO: this example is not working
 int main() {
-  Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
+  Connection connection(clusterApiUrl(Cluster::Devnet), Commitment::Processed);
   auto programAccounts = connection.getProgramAccounts(TOKEN_PROGRAM_ID);
 
   for (AccountInfo programAccount : programAccounts) {

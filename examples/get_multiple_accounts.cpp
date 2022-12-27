@@ -3,7 +3,6 @@
 
 using namespace solana;
 
-// TODO: test this
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
   auto accountInfos = connection.getMultipleAccounts({PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"), NATIVE_MINT});
