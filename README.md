@@ -29,4 +29,4 @@ int main() {
 ```
 
 ### Contributing
-If you'd like to report a problem or help contribute, please email us at [many.defi@gmail.com](mailto:many.defi@gmail.com) 🤘
+If you'd like to help contribute or report a problem, submit a PR or email us at [many.defi@gmail.com](mailto:many.defi@gmail.com) 🤘
