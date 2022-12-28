@@ -4,7 +4,7 @@
 using namespace solana;
 
 int main() {
-  Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   auto tokenAccounts = connection.get_token_accounts_by_owner(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"), NATIVE_MINT);
   if (tokenAccounts.size() == 0) {
     std::cout << "No token accounts found." << std::endl;

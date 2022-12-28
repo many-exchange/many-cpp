@@ -4,7 +4,7 @@
 using namespace solana;
 
 int main() {
-  Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   auto accountInfos = connection.get_multiple_accounts({PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"), NATIVE_MINT});
 
   for (AccountInfo accountInfo : accountInfos) {

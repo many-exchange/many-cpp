@@ -4,7 +4,7 @@
 using namespace solana;
 
 int main() {
-  Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   auto transaction = connection.get_transaction("5WnkjRzRjb2sfCeU3JyE681pB8sMSEbhd9AqNgV8k3DryTeYzgnwCdoDuG2Jm3Qj2Tv6fHkJunZbvyxFtuunLkF1");
 
   std::cout << "slot = " << transaction.slot << std::endl;

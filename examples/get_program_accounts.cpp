@@ -4,7 +4,7 @@
 using namespace solana;
 
 int main() {
-  Connection connection(clusterApiUrl(Cluster::Devnet), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
   auto programAccounts = connection.get_program_accounts(TOKEN_PROGRAM_ID);
 
   for (AccountInfo programAccount : programAccounts) {

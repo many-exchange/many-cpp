@@ -4,7 +4,7 @@
 using namespace solana;
 
 int main() {
-  Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   auto slot = connection.get_slot();
 
   std::cout << "slot = " << slot << std::endl << std::endl;

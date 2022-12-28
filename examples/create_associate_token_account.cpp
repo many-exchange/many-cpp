@@ -6,7 +6,7 @@ using namespace solana;
 
 int main() {
   // Create a connection to the cluster
-  Connection connection(clusterApiUrl(Cluster::Devnet), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
 
   // Generate a new keypair
   auto keypair = Keypair::generate();
@@ -30,8 +30,6 @@ int main() {
     keypair.publicKey
   );
   std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl << std::endl;
-
-  sleep(3);
 
   // Verify that the account was created
   AccountInfo accountInfo = connection.get_account_info(associatedTokenAccount);

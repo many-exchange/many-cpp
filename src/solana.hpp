@@ -1130,7 +1130,7 @@ namespace solana {
    *
    * @param cluster The cluster to get the default API URL for
   */
-  std::string clusterApiUrl(Cluster cluster) {
+  std::string cluster_api_url(Cluster cluster) {
     switch (cluster) {
       case Cluster::Devnet:
         return "https://api.devnet.solana.com";
