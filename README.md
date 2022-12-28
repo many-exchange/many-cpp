@@ -1,5 +1,5 @@
 # Solana C++ SDK
-A Solana C++ SDK built on the [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)
+A Solana C++ SDK built on the [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)<br>
 *You may notice small differences where we saw a benefit to changing the API.*
 
 ### Installation
