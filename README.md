@@ -1,38 +1,32 @@
 # Solana C++ SDK
+A Solana C++ SDK built on the [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)
+*You may notice small differences where we saw a benefit to changing the API.*
 
-To get the Solana C++ SDK, you can follow the instructions in the Solana documentation. Here is a summary of the steps you need to follow:
-
-1. Install the dependencies for the Solana C++ SDK by running the following command:
-
+### Installation
 ```
-sudo apt update
-sudo apt install libssl-dev
+$ TODO: add setup instructions
 ```
 
-2. Clone the Solana C++ SDK repository from GitHub:
+### Dependencies
+You'll need to install both [libsodium](https://formulae.brew.sh/formula/libsodium#default) and [openssl@3](https://formulae.brew.sh/formula/openssl@3) TODO finish this section + json.hpp
 
-```
-git clone https://github.com/many-exchange/solana-sdk-cpp.git
-```
+### Usage
+#### TODO break down key structs/classes, more examples
+```c++
+#include "../src/json.hpp"
+#include "../src/solana.hpp"
 
-3. Navigate to the repository directory:
+using namespace solana;
 
-```
-cd solana-sdk-cpp
-```
+int main() {
+  Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
+  auto balance = connection.get_balance(PublicKey("{your_pubkey}"));
 
-4. Test the Solana C++ SDK:
+  std::cout << "balance = " << balance << std::endl;
 
-```
-make test
-```
-
-This will run the Solana C++ SDK unit tests.
-
-5. Install the Solana C++ SDK:
-
-```
-sudo make install
+  return 0;
+}
 ```
 
-This will install the Solana C++ SDK on your system. You can then use the SDK in your C++ programs by including the solana.h header file.
+### Contributing
+If you'd like to report a problem or help contribute, please email us at [many.defi@gmail.com](mailto:many.defi@gmail.com) 🤘

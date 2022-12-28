@@ -5,7 +5,7 @@ using namespace solana;
 
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
-  auto latestBlockhash = connection.getLatestBlockhash();
+  auto latestBlockhash = connection.get_latest_blockhash();
 
   std::cout << "latest blockhash = " << latestBlockhash << std::endl << std::endl;
 

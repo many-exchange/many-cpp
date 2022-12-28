@@ -1179,7 +1179,7 @@ namespace solana {
     uint64_t slot;
   };
 
-  int decodeLength(std::vector<uint8_t> bytes) {
+  int decode_length(std::vector<uint8_t> bytes) {
     int len = 0;
     int size = 0;
     for (;;) {
@@ -1193,7 +1193,7 @@ namespace solana {
     return len;
   }
 
-  std::vector<uint8_t> encodeLength(int len) {
+  std::vector<uint8_t> encode_length(int len) {
     std::vector<uint8_t> bytes;
     while (len > 0) {
       int elem = len & 0x7f;
@@ -1310,7 +1310,10 @@ namespace solana {
      * @param seeds Seed values used to generate the program address
      * @param programId Program ID to generate the address for
      */
-    static std::tuple<PublicKey, uint8_t> find_program_address(const std::vector<std::vector<uint8_t>>& seeds, const PublicKey& programId) {
+    static std::tuple<PublicKey, uint8_t> find_program_address(
+      const std::vector<std::vector<uint8_t>>& seeds, 
+      const PublicKey& programId
+    ) {
       uint8_t nonce = 255;
       std::optional<PublicKey> address;
       while (nonce != 0) {
@@ -1347,7 +1350,7 @@ namespace solana {
      *
      * This method should only be used to recreate a keypair from a previously
      * generated secret key. Generating keypairs from a random seed should be done
-     * with the {@link Keypair.fromSeed} method.
+     * with the {@link Keypair.from_seed} method.
      *
      * @throws error if the provided secret key is invalid and validation is not skipped.
      *
@@ -1370,7 +1373,7 @@ namespace solana {
      *
      * @param path path to keypair file
      */
-    static Keypair fromFile(const std::string &path) {
+    static Keypair from_file(const std::string &path) {
       Keypair result = Keypair();
       std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
       if (file.is_open()) {
@@ -1395,7 +1398,7 @@ namespace solana {
      *
      * @param seed secret key seed
      */
-    static Keypair fromSeed(const uint8_t *seed) {
+    static Keypair from_seed(const uint8_t *seed) {
       Keypair result = Keypair();
       crypto_sign_seed_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data(), seed);
       return result;
@@ -1618,7 +1621,7 @@ namespace solana {
         buffer.push_back(header.numReadonlySignedAccounts);
         buffer.push_back(header.numReadonlyUnsignedAccounts);
 
-        std::vector<uint8_t> accountAddressesLength = encodeLength(accountKeys.size());
+        std::vector<uint8_t> accountAddressesLength = encode_length(accountKeys.size());
         buffer.insert(buffer.end(), accountAddressesLength.begin(), accountAddressesLength.end());
 
         for (PublicKey accountKey : accountKeys) {
@@ -1629,14 +1632,14 @@ namespace solana {
         std::string recentBlockhashBytes = base58::decode(recentBlockhash);
         buffer.insert(buffer.end(), recentBlockhashBytes.begin(), recentBlockhashBytes.end());
 
-        std::vector<uint8_t> instructionsLength = encodeLength(instructions.size());
+        std::vector<uint8_t> instructionsLength = encode_length(instructions.size());
         buffer.insert(buffer.end(), instructionsLength.begin(), instructionsLength.end());
 
         for (Instruction instruction : instructions) {
           std::array<uint8_t, PUBLIC_KEY_LENGTH>  programIdBytes = instruction.programId.bytes;
           buffer.insert(buffer.end(), programIdBytes.begin(), programIdBytes.end());
 
-          std::vector<uint8_t> accountsLength = encodeLength(instruction.accounts.size());
+          std::vector<uint8_t> accountsLength = encode_length(instruction.accounts.size());
           buffer.insert(buffer.end(), accountsLength.begin(), accountsLength.end());
 
           for (Instruction::AccountMeta accountMeta : instruction.accounts) {
@@ -1653,7 +1656,7 @@ namespace solana {
             buffer.push_back(accountMetaFlags);
           }
 
-          std::vector<uint8_t> dataLength = encodeLength(instruction.data.size());
+          std::vector<uint8_t> dataLength = encode_length(instruction.data.size());
           buffer.insert(buffer.end(), dataLength.begin(), dataLength.end());
 
           buffer.insert(buffer.end(), instruction.data.begin(), instruction.data.end());
@@ -1677,7 +1680,7 @@ namespace solana {
      */
     std::vector<uint8_t> serialize() {
       std::vector<uint8_t> buffer;
-      std::vector<uint8_t> signaturesLength = encodeLength(signatures.size());
+      std::vector<uint8_t> signaturesLength = encode_length(signatures.size());
       buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
       for (auto& signature : signatures) {
         std::string rawSignature = base58::decode(signature);
@@ -1989,7 +1992,7 @@ namespace solana {
     std::map<int, ProgramAccountChangeSubscriptionInfo> _programAccountChangeSubscriptions;
     std::map<int, std::function<void(Context context, SlotInfo slotInfo)>> _slotSubscriptions;
 
-    static std::string makeWebsocketUrl(std::string endpoint) {
+    static std::string make_websocket_url(std::string endpoint) {
       auto url = endpoint;
       url.replace(0, 4, "ws");
       return url;
@@ -2000,7 +2003,7 @@ namespace solana {
     Connection(std::string endpoint, Commitment commitment)
       : _commitment(commitment),
       _rpcEndpoint(endpoint),
-      _rpcWsEndpoint(makeWebsocketUrl(endpoint))
+      _rpcWsEndpoint(make_websocket_url(endpoint))
       // _rpcClient(_rpcEndpoint, 443),
       // _rpcWebSocket(_rpcWsEndpoint, 443)
     {
@@ -2010,7 +2013,8 @@ namespace solana {
       }
     }
 
-    ~Connection() {}
+    ~Connection() {
+    }
 
     Connection() = delete;
     Connection(const Connection&) = delete;
@@ -2025,7 +2029,7 @@ namespace solana {
      *
      * @param publicKey The Pubkey of account to query
      */
-    AccountInfo getAccountInfo(const PublicKey& publicKey) {
+    AccountInfo get_account_info(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2044,7 +2048,7 @@ namespace solana {
      *
      * @param publicKey The Pubkey of the account to query
      */
-    uint64_t getBalance(const PublicKey& publicKey) {
+    uint64_t get_balance(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2058,7 +2062,7 @@ namespace solana {
     /**
      * Returns information about all the nodes participating in the cluster.
      */
-    json getClusterNodes() {
+    json get_cluster_nodes() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2069,7 +2073,7 @@ namespace solana {
     /**
      * Returns the identity Pubkey of the current node.
      */
-    PublicKey getIdentity() {
+    PublicKey get_identity() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2080,7 +2084,7 @@ namespace solana {
     /**
      * Returns the latest blockhash.
      */
-    std::string getLatestBlockhash() const {
+    std::string get_latest_blockhash() const {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2093,7 +2097,7 @@ namespace solana {
      *
      * @param leaderAddress The Pubkey of the leader to query
      */
-    json getLeaderSchedule(const PublicKey& leaderAddress) {
+    json get_leader_schedule(const PublicKey& leaderAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2111,7 +2115,7 @@ namespace solana {
      *
      * @param publicKeys The Pubkeys of the accounts to query
     */
-    std::vector<AccountInfo> getMultipleAccounts(const std::vector<PublicKey>& publicKeys) {
+    std::vector<AccountInfo> get_multiple_accounts(const std::vector<PublicKey>& publicKeys) {
       std::vector<std::string> base58Keys;
       for (auto publicKey : publicKeys) {
         base58Keys.push_back(publicKey.to_base58());
@@ -2134,7 +2138,7 @@ namespace solana {
      *
      * @param programId The Pubkey of the program to query
     */
-    std::vector<AccountInfo> getProgramAccounts(const PublicKey& programId) {
+    std::vector<AccountInfo> get_program_accounts(const PublicKey& programId) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2148,7 +2152,7 @@ namespace solana {
     /**
      * Returns the slot that has reached the given or default commitment level.
     */
-    uint64_t getSlot(const Commitment& commitment = Commitment::Finalized) {
+    uint64_t get_slot(const Commitment& commitment = Commitment::Finalized) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2159,7 +2163,7 @@ namespace solana {
     /**
      * Returns the current slot leader.
      */
-    PublicKey getSlotLeader() {
+    PublicKey get_slot_leader() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2172,7 +2176,7 @@ namespace solana {
      *
      * @param tokenAddress The Pubkey of the token account to query
      */
-    TokenBalance getTokenAccountBalance(const PublicKey& tokenAddress) {
+    TokenBalance get_token_account_balance(const PublicKey& tokenAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2188,7 +2192,7 @@ namespace solana {
      *
      * @param ownerAddress The Pubkey of account owner to query
      */
-    std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress) {
+    std::vector<TokenAccount> get_token_accounts_by_owner(const PublicKey& ownerAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2211,7 +2215,7 @@ namespace solana {
      * @param ownerAddress The Pubkey of account owner to query
      * @param mintAddress The mint of the token to query
      */
-    std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
+    std::vector<TokenAccount> get_token_accounts_by_owner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2233,7 +2237,7 @@ namespace solana {
      *
      * @param tokenMintAddress The Pubkey of the token mint to query
      */
-    TokenBalance getTokenSupply(const PublicKey& tokenMintAddress) {
+    TokenBalance get_token_supply(const PublicKey& tokenMintAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2249,7 +2253,7 @@ namespace solana {
      *
      * @param transactionSignature The signature of the transaction to query
      */
-    TransactionResponse getTransaction(const std::string& transactionSignature) {
+    TransactionResponse get_transaction(const std::string& transactionSignature) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2263,7 +2267,7 @@ namespace solana {
     /**
      * Returns the current solana versions running on the node.
      */
-    std::string getVersion() {
+    std::string get_version() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2277,7 +2281,7 @@ namespace solana {
      * @param recipientAddress The Pubkey to airdrop lamports to
      * @param lamports The number of lamports to airdrop
     */
-    std::string requestAirdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
+    std::string request_airdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2294,7 +2298,7 @@ namespace solana {
      *
      * @param signedTransaction The signed transaction to submit
      */
-    SendTransactionResult sendTransaction(const std::string& signedTransaction) const {
+    SendTransactionResult send_transaction(const std::string& signedTransaction) const {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2314,8 +2318,8 @@ namespace solana {
      * @param transaction The transaction to sign
      * @param signers The keypairs to sign the transaction
      */
-    std::string signTransaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
-      transaction.message.recentBlockhash = getLatestBlockhash();
+    std::string sign_transaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
+      transaction.message.recentBlockhash = get_latest_blockhash();
       transaction.sign(signers);
       std::vector<uint8_t> wireTransaction = transaction.serialize();
       return base64::base64_encode(wireTransaction.data(), wireTransaction.size());;
@@ -2326,7 +2330,7 @@ namespace solana {
      *
      * @param signedTransaction The signed transaction to simulate
      */
-    SimulatedTransactionResponse simulateTransaction(const std::string& signedTransaction) {
+    SimulatedTransactionResponse simulate_transaction(const std::string& signedTransaction) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2342,7 +2346,7 @@ namespace solana {
 
     //-------- Websocket methods --------------------------------------------------------------------
 
-    int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2361,7 +2365,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeAccountChangeListener(int subscriptionId) {
+    bool remove_account_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
@@ -2378,7 +2382,7 @@ namespace solana {
       return false;
     }
 
-    int onLogs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
+    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2399,7 +2403,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeOnLogsListener(int subscriptionId) {
+    bool remove_on_logs_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
@@ -2416,7 +2420,7 @@ namespace solana {
       return false;
     }
 
-    int onProgramAccountChange(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
+    int on_program_account_change(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2435,7 +2439,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeProgramAccountChangeListener(int subscriptionId) {
+    bool remove_program_account_change_listnener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
@@ -2452,7 +2456,7 @@ namespace solana {
       return false;
     }
 
-    int onSlotChange(std::function<void(Context context, SlotInfo slotInfo)> callback) {
+    int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2464,7 +2468,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeSlotChangeListener(int subscriptionId) {
+    bool remove_slot_change_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {

@@ -5,7 +5,7 @@ using namespace solana;
 
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
-  auto accountInfo = connection.getAccountInfo(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"));
+  auto accountInfo = connection.get_account_info(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"));
 
   std::cout << "owner = " << accountInfo.owner.to_base58() << std::endl;
   std::cout << "lamports = " << accountInfo.lamports << std::endl;
