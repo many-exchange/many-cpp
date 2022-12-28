@@ -156,7 +156,7 @@ namespace solana {
     ) {
       const PublicKey associatedToken = get_associated_token_address(mint, owner, false, programId, associatedTokenProgramId);
 
-      Transaction tx = create_associated_token_account_transaction(
+      Transaction transaction = create_associated_token_account_transaction(
         payer.publicKey,
         associatedToken,
         owner,
@@ -165,8 +165,7 @@ namespace solana {
         associatedTokenProgramId
       );
 
-      std::string signedTx = connection.signTransaction(tx, {payer});
-      SendTransactionResult result = connection.sendTransaction(signedTx);
+       SendTransactionResult result = connection.signAndSendTransaction(transaction, {payer});
 
       return associatedToken;
     }

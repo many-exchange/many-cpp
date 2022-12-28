@@ -49,10 +49,10 @@ using json = nlohmann::json;
 #define TOKEN_PROGRAM_ID PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 #define ASSOCIATED_TOKEN_PROGRAM_ID PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
 
-#define PUBLIC_KEY_LENGTH 32
-#define PRIVATE_KEY_LENGTH 64
 #define MAX_SEED_LENGTH 32
-
+#define PACKET_DATA_SIZE 1232
+#define PRIVATE_KEY_LENGTH 64
+#define PUBLIC_KEY_LENGTH 32
 #define SIGNATURE_LENGTH 64
 
 namespace solana {
@@ -259,7 +259,7 @@ namespace solana {
     }
 
     template <typename T>
-    inline std::string b58encode(const T &str) {
+    inline std::string encode(const T &str) {
       size_t b58Size = str.size() * 138 / 100 + 1;
       std::string b58(b58Size, '\0');
       const bool ok = b58enc(b58.data(), &b58Size, str.data(), str.size());
@@ -1179,7 +1179,7 @@ namespace solana {
     uint64_t slot;
   };
 
-  int decodeLength(std::vector<uint8_t> bytes) {
+  int decode_length(std::vector<uint8_t> bytes) {
     int len = 0;
     int size = 0;
     for (;;) {
@@ -1193,7 +1193,7 @@ namespace solana {
     return len;
   }
 
-  std::vector<uint8_t> encodeLength(int len) {
+  std::vector<uint8_t> encode_length(int len) {
     std::vector<uint8_t> bytes;
     while (len > 0) {
       int elem = len & 0x7f;
@@ -1242,6 +1242,18 @@ namespace solana {
         }
       }
       return true;
+    }
+
+    bool operator<(const PublicKey& other) const {
+      for (int i = 0; i < PUBLIC_KEY_LENGTH; i++) {
+        if (bytes[i] < other.bytes[i]) {
+          return true;
+        }
+        else if (bytes[i] > other.bytes[i]) {
+          return false;
+        }
+      }
+      return false;
     }
 
     /**
@@ -1421,7 +1433,7 @@ namespace solana {
       if (0 != crypto_sign_detached(sig, &sigSize, message.data(), message.size(), secretKey.data())) {
         throw std::runtime_error("could not sign tx with private key");
       }
-      return std::string((const char *)sig, sigSize);
+      return std::string((char*)sig, sigSize);
     }
   };
 
@@ -1565,6 +1577,186 @@ namespace solana {
     header.numReadonlyUnsignedAccounts = j["numReadonlyUnsignedAccounts"].get<uint8_t>();
   }
 
+  struct CompiledTransaction {
+    std::vector<uint8_t> serialized_message;
+
+    /** Defines the content of the transaction */
+    struct Message {
+      /** List of base-58 encoded Pubkeys used by the transaction, including by the instructions and for signatures.
+      The first message.header.numRequiredSignatures Pubkeys must sign the transaction. */
+      std::vector<PublicKey> accountKeys;
+      /** The message header */
+      TransactionMessageHeader header;
+      struct Instruction {
+        /** Ordered indices into the `message.accountKeys` array indicating which accounts to pass to the program */
+        std::vector<uint8_t> accounts;
+        /** The program input data encoded as base-58 */
+        std::string data;
+        /** Index into the `message.accountKeys` array indicating the program account that executes this instruction */
+        uint8_t programIdIndex;
+      };
+      /** List of program instructions that will be executed in sequence and committed in one atomic transaction if all succeed. */
+      std::vector<Instruction> instructions;
+      /** A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
+      std::string recentBlockhash;
+
+      void serialize() {
+
+  //   const numKeys = this.accountKeys.length;
+
+  //   let keyCount: number[] = [];
+        //shortvec.encodeLength(keyCount, numKeys);
+
+  //   const instructions = this.instructions.map(instruction => {
+  //     const {accounts, programIdIndex} = instruction;
+  //     const data = Array.from(bs58.decode(instruction.data));
+
+  //     let keyIndicesCount: number[] = [];
+  //     shortvec.encodeLength(keyIndicesCount, accounts.length);
+
+  //     let dataCount: number[] = [];
+  //     shortvec.encodeLength(dataCount, data.length);
+
+  //     return {
+  //       programIdIndex,
+  //       keyIndicesCount: Buffer.from(keyIndicesCount),
+  //       keyIndices: accounts,
+  //       dataLength: Buffer.from(dataCount),
+  //       data,
+  //     };
+  //   });
+
+  //   let instructionCount: number[] = [];
+  //   shortvec.encodeLength(instructionCount, instructions.length);
+  //   let instructionBuffer = Buffer.alloc(PACKET_DATA_SIZE);
+  //   Buffer.from(instructionCount).copy(instructionBuffer);
+  //   let instructionBufferLength = instructionCount.length;
+
+  //   instructions.forEach(instruction => {
+  //     const instructionLayout = BufferLayout.struct<
+  //       Readonly<{
+  //         data: number[];
+  //         dataLength: Uint8Array;
+  //         keyIndices: number[];
+  //         keyIndicesCount: Uint8Array;
+  //         programIdIndex: number;
+  //       }>
+  //     >([
+  //       BufferLayout.u8('programIdIndex'),
+
+  //       BufferLayout.blob(
+  //         instruction.keyIndicesCount.length,
+  //         'keyIndicesCount',
+  //       ),
+  //       BufferLayout.seq(
+  //         BufferLayout.u8('keyIndex'),
+  //         instruction.keyIndices.length,
+  //         'keyIndices',
+  //       ),
+  //       BufferLayout.blob(instruction.dataLength.length, 'dataLength'),
+  //       BufferLayout.seq(
+  //         BufferLayout.u8('userdatum'),
+  //         instruction.data.length,
+  //         'data',
+  //       ),
+  //     ]);
+  //     const length = instructionLayout.encode(
+  //       instruction,
+  //       instructionBuffer,
+  //       instructionBufferLength,
+  //     );
+  //     instructionBufferLength += length;
+  //   });
+  //   instructionBuffer = instructionBuffer.slice(0, instructionBufferLength);
+
+  //   const signDataLayout = BufferLayout.struct<
+  //     Readonly<{
+  //       keyCount: Uint8Array;
+  //       keys: Uint8Array[];
+  //       numReadonlySignedAccounts: Uint8Array;
+  //       numReadonlyUnsignedAccounts: Uint8Array;
+  //       numRequiredSignatures: Uint8Array;
+  //       recentBlockhash: Uint8Array;
+  //     }>
+  //   >([
+  //     BufferLayout.blob(1, 'numRequiredSignatures'),
+  //     BufferLayout.blob(1, 'numReadonlySignedAccounts'),
+  //     BufferLayout.blob(1, 'numReadonlyUnsignedAccounts'),
+  //     BufferLayout.blob(keyCount.length, 'keyCount'),
+  //     BufferLayout.seq(Layout.publicKey('key'), numKeys, 'keys'),
+  //     Layout.publicKey('recentBlockhash'),
+  //   ]);
+
+  //   const transaction = {
+  //     numRequiredSignatures: Buffer.from([this.header.numRequiredSignatures]),
+  //     numReadonlySignedAccounts: Buffer.from([
+  //       this.header.numReadonlySignedAccounts,
+  //     ]),
+  //     numReadonlyUnsignedAccounts: Buffer.from([
+  //       this.header.numReadonlyUnsignedAccounts,
+  //     ]),
+  //     keyCount: Buffer.from(keyCount),
+  //     keys: this.accountKeys.map(key => toBuffer(key.toBytes())),
+  //     recentBlockhash: bs58.decode(this.recentBlockhash),
+  //   };
+
+  //   let signData = Buffer.alloc(2048);
+  //   const length = signDataLayout.encode(transaction, signData);
+  //   instructionBuffer.copy(signData, length);
+  //   return signData.slice(0, length + instructionBuffer.length);
+  // }
+
+      }
+    } message;
+    /** The transaction signatures */
+    std::vector<std::string> signatures;
+
+    /**
+     * Serialize the transaction
+     */
+    std::vector<uint8_t> serialize() {
+      std::vector<uint8_t> buffer;
+      std::vector<uint8_t> signaturesLength = encode_length(signatures.size());
+      buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
+      for (auto& signature : signatures) {
+        std::string rawSignature = base58::decode(signature);
+        buffer.insert(buffer.end(), rawSignature.begin(), rawSignature.end());
+      }
+      buffer.insert(buffer.end(), serialized_message.begin(), serialized_message.end());
+      return buffer;
+    }
+
+    /**
+     * Sign the transaction with the provided signers
+     */
+    void sign(const std::vector<Keypair>& signers) {
+      for (auto& signer : signers) {
+        //signatures.insert(signer.publicKey, signer.sign(serialized_message));
+        signatures.push_back(signer.sign(serialized_message));
+      }
+    }
+  };
+
+  void from_json(const json& j, CompiledTransaction::Message::Instruction& instruction) {
+    instruction.accounts = j["accounts"].get<std::vector<uint8_t>>();
+    instruction.data = j["data"].get<std::string>();
+    instruction.programIdIndex = j["programIdIndex"].get<uint8_t>();
+  }
+
+  void from_json(const json& j, CompiledTransaction::Message& message) {
+    message.accountKeys = j["accountKeys"].get<std::vector<PublicKey>>();
+    message.header.numReadonlySignedAccounts = j["header"]["numReadonlySignedAccounts"].get<uint8_t>();
+    message.header.numReadonlyUnsignedAccounts = j["header"]["numReadonlyUnsignedAccounts"].get<uint8_t>();
+    message.header.numRequiredSignatures = j["header"]["numRequiredSignatures"].get<uint8_t>();
+    message.instructions = j["instructions"].get<std::vector<CompiledTransaction::Message::Instruction>>();
+    message.recentBlockhash = j["recentBlockhash"].get<std::string>();
+  }
+
+  void from_json(const json& j, CompiledTransaction& transaction) {
+    transaction.message = j["message"].get<CompiledTransaction::Message>();
+    transaction.signatures = j["signatures"].get<std::vector<std::string>>();
+  }
+
   struct Transaction {
     /** The transaction signatures */
     std::vector<std::string> signatures;
@@ -1588,10 +1780,13 @@ namespace solana {
           /** True if the Pubkey can be loaded as a read-write account. */
           bool isWritable;
 
-          AccountMeta() : pubkey(), isSigner(false), isWritable(false) { }
-          AccountMeta(PublicKey pubkey, bool isSigner, bool isWritable) : pubkey(pubkey), isSigner(isSigner), isWritable(isWritable) { }
-          AccountMeta(PublicKey pubkey, bool isSigner) : pubkey(pubkey), isSigner(isSigner), isWritable(false) { }
-          AccountMeta(PublicKey pubkey) : pubkey(pubkey), isSigner(false), isWritable(false) { }
+          bool operator==(const AccountMeta& other) const {
+            return pubkey == other.pubkey;
+          }
+
+          bool operator==(const PublicKey& other) const {
+            return pubkey == other;
+          }
         };
         /** Ordered indices into the transaction keys array indicating which accounts to pass to the program */
         std::vector<AccountMeta> accounts;
@@ -1601,10 +1796,8 @@ namespace solana {
       /** The program instructions */
       std::vector<Instruction> instructions;
 
-      /**
-       * Serialize the transaction message
-       */
-      std::vector<uint8_t> serialize() {
+      CompiledTransaction::Message compile(const std::vector<Keypair>& signers) {
+
         if (recentBlockhash.empty()) {
           throw std::runtime_error("recentBlockhash required");
         }
@@ -1612,54 +1805,103 @@ namespace solana {
           throw std::runtime_error("No instructions provided");
         }
 
-        std::vector<uint8_t> buffer;
-
-        buffer.push_back(header.numRequiredSignatures);
-        buffer.push_back(header.numReadonlySignedAccounts);
-        buffer.push_back(header.numReadonlyUnsignedAccounts);
-
-        std::vector<uint8_t> accountAddressesLength = encodeLength(accountKeys.size());
-        buffer.insert(buffer.end(), accountAddressesLength.begin(), accountAddressesLength.end());
-
-        for (PublicKey accountKey : accountKeys) {
-          std::array<uint8_t, PUBLIC_KEY_LENGTH> accountAddress = accountKey.bytes;
-          buffer.insert(buffer.end(), accountAddress.begin(), accountAddress.end());
-        }
-
-        std::string recentBlockhashBytes = base58::decode(recentBlockhash);
-        buffer.insert(buffer.end(), recentBlockhashBytes.begin(), recentBlockhashBytes.end());
-
-        std::vector<uint8_t> instructionsLength = encodeLength(instructions.size());
-        buffer.insert(buffer.end(), instructionsLength.begin(), instructionsLength.end());
-
-        for (Instruction instruction : instructions) {
-          std::array<uint8_t, PUBLIC_KEY_LENGTH>  programIdBytes = instruction.programId.bytes;
-          buffer.insert(buffer.end(), programIdBytes.begin(), programIdBytes.end());
-
-          std::vector<uint8_t> accountsLength = encodeLength(instruction.accounts.size());
-          buffer.insert(buffer.end(), accountsLength.begin(), accountsLength.end());
-
-          for (Instruction::AccountMeta accountMeta : instruction.accounts) {
-            std::array<uint8_t, PUBLIC_KEY_LENGTH>  accountMetaBytes = accountMeta.pubkey.bytes;
-            buffer.insert(buffer.end(), accountMetaBytes.begin(), accountMetaBytes.end());
-
-            uint8_t accountMetaFlags = 0;
-            if (accountMeta.isSigner) {
-              accountMetaFlags |= 1;
+        std::vector<Transaction::Message::Instruction::AccountMeta> accountMetas;
+        for (auto& instruction : instructions) {
+          for (auto& account : instruction.accounts) {
+            //TODO there is a bug here, if the same account is used twice with different signer or writable flags.
+            if (std::find(accountMetas.begin(), accountMetas.end(), account) == accountMetas.end()) {
+              accountMetas.push_back(account);
             }
-            if (accountMeta.isWritable) {
-              accountMetaFlags |= 2;
-            }
-            buffer.push_back(accountMetaFlags);
           }
-
-          std::vector<uint8_t> dataLength = encodeLength(instruction.data.size());
-          buffer.insert(buffer.end(), dataLength.begin(), dataLength.end());
-
-          buffer.insert(buffer.end(), instruction.data.begin(), instruction.data.end());
         }
 
-        return buffer;
+        std::vector<PublicKey> programIds;
+        for (auto& instruction : instructions) {
+          auto programId = instruction.programId;
+          if (std::find(programIds.begin(), programIds.end(), programId) == programIds.end()) {
+            programIds.push_back(programId);
+            accountMetas.push_back({programId, false, false});
+          }
+        }
+
+        // Sort. Prioritizing first by signer, then by writable
+        std::sort(accountMetas.begin(), accountMetas.end(), [](const auto& a, const auto& b) {
+          if (a.isSigner != b.isSigner) {
+            return a.isSigner;
+          }
+          if (a.isWritable != b.isWritable) {
+            return a.isWritable;
+          }
+          return a.pubkey < b.pubkey;
+        });
+
+        // Use implicit fee payer
+        auto fee_payer = signers[0].publicKey;
+
+        // Move fee payer to the front
+        auto feePayerIndex = std::find(accountMetas.begin(), accountMetas.end(), fee_payer);
+        if (feePayerIndex != accountMetas.end()) {
+          auto payerMeta = *feePayerIndex;
+          accountMetas.erase(feePayerIndex);
+          payerMeta.isSigner = true;
+          payerMeta.isWritable = true;
+          accountMetas.insert(accountMetas.begin(), payerMeta);
+        } else {
+          accountMetas.insert(accountMetas.begin(), {fee_payer, true, true});
+        }
+
+        uint8_t numRequiredSignatures = 0;
+        uint8_t numReadonlySignedAccounts = 0;
+        uint8_t numReadonlyUnsignedAccounts = 0;
+
+        // Split out signing from non-signing keys and count header values
+        std::vector<PublicKey> signedKeys;
+        std::vector<PublicKey> unsignedKeys;
+        for (auto& accountMeta : accountMetas) {
+          if (accountMeta.isSigner) {
+            signedKeys.push_back(accountMeta.pubkey);
+            numRequiredSignatures += 1;
+            if (!accountMeta.isWritable) {
+              numReadonlySignedAccounts += 1;
+            }
+          } else {
+            unsignedKeys.push_back(accountMeta.pubkey);
+            if (!accountMeta.isWritable) {
+              numReadonlyUnsignedAccounts += 1;
+            }
+          }
+        }
+
+        auto accountKeys = signedKeys;
+        accountKeys.insert(accountKeys.end(), unsignedKeys.begin(), unsignedKeys.end());
+
+        std::vector<CompiledTransaction::Message::Instruction> compiledInstructions;
+        for (auto& instruction : instructions) {
+          std::vector<uint8_t> accountsIndexes;
+          for (auto& account : instruction.accounts) {
+            auto index = std::find(accountKeys.begin(), accountKeys.end(), account.pubkey);
+            if (index == accountKeys.end()) {
+              throw std::runtime_error("Unknown account");
+            }
+            accountsIndexes.push_back(index - accountKeys.begin());
+          }
+          compiledInstructions.push_back(CompiledTransaction::Message::Instruction {
+            .accounts = accountsIndexes,
+            .data = base58::encode(instruction.data),
+            .programIdIndex = (uint8_t)(std::find(accountKeys.begin(), accountKeys.end(), instruction.programId) - accountKeys.begin()),
+          });
+        }
+
+        return {
+          accountKeys,
+          {
+            numRequiredSignatures,
+            numReadonlySignedAccounts,
+            numReadonlyUnsignedAccounts,
+          },
+          compiledInstructions,
+          recentBlockhash,
+        };
       }
     } message;
 
@@ -1673,39 +1915,21 @@ namespace solana {
     }
 
     /**
-     * Serialize the transaction
-     */
-    std::vector<uint8_t> serialize() {
-      std::vector<uint8_t> buffer;
-      std::vector<uint8_t> signaturesLength = encodeLength(signatures.size());
-      buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
-      for (auto& signature : signatures) {
-        std::string rawSignature = base58::decode(signature);
-        buffer.insert(buffer.end(), rawSignature.begin(), rawSignature.end());
-      }
-      auto serializedMessage = message.serialize();
-      buffer.insert(buffer.end(), serializedMessage.begin(), serializedMessage.end());
-      return buffer;
-    }
-
-    /**
      * Sign the transaction
      *
      * @param signers The keypairs to sign the transaction with
      */
-    void sign(const std::vector<Keypair> signers) {
-      if (signers.empty()) {
-        throw std::runtime_error("No signers");
-      }
-
-      PublicKey feePayer = signers[0].publicKey;
-      std::vector<uint8_t> serializedMessage = message.serialize();
-      for (Keypair signer : signers) {
-        auto signature = signer.sign(serializedMessage);
-        //TODO base58 encode the message
-        signatures.push_back(signature);
-      }
+    CompiledTransaction sign(const std::vector<Keypair>& signers) {
+      auto compiled_message = message.compile(signers);
+      compiled_message.serialize();
+      CompiledTransaction compiled_transaction = {
+        .message = compiled_message,
+        .signatures = std::vector<std::string>(signers.size())
+      };
+      compiled_transaction.sign(signers);
+      return compiled_transaction;
     }
+
   };
 
   void from_json(const json& j, Transaction::Message::Instruction::AccountMeta& accountMeta) {
@@ -1732,30 +1956,7 @@ namespace solana {
     /** The estimated production time of when the transaction was processed. */
     uint64_t blockTime;
     /** The transaction */
-    struct Transaction {
-      /** Defines the content of the transaction */
-      struct Message {
-        /** List of base-58 encoded Pubkeys used by the transaction, including by the instructions and for signatures.
-        The first message.header.numRequiredSignatures Pubkeys must sign the transaction. */
-        std::vector<PublicKey> accountKeys;
-        /** The message header */
-        TransactionMessageHeader header;
-        struct Instruction {
-          /** Ordered indices into the `message.accountKeys` array indicating which accounts to pass to the program */
-          std::vector<uint8_t> accounts;
-          /** The program input data encoded as base-58 */
-          std::string data;
-          /** Index into the `message.accountKeys` array indicating the program account that executes this instruction */
-          uint8_t programIdIndex;
-        };
-        /** List of program instructions that will be executed in sequence and committed in one atomic transaction if all succeed. */
-        std::vector<Instruction> instructions;
-        /** A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
-        std::string recentBlockhash;
-      } message;
-      /** The transaction signatures */
-      std::vector<std::string> signatures;
-    } transaction;
+    CompiledTransaction transaction;
     /** Transaction status metadata object */
     struct Meta {
       /** Error if the transaction failed */
@@ -1814,26 +2015,6 @@ namespace solana {
     TransactionResponseReturnData returnData;
   };
 
-  void from_json(const json& j, TransactionResponse::Transaction::Message::Instruction& instruction) {
-    instruction.accounts = j["accounts"].get<std::vector<uint8_t>>();
-    instruction.data = j["data"].get<std::string>();
-    instruction.programIdIndex = j["programIdIndex"].get<uint8_t>();
-  }
-
-  void from_json(const json& j, TransactionResponse::Transaction::Message& message) {
-    message.accountKeys = j["accountKeys"].get<std::vector<PublicKey>>();
-    message.header.numReadonlySignedAccounts = j["header"]["numReadonlySignedAccounts"].get<uint8_t>();
-    message.header.numReadonlyUnsignedAccounts = j["header"]["numReadonlyUnsignedAccounts"].get<uint8_t>();
-    message.header.numRequiredSignatures = j["header"]["numRequiredSignatures"].get<uint8_t>();
-    message.instructions = j["instructions"].get<std::vector<TransactionResponse::Transaction::Message::Instruction>>();
-    message.recentBlockhash = j["recentBlockhash"].get<std::string>();
-  }
-
-  void from_json(const json& j, TransactionResponse::Transaction& transaction) {
-    transaction.message = j["message"].get<TransactionResponse::Transaction::Message>();
-    transaction.signatures = j["signatures"].get<std::vector<std::string>>();
-  }
-
   void from_json(const json& j, TransactionResponse::Meta::InnerInstruction::Instruction& metaInstruction) {
     metaInstruction.programIdIndex = j["programIdIndex"].get<uint64_t>();
     metaInstruction.accounts = j["accounts"].get<std::vector<uint64_t>>();
@@ -1885,7 +2066,7 @@ namespace solana {
 
     transactionResponse.slot = j["slot"].get<uint64_t>();
     transactionResponse.blockTime = j["blockTime"].get<uint64_t>();
-    transactionResponse.transaction = j["transaction"].get<TransactionResponse::Transaction>();
+    transactionResponse.transaction = j["transaction"].get<CompiledTransaction>();
     transactionResponse.meta = j["meta"].get<TransactionResponse::Meta>();
     if (j.contains("returnData")) {
       transactionResponse.returnData = j["returnData"].get<TransactionResponseReturnData>();
@@ -2292,33 +2473,26 @@ namespace solana {
     /**
      * Submits a signed transaction to the cluster for processing.
      *
-     * @param signedTransaction The signed transaction to submit
+     * @param transaction The transaction to sign
+     * @param signers The keypairs to sign the transaction
+     * @param options Options for sending the transaction
      */
-    SendTransactionResult sendTransaction(const std::string& signedTransaction) const {
+    SendTransactionResult signAndSendTransaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
+      transaction.message.recentBlockhash = getLatestBlockhash();
+      CompiledTransaction compiled_transaction = transaction.sign(signers);
+      std::vector<uint8_t> serialized_transaction = compiled_transaction.serialize();
+
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "sendTransaction"},
         {"params", {
-          signedTransaction,
+          base64::base64_encode(serialized_transaction.data(), serialized_transaction.size()),
           {
             {"encoding", "base64"},
           },
         }},
       });
-    }
-
-    /**
-     * Returns a signed transaction.
-     *
-     * @param transaction The transaction to sign
-     * @param signers The keypairs to sign the transaction
-     */
-    std::string signTransaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
-      transaction.message.recentBlockhash = getLatestBlockhash();
-      transaction.sign(signers);
-      std::vector<uint8_t> wireTransaction = transaction.serialize();
-      return base64::base64_encode(wireTransaction.data(), wireTransaction.size());;
     }
 
     /**
