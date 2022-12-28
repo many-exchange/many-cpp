@@ -780,7 +780,7 @@ namespace assertType {
 
 DOCTEST_INTERFACE const char* assertString(assertType::Enum at);
 DOCTEST_INTERFACE const char* failureString(assertType::Enum at);
-DOCTEST_INTERFACE const char* skipPathFromFilename(const char* file);
+DOCTEST_INTERFACE const char* skipPathfrom_filename(const char* file);
 
 struct DOCTEST_INTERFACE TestCaseData
 {
@@ -3829,7 +3829,7 @@ const char* failureString(assertType::Enum at) {
 DOCTEST_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wnull-dereference")
 DOCTEST_GCC_SUPPRESS_WARNING_WITH_PUSH("-Wnull-dereference")
 // depending on the current options this will remove the path of filenames
-const char* skipPathFromFilename(const char* file) {
+const char* skipPathfrom_filename(const char* file) {
 #ifndef DOCTEST_CONFIG_DISABLE
     if(getContextOptions()->no_path_in_filenames) {
         auto back    = std::strrchr(file, '\\');
@@ -5402,7 +5402,7 @@ namespace {
             tc = &in;
             xml.startElement("TestCase")
                     .writeAttribute("name", in.m_name)
-                    .writeAttribute("filename", skipPathFromFilename(in.m_file.c_str()))
+                    .writeAttribute("filename", skipPathfrom_filename(in.m_file.c_str()))
                     .writeAttribute("line", line(in.m_line))
                     .writeAttribute("description", in.m_description);
 
@@ -5433,7 +5433,7 @@ namespace {
                 for(unsigned i = 0; i < in.num_data; ++i) {
                     xml.scopedElement("TestCase").writeAttribute("name", in.data[i]->m_name)
                         .writeAttribute("testsuite", in.data[i]->m_test_suite)
-                        .writeAttribute("filename", skipPathFromFilename(in.data[i]->m_file.c_str()))
+                        .writeAttribute("filename", skipPathfrom_filename(in.data[i]->m_file.c_str()))
                         .writeAttribute("line", line(in.data[i]->m_line))
                         .writeAttribute("skipped", in.data[i]->m_skip);
                 }
@@ -5454,7 +5454,7 @@ namespace {
             xml.writeDeclaration();
 
             // remove .exe extension - mainly to have the same output on UNIX and Windows
-            std::string binary_name = skipPathFromFilename(opt.binary_name.c_str());
+            std::string binary_name = skipPathfrom_filename(opt.binary_name.c_str());
 #ifdef DOCTEST_PLATFORM_WINDOWS
             if(binary_name.rfind(".exe") != std::string::npos)
                 binary_name = binary_name.substr(0, binary_name.length() - 4);
@@ -5529,7 +5529,7 @@ namespace {
         void subcase_start(const SubcaseSignature& in) override {
             xml.startElement("SubCase")
                     .writeAttribute("name", in.m_name)
-                    .writeAttribute("filename", skipPathFromFilename(in.m_file))
+                    .writeAttribute("filename", skipPathfrom_filename(in.m_file))
                     .writeAttribute("line", line(in.m_line));
             xml.ensureTagClosed();
         }
@@ -5545,7 +5545,7 @@ namespace {
             xml.startElement("Expression")
                     .writeAttribute("success", !rb.m_failed)
                     .writeAttribute("type", assertString(rb.m_at))
-                    .writeAttribute("filename", skipPathFromFilename(rb.m_file))
+                    .writeAttribute("filename", skipPathfrom_filename(rb.m_file))
                     .writeAttribute("line", line(rb.m_line));
 
             xml.scopedElement("Original").writeText(rb.m_expr);
@@ -5570,7 +5570,7 @@ namespace {
 
             xml.startElement("Message")
                     .writeAttribute("type", failureString(mb.m_severity))
-                    .writeAttribute("filename", skipPathFromFilename(mb.m_file))
+                    .writeAttribute("filename", skipPathfrom_filename(mb.m_file))
                     .writeAttribute("line", line(mb.m_line));
 
             xml.scopedElement("Text").writeText(mb.m_string.c_str());
@@ -5757,7 +5757,7 @@ namespace {
 
         void test_run_end(const TestRunStats& p) override {
             // remove .exe extension - mainly to have the same output on UNIX and Windows
-            std::string binary_name = skipPathFromFilename(opt.binary_name.c_str());
+            std::string binary_name = skipPathfrom_filename(opt.binary_name.c_str());
 #ifdef DOCTEST_PLATFORM_WINDOWS
             if(binary_name.rfind(".exe") != std::string::npos)
                 binary_name = binary_name.substr(0, binary_name.length() - 4);
@@ -5803,7 +5803,7 @@ namespace {
         }
 
         void test_case_start(const TestCaseData& in) override {
-            testCaseData.add(skipPathFromFilename(in.m_file.c_str()), in.m_name);
+            testCaseData.add(skipPathfrom_filename(in.m_file.c_str()), in.m_name);
             timer.start();
         }
 
@@ -5813,7 +5813,7 @@ namespace {
             deepestSubcaseStackNames.clear();
 
             timer.start();
-            testCaseData.add(skipPathFromFilename(in.m_file.c_str()), in.m_name);
+            testCaseData.add(skipPathfrom_filename(in.m_file.c_str()), in.m_name);
         }
 
         void test_case_end(const CurrentTestCaseStats&) override {
@@ -5840,7 +5840,7 @@ namespace {
             DOCTEST_LOCK_MUTEX(mutex)
 
             std::ostringstream os;
-            os << skipPathFromFilename(rb.m_file) << (opt.gnu_file_line ? ":" : "(")
+            os << skipPathfrom_filename(rb.m_file) << (opt.gnu_file_line ? ":" : "(")
               << line(rb.m_line) << (opt.gnu_file_line ? ":" : "):") << std::endl;
 
             fulltext_log_assert_to_stream(os, rb);
@@ -5949,7 +5949,7 @@ namespace {
         // this was requested to be made virtual so users could override it
         virtual void file_line_to_stream(const char* file, int line,
                                         const char* tail = "") {
-            s << Color::LightGrey << skipPathFromFilename(file) << (opt.gnu_file_line ? ":" : "(")
+            s << Color::LightGrey << skipPathfrom_filename(file) << (opt.gnu_file_line ? ":" : "(")
             << (opt.no_line_numbers ? 0 : line) // 0 or the real num depending on the option
             << (opt.gnu_file_line ? ":" : "):") << tail;
         }

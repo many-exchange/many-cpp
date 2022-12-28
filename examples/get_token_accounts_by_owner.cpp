@@ -5,7 +5,7 @@ using namespace solana;
 
 int main() {
   Connection connection(clusterApiUrl(Cluster::MainnetBeta), Commitment::Processed);
-  auto tokenAccounts = connection.getTokenAccountsByOwner(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"));
+  auto tokenAccounts = connection.get_token_accounts_by_owner(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"));
 
   for (TokenAccount tokenAccount : tokenAccounts) {
     std::cout << "pubkey = " << tokenAccount.pubkey.to_base58() << std::endl;

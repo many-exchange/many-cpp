@@ -55,15 +55,10 @@ namespace solana {
           { "isSigner", false },
           { "isWritable", false },
         },
-        {
-          { "pubkey", associatedTokenProgramId.to_base58() },
-          { "isSigner", false },
-          { "isWritable", false },
-        },
       };
 
       return {
-        programId,
+        associatedTokenProgramId,
         accounts,
         {}
       };
@@ -165,7 +160,7 @@ namespace solana {
         associatedTokenProgramId
       );
 
-       SendTransactionResult result = connection.signAndSendTransaction(transaction, {payer});
+      SendTransactionResult result = connection.sign_and_send_transaction(transaction, {payer});
 
       return associatedToken;
     }

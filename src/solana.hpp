@@ -274,74 +274,84 @@ namespace solana {
 
   namespace base64 {
 
-    static const char base64_encoding_table[] = {
-      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-      'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-      'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-      'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-      'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-      'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-      'w', 'x', 'y', 'z', '0', '1', '2', '3',
-      '4', '5', '6', '7', '8', '9', '+', '/' };
+    const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    static int mod_table[] = {0, 2, 1};
-
-    int encode(const char *input, const int input_length, char *output, const int max_output_length) {
-      int output_length = 4 * ((input_length + 2) / 3);
-      assert(output_length <= max_output_length);
-
-      for (int i = 0, j = 0; i < input_length;) {
-        int octet_a = i < input_length ? input[i++] : 0;
-        int octet_b = i < input_length ? input[i++] : 0;
-        int octet_c = i < input_length ? input[i++] : 0;
-
-        int triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
-
-        output[j++] = base64_encoding_table[(triple >> 3 * 6) & 0x3F];
-        output[j++] = base64_encoding_table[(triple >> 2 * 6) & 0x3F];
-        output[j++] = base64_encoding_table[(triple >> 1 * 6) & 0x3F];
-        output[j++] = base64_encoding_table[(triple >> 0 * 6) & 0x3F];
+    size_t encode(const unsigned char *data, size_t input_length, char *output, size_t output_size) {
+      if (output_size < 4 * ((input_length + 2) / 3)) {
+        throw std::runtime_error("Output buffer too small");
       }
 
-      for (int i = 0; i < mod_table[input_length % 3]; i++)
-          output[output_length - 1 - i] = '=';
+      for (size_t i = 0, j = 0; i < input_length;) {
+        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
 
-      return output_length;
+        output[j++] = base64_chars[(triple >> 3 * 6) & 0x3F];
+        output[j++] = base64_chars[(triple >> 2 * 6) & 0x3F];
+        output[j++] = base64_chars[(triple >> 1 * 6) & 0x3F];
+        output[j++] = base64_chars[(triple >> 0 * 6) & 0x3F];
+      }
+
+      for (size_t i = 0; i < (3 - input_length % 3) % 3; i++) {
+        output[output_size - 1 - i] = '=';
+      }
+
+      return output_size;
     }
 
-    static const char base64_decoding_table[] = {
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 62, 0, 0, 0, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-      0, 0, 0, -1, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-      14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0, 0, 26,
-      27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
-      45, 46, 47, 48, 49, 50, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    std::string encode(const unsigned char *data, size_t input_length) {
+      int output_length = 4 * ((input_length + 2) / 3);
+      char output[output_length + 1];
+      output[output_length] = '\0';
+      encode((unsigned char *)data, input_length, output, output_length);
+      return output;
+    }
+
+    std::string encode(const std::vector<uint8_t>& input) {
+      int output_length = 4 * ((input.size() + 2) / 3);
+      char output[output_length + 1];
+      output[output_length] = '\0';
+      encode((unsigned char *)input.data(), input.size(), output, output_length);
+      return output;
+    }
+
+    const int base64_decode_chars[] = {
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63,
+      52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1,
+      -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+      15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
+      -1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+      41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
     };
 
-    int decode(const char *input, const int input_length, char *output, const int max_output_length) {
-      assert(input_length % 4 == 0);
+    size_t decode(const char *data, size_t input_length, char *output, size_t output_size) {
+      size_t i, j;
+      size_t output_length = input_length / 4 * 3;
 
-      int output_length = input_length / 4 * 3;
-      assert(output_length <= max_output_length);
-      if (input[input_length - 1] == '=') (output_length)--;
-      if (input[input_length - 2] == '=') (output_length)--;
+      if (data[input_length - 1] == '=') output_length--;
+      if (data[input_length - 2] == '=') output_length--;
 
-      for (int i = 0, j = 0; i < input_length;) {
-        int sextet_a = input[i] == '=' ? 0 & i++ : base64_decoding_table[(int)input[i++]];
-        int sextet_b = input[i] == '=' ? 0 & i++ : base64_decoding_table[(int)input[i++]];
-        int sextet_c = input[i] == '=' ? 0 & i++ : base64_decoding_table[(int)input[i++]];
-        int sextet_d = input[i] == '=' ? 0 & i++ : base64_decoding_table[(int)input[i++]];
+      if (output_size < output_length) {
+        throw std::runtime_error("Output buffer too small");
+      }
 
-        int triple = (sextet_a << 3 * 6)
-                      + (sextet_b << 2 * 6)
-                      + (sextet_c << 1 * 6)
-                      + (sextet_d << 0 * 6);
+      for (i = 0, j = 0; i < input_length; ) {
+        unsigned int a = data[i] == '=' ? 0 & i++ : base64_decode_chars[(int)data[i++]];
+        unsigned int b = data[i] == '=' ? 0 & i++ : base64_decode_chars[(int)data[i++]];
+        unsigned int c = data[i] == '=' ? 0 & i++ : base64_decode_chars[(int)data[i++]];
+        unsigned int d = data[i] == '=' ? 0 & i++ : base64_decode_chars[(int)data[i++]];
+
+        unsigned int triple = (a << 3 * 6) + (b << 2 * 6) + (c << 1 * 6) + (d << 0 * 6);
 
         if (j < output_length) output[j++] = (triple >> 2 * 8) & 0xFF;
         if (j < output_length) output[j++] = (triple >> 1 * 8) & 0xFF;
@@ -351,48 +361,18 @@ namespace solana {
       return output_length;
     }
 
-    //TODO DELETE
-    const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string decode(const char *data, size_t input_length) {
+      int output_length = input_length / 4 * 3;
+      char output[output_length + 1];
+      output[output_length] = '\0';
+      output_length = decode(data, input_length, output, output_length);
+      output[output_length] = '\0';
+      return output;
+    }
 
-    //TODO DELETE
-    std::string base64_encode(unsigned char const* buf, unsigned int bufLen) {
-      std::string ret;
-      int i = 0;
-      int j = 0;
-      unsigned char char_array_3[3];
-      unsigned char char_array_4[4];
-
-      while (bufLen--) {
-        char_array_3[i++] = *(buf++);
-        if (i == 3) {
-          char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-          char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-          char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-          char_array_4[3] = char_array_3[2] & 0x3f;
-
-          for(i = 0; (i <4) ; i++)
-            ret += base64_chars[char_array_4[i]];
-          i = 0;
-        }
-      }
-
-      if (i) {
-        for(j = i; j < 3; j++)
-          char_array_3[j] = '\0';
-
-        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-        char_array_4[3] = char_array_3[2] & 0x3f;
-
-        for (j = 0; (j < i + 1); j++)
-          ret += base64_chars[char_array_4[j]];
-
-        while((i++ < 3))
-          ret += '=';
-      }
-
-      return ret;
+    std::vector<uint8_t> decode(const std::string& input) {
+      std::string decoded = decode(input.c_str(), input.size());
+      return std::vector<uint8_t>(decoded.begin(), decoded.end());
     }
 
   }
@@ -787,11 +767,11 @@ namespace solana {
               }
             }
             else if (strncmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0) {
-              std::string key = base64::base64_encode(_nonce.begin(), 16) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+              std::string key = base64::encode(_nonce.begin(), 16) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
               char sha1[20];
               SHA1((const unsigned char *)key.data(), key.size(), (unsigned char *)sha1);
-              std::string hash = base64::base64_encode((unsigned char *)sha1, 20);
+              std::string hash = base64::encode((unsigned char *)sha1, 20);
 
               accept = (strncmp(&buffer[start + 22], hash.c_str(), 20) == 0);
             }
@@ -1002,7 +982,7 @@ namespace solana {
         std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
 
         std::generate(_nonce.begin(), _nonce.end(), []() { return (uint8_t)std::rand(); });
-        std::string websocket_key = base64::base64_encode(_nonce.begin(), 16);
+        std::string websocket_key = base64::encode(_nonce.begin(), 16);
 
         int send_length = 0;
         send_length += sprintf(&_send_buffer[send_length], "GET %s HTTP/1.1\r\n", resource.c_str());
@@ -1182,8 +1162,9 @@ namespace solana {
   int decode_length(std::vector<uint8_t> bytes) {
     int len = 0;
     int size = 0;
-    for (;;) {
-      int elem = bytes[0];
+    while (bytes.size() > 0) {
+      int elem = bytes.front();
+      bytes.erase(bytes.begin());
       len |= (elem & 0x7f) << (size * 7);
       size += 1;
       if ((elem & 0x80) == 0) {
@@ -1195,14 +1176,19 @@ namespace solana {
 
   std::vector<uint8_t> encode_length(int len) {
     std::vector<uint8_t> bytes;
-    while (len > 0) {
-      int elem = len & 0x7f;
-      len >>= 7;
-      if (len > 0) {
+    int rem_len = len;
+    for (;;) {
+      int elem = rem_len & 0x7f;
+      rem_len >>= 7;
+      if (rem_len == 0) {
+        bytes.push_back(elem);
+        break;
+      } else {
         elem |= 0x80;
+        bytes.push_back(elem);
       }
-      bytes.push_back(elem);
     }
+    assert(bytes.size() <= 2);
     return bytes;
   }
 
@@ -1322,13 +1308,15 @@ namespace solana {
      * @param seeds Seed values used to generate the program address
      * @param programId Program ID to generate the address for
      */
-    static std::tuple<PublicKey, uint8_t> find_program_address(const std::vector<std::vector<uint8_t>>& seeds, const PublicKey& programId) {
+    static std::tuple<PublicKey, uint8_t> find_program_address(
+      const std::vector<std::vector<uint8_t>>& seeds,
+      const PublicKey& programId
+    ) {
       uint8_t nonce = 255;
-      std::optional<PublicKey> address;
       while (nonce != 0) {
-        std::vector<std::vector<uint8_t>> seedsWithNonce = seeds;
+        std::vector<std::vector<uint8_t>> seedsWithNonce(seeds.begin(), seeds.end());
         seedsWithNonce.push_back({nonce});
-        address = create_program_address(seedsWithNonce, programId);
+        std::optional<PublicKey> address = create_program_address(seedsWithNonce, programId);
         if (address.has_value()) {
           return std::make_tuple(address.value(), nonce);
         } else {
@@ -1359,7 +1347,7 @@ namespace solana {
      *
      * This method should only be used to recreate a keypair from a previously
      * generated secret key. Generating keypairs from a random seed should be done
-     * with the {@link Keypair.fromSeed} method.
+     * with the {@link Keypair.from_seed} method.
      *
      * @throws error if the provided secret key is invalid and validation is not skipped.
      *
@@ -1382,7 +1370,7 @@ namespace solana {
      *
      * @param path path to keypair file
      */
-    static Keypair fromFile(const std::string &path) {
+    static Keypair from_file(const std::string &path) {
       Keypair result = Keypair();
       std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
       if (file.is_open()) {
@@ -1407,7 +1395,7 @@ namespace solana {
      *
      * @param seed secret key seed
      */
-    static Keypair fromSeed(const uint8_t *seed) {
+    static Keypair from_seed(const uint8_t *seed) {
       Keypair result = Keypair();
       crypto_sign_seed_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data(), seed);
       return result;
@@ -1578,134 +1566,64 @@ namespace solana {
   }
 
   struct CompiledTransaction {
-    std::vector<uint8_t> serialized_message;
-
     /** Defines the content of the transaction */
     struct Message {
+      /** The message header */
+      TransactionMessageHeader header;
       /** List of base-58 encoded Pubkeys used by the transaction, including by the instructions and for signatures.
       The first message.header.numRequiredSignatures Pubkeys must sign the transaction. */
       std::vector<PublicKey> accountKeys;
-      /** The message header */
-      TransactionMessageHeader header;
+      /** A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
+      PublicKey recentBlockhash;
       struct Instruction {
         /** Ordered indices into the `message.accountKeys` array indicating which accounts to pass to the program */
         std::vector<uint8_t> accounts;
-        /** The program input data encoded as base-58 */
-        std::string data;
+        /** The program input data */
+        std::vector<uint8_t> data;
         /** Index into the `message.accountKeys` array indicating the program account that executes this instruction */
         uint8_t programIdIndex;
       };
       /** List of program instructions that will be executed in sequence and committed in one atomic transaction if all succeed. */
       std::vector<Instruction> instructions;
-      /** A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
-      std::string recentBlockhash;
 
-      void serialize() {
+      void serialize(std::vector<uint8_t>& serialized_message) {
+        if (serialized_message.size() > 0) {
+          throw new std::runtime_error("Message is already serialized");
+        }
+        if (header.numRequiredSignatures == 0) {
+          throw new std::runtime_error("Message must have at least one signature");
+        }
+        serialized_message.push_back(header.numRequiredSignatures);
+        serialized_message.push_back(header.numReadonlySignedAccounts);
+        serialized_message.push_back(header.numReadonlyUnsignedAccounts);
 
-  //   const numKeys = this.accountKeys.length;
+        auto keyCount = encode_length(accountKeys.size());
+        serialized_message.insert(serialized_message.end(), keyCount.begin(), keyCount.end());
 
-  //   let keyCount: number[] = [];
-        //shortvec.encodeLength(keyCount, numKeys);
+        for (auto& key : accountKeys) {
+          serialized_message.insert(serialized_message.end(), key.bytes.begin(), key.bytes.end());
+        }
 
-  //   const instructions = this.instructions.map(instruction => {
-  //     const {accounts, programIdIndex} = instruction;
-  //     const data = Array.from(bs58.decode(instruction.data));
+        serialized_message.insert(serialized_message.end(), recentBlockhash.bytes.begin(), recentBlockhash.bytes.end());
 
-  //     let keyIndicesCount: number[] = [];
-  //     shortvec.encodeLength(keyIndicesCount, accounts.length);
+        auto instructionCount = encode_length(instructions.size());
+        serialized_message.insert(serialized_message.end(), instructionCount.begin(), instructionCount.end());
 
-  //     let dataCount: number[] = [];
-  //     shortvec.encodeLength(dataCount, data.length);
+        for (auto& instruction : instructions) {
+          serialized_message.push_back(instruction.programIdIndex);
 
-  //     return {
-  //       programIdIndex,
-  //       keyIndicesCount: Buffer.from(keyIndicesCount),
-  //       keyIndices: accounts,
-  //       dataLength: Buffer.from(dataCount),
-  //       data,
-  //     };
-  //   });
+          auto keyIndicesCount = encode_length(instruction.accounts.size());
+          serialized_message.insert(serialized_message.end(), keyIndicesCount.begin(), keyIndicesCount.end());
 
-  //   let instructionCount: number[] = [];
-  //   shortvec.encodeLength(instructionCount, instructions.length);
-  //   let instructionBuffer = Buffer.alloc(PACKET_DATA_SIZE);
-  //   Buffer.from(instructionCount).copy(instructionBuffer);
-  //   let instructionBufferLength = instructionCount.length;
+          for (auto& accountIndex : instruction.accounts) {
+            serialized_message.push_back(accountIndex);
+          }
 
-  //   instructions.forEach(instruction => {
-  //     const instructionLayout = BufferLayout.struct<
-  //       Readonly<{
-  //         data: number[];
-  //         dataLength: Uint8Array;
-  //         keyIndices: number[];
-  //         keyIndicesCount: Uint8Array;
-  //         programIdIndex: number;
-  //       }>
-  //     >([
-  //       BufferLayout.u8('programIdIndex'),
+          auto dataLength = encode_length(instruction.data.size());
+          serialized_message.insert(serialized_message.end(), dataLength.begin(), dataLength.end());
 
-  //       BufferLayout.blob(
-  //         instruction.keyIndicesCount.length,
-  //         'keyIndicesCount',
-  //       ),
-  //       BufferLayout.seq(
-  //         BufferLayout.u8('keyIndex'),
-  //         instruction.keyIndices.length,
-  //         'keyIndices',
-  //       ),
-  //       BufferLayout.blob(instruction.dataLength.length, 'dataLength'),
-  //       BufferLayout.seq(
-  //         BufferLayout.u8('userdatum'),
-  //         instruction.data.length,
-  //         'data',
-  //       ),
-  //     ]);
-  //     const length = instructionLayout.encode(
-  //       instruction,
-  //       instructionBuffer,
-  //       instructionBufferLength,
-  //     );
-  //     instructionBufferLength += length;
-  //   });
-  //   instructionBuffer = instructionBuffer.slice(0, instructionBufferLength);
-
-  //   const signDataLayout = BufferLayout.struct<
-  //     Readonly<{
-  //       keyCount: Uint8Array;
-  //       keys: Uint8Array[];
-  //       numReadonlySignedAccounts: Uint8Array;
-  //       numReadonlyUnsignedAccounts: Uint8Array;
-  //       numRequiredSignatures: Uint8Array;
-  //       recentBlockhash: Uint8Array;
-  //     }>
-  //   >([
-  //     BufferLayout.blob(1, 'numRequiredSignatures'),
-  //     BufferLayout.blob(1, 'numReadonlySignedAccounts'),
-  //     BufferLayout.blob(1, 'numReadonlyUnsignedAccounts'),
-  //     BufferLayout.blob(keyCount.length, 'keyCount'),
-  //     BufferLayout.seq(Layout.publicKey('key'), numKeys, 'keys'),
-  //     Layout.publicKey('recentBlockhash'),
-  //   ]);
-
-  //   const transaction = {
-  //     numRequiredSignatures: Buffer.from([this.header.numRequiredSignatures]),
-  //     numReadonlySignedAccounts: Buffer.from([
-  //       this.header.numReadonlySignedAccounts,
-  //     ]),
-  //     numReadonlyUnsignedAccounts: Buffer.from([
-  //       this.header.numReadonlyUnsignedAccounts,
-  //     ]),
-  //     keyCount: Buffer.from(keyCount),
-  //     keys: this.accountKeys.map(key => toBuffer(key.toBytes())),
-  //     recentBlockhash: bs58.decode(this.recentBlockhash),
-  //   };
-
-  //   let signData = Buffer.alloc(2048);
-  //   const length = signDataLayout.encode(transaction, signData);
-  //   instructionBuffer.copy(signData, length);
-  //   return signData.slice(0, length + instructionBuffer.length);
-  // }
-
+          serialized_message.insert(serialized_message.end(), instruction.data.begin(), instruction.data.end());
+        }
       }
     } message;
     /** The transaction signatures */
@@ -1714,13 +1632,16 @@ namespace solana {
     /**
      * Serialize the transaction
      */
-    std::vector<uint8_t> serialize() {
+    std::vector<uint8_t> serialize(std::vector<uint8_t>& serialized_message) {
       std::vector<uint8_t> buffer;
       std::vector<uint8_t> signaturesLength = encode_length(signatures.size());
       buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
       for (auto& signature : signatures) {
-        std::string rawSignature = base58::decode(signature);
-        buffer.insert(buffer.end(), rawSignature.begin(), rawSignature.end());
+        assert(signature.size() == 64);
+        buffer.insert(buffer.end(), signature.begin(), signature.end());
+      }
+      if (serialized_message.size() == 0) {
+        throw new std::runtime_error("Message is not serialized");
       }
       buffer.insert(buffer.end(), serialized_message.begin(), serialized_message.end());
       return buffer;
@@ -1729,7 +1650,8 @@ namespace solana {
     /**
      * Sign the transaction with the provided signers
      */
-    void sign(const std::vector<Keypair>& signers) {
+    void sign(const std::vector<uint8_t>& serialized_message, const std::vector<Keypair>& signers) {
+      assert(signatures.size() == 0);
       for (auto& signer : signers) {
         //signatures.insert(signer.publicKey, signer.sign(serialized_message));
         signatures.push_back(signer.sign(serialized_message));
@@ -1739,7 +1661,7 @@ namespace solana {
 
   void from_json(const json& j, CompiledTransaction::Message::Instruction& instruction) {
     instruction.accounts = j["accounts"].get<std::vector<uint8_t>>();
-    instruction.data = j["data"].get<std::string>();
+    instruction.data = base64::decode(j["data"].get<std::string>());
     instruction.programIdIndex = j["programIdIndex"].get<uint8_t>();
   }
 
@@ -1749,7 +1671,7 @@ namespace solana {
     message.header.numReadonlyUnsignedAccounts = j["header"]["numReadonlyUnsignedAccounts"].get<uint8_t>();
     message.header.numRequiredSignatures = j["header"]["numRequiredSignatures"].get<uint8_t>();
     message.instructions = j["instructions"].get<std::vector<CompiledTransaction::Message::Instruction>>();
-    message.recentBlockhash = j["recentBlockhash"].get<std::string>();
+    message.recentBlockhash = PublicKey(j["recentBlockhash"].get<std::string>());
   }
 
   void from_json(const json& j, CompiledTransaction& transaction) {
@@ -1767,7 +1689,7 @@ namespace solana {
       /** The account keys used by this transaction */
       std::vector<PublicKey> accountKeys;
       /** Recent blockhash */
-      std::string recentBlockhash;
+      PublicKey recentBlockhash;
       struct Instruction {
         /** The program id that executes this instruction */
         PublicKey programId;
@@ -1798,11 +1720,15 @@ namespace solana {
 
       CompiledTransaction::Message compile(const std::vector<Keypair>& signers) {
 
-        if (recentBlockhash.empty()) {
-          throw std::runtime_error("recentBlockhash required");
-        }
+        //TODO check if recentBlockhash is the default pubkey
+        // if (recentBlockhash.empty()) {
+        //   throw std::runtime_error("recentBlockhash required");
+        // }
         if (instructions.empty()) {
           throw std::runtime_error("No instructions provided");
+        }
+        if (signers.size() == 0) {
+          throw std::runtime_error("No signers provided");
         }
 
         std::vector<Transaction::Message::Instruction::AccountMeta> accountMetas;
@@ -1887,20 +1813,20 @@ namespace solana {
           }
           compiledInstructions.push_back(CompiledTransaction::Message::Instruction {
             .accounts = accountsIndexes,
-            .data = base58::encode(instruction.data),
+            .data = instruction.data,
             .programIdIndex = (uint8_t)(std::find(accountKeys.begin(), accountKeys.end(), instruction.programId) - accountKeys.begin()),
           });
         }
 
         return {
-          accountKeys,
           {
             numRequiredSignatures,
             numReadonlySignedAccounts,
             numReadonlyUnsignedAccounts,
           },
-          compiledInstructions,
+          accountKeys,
           recentBlockhash,
+          compiledInstructions
         };
       }
     } message;
@@ -1913,23 +1839,6 @@ namespace solana {
     void add(Transaction::Message::Instruction instruction) {
       message.instructions.push_back(instruction);
     }
-
-    /**
-     * Sign the transaction
-     *
-     * @param signers The keypairs to sign the transaction with
-     */
-    CompiledTransaction sign(const std::vector<Keypair>& signers) {
-      auto compiled_message = message.compile(signers);
-      compiled_message.serialize();
-      CompiledTransaction compiled_transaction = {
-        .message = compiled_message,
-        .signatures = std::vector<std::string>(signers.size())
-      };
-      compiled_transaction.sign(signers);
-      return compiled_transaction;
-    }
-
   };
 
   void from_json(const json& j, Transaction::Message::Instruction::AccountMeta& accountMeta) {
@@ -2170,7 +2079,7 @@ namespace solana {
     std::map<int, ProgramAccountChangeSubscriptionInfo> _programAccountChangeSubscriptions;
     std::map<int, std::function<void(Context context, SlotInfo slotInfo)>> _slotSubscriptions;
 
-    static std::string makeWebsocketUrl(std::string endpoint) {
+    static std::string make_websocket_url(std::string endpoint) {
       auto url = endpoint;
       url.replace(0, 4, "ws");
       return url;
@@ -2181,7 +2090,7 @@ namespace solana {
     Connection(std::string endpoint, Commitment commitment)
       : _commitment(commitment),
       _rpcEndpoint(endpoint),
-      _rpcWsEndpoint(makeWebsocketUrl(endpoint))
+      _rpcWsEndpoint(make_websocket_url(endpoint))
       // _rpcClient(_rpcEndpoint, 443),
       // _rpcWebSocket(_rpcWsEndpoint, 443)
     {
@@ -2191,7 +2100,8 @@ namespace solana {
       }
     }
 
-    ~Connection() {}
+    ~Connection() {
+    }
 
     Connection() = delete;
     Connection(const Connection&) = delete;
@@ -2206,7 +2116,7 @@ namespace solana {
      *
      * @param publicKey The Pubkey of account to query
      */
-    AccountInfo getAccountInfo(const PublicKey& publicKey) {
+    AccountInfo get_account_info(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2225,7 +2135,7 @@ namespace solana {
      *
      * @param publicKey The Pubkey of the account to query
      */
-    uint64_t getBalance(const PublicKey& publicKey) {
+    uint64_t get_balance(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2239,7 +2149,7 @@ namespace solana {
     /**
      * Returns information about all the nodes participating in the cluster.
      */
-    json getClusterNodes() {
+    json get_cluster_nodes() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2250,7 +2160,7 @@ namespace solana {
     /**
      * Returns the identity Pubkey of the current node.
      */
-    PublicKey getIdentity() {
+    PublicKey get_identity() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2261,7 +2171,7 @@ namespace solana {
     /**
      * Returns the latest blockhash.
      */
-    std::string getLatestBlockhash() const {
+    std::string get_latest_blockhash() const {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2274,7 +2184,7 @@ namespace solana {
      *
      * @param leaderAddress The Pubkey of the leader to query
      */
-    json getLeaderSchedule(const PublicKey& leaderAddress) {
+    json get_leader_schedule(const PublicKey& leaderAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2292,7 +2202,7 @@ namespace solana {
      *
      * @param publicKeys The Pubkeys of the accounts to query
     */
-    std::vector<AccountInfo> getMultipleAccounts(const std::vector<PublicKey>& publicKeys) {
+    std::vector<AccountInfo> get_multiple_accounts(const std::vector<PublicKey>& publicKeys) {
       std::vector<std::string> base58Keys;
       for (auto publicKey : publicKeys) {
         base58Keys.push_back(publicKey.to_base58());
@@ -2315,7 +2225,7 @@ namespace solana {
      *
      * @param programId The Pubkey of the program to query
     */
-    std::vector<AccountInfo> getProgramAccounts(const PublicKey& programId) {
+    std::vector<AccountInfo> get_program_accounts(const PublicKey& programId) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2329,7 +2239,7 @@ namespace solana {
     /**
      * Returns the slot that has reached the given or default commitment level.
     */
-    uint64_t getSlot(const Commitment& commitment = Commitment::Finalized) {
+    uint64_t get_slot(const Commitment& commitment = Commitment::Finalized) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2340,7 +2250,7 @@ namespace solana {
     /**
      * Returns the current slot leader.
      */
-    PublicKey getSlotLeader() {
+    PublicKey get_slot_leader() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2353,7 +2263,7 @@ namespace solana {
      *
      * @param tokenAddress The Pubkey of the token account to query
      */
-    TokenBalance getTokenAccountBalance(const PublicKey& tokenAddress) {
+    TokenBalance get_token_account_balance(const PublicKey& tokenAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2369,7 +2279,7 @@ namespace solana {
      *
      * @param ownerAddress The Pubkey of account owner to query
      */
-    std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress) {
+    std::vector<TokenAccount> get_token_accounts_by_owner(const PublicKey& ownerAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2392,7 +2302,7 @@ namespace solana {
      * @param ownerAddress The Pubkey of account owner to query
      * @param mintAddress The mint of the token to query
      */
-    std::vector<TokenAccount> getTokenAccountsByOwner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
+    std::vector<TokenAccount> get_token_accounts_by_owner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2414,7 +2324,7 @@ namespace solana {
      *
      * @param tokenMintAddress The Pubkey of the token mint to query
      */
-    TokenBalance getTokenSupply(const PublicKey& tokenMintAddress) {
+    TokenBalance get_token_supply(const PublicKey& tokenMintAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2430,7 +2340,7 @@ namespace solana {
      *
      * @param transactionSignature The signature of the transaction to query
      */
-    TransactionResponse getTransaction(const std::string& transactionSignature) {
+    TransactionResponse get_transaction(const std::string& transactionSignature) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2444,7 +2354,7 @@ namespace solana {
     /**
      * Returns the current solana versions running on the node.
      */
-    std::string getVersion() {
+    std::string get_version() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2458,7 +2368,7 @@ namespace solana {
      * @param recipientAddress The Pubkey to airdrop lamports to
      * @param lamports The number of lamports to airdrop
     */
-    std::string requestAirdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
+    std::string request_airdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2477,17 +2387,31 @@ namespace solana {
      * @param signers The keypairs to sign the transaction
      * @param options Options for sending the transaction
      */
-    SendTransactionResult signAndSendTransaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
-      transaction.message.recentBlockhash = getLatestBlockhash();
-      CompiledTransaction compiled_transaction = transaction.sign(signers);
-      std::vector<uint8_t> serialized_transaction = compiled_transaction.serialize();
+    SendTransactionResult sign_and_send_transaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
+      transaction.message.recentBlockhash = get_latest_blockhash();
+
+      auto compiled_message = transaction.message.compile(signers);
+      CompiledTransaction compiled_transaction = {
+        .message = compiled_message,
+      };
+
+      std::vector<uint8_t> serialized_message;
+      compiled_message.serialize(serialized_message);
+
+      compiled_transaction.sign(serialized_message, signers);
+
+      std::vector<uint8_t> serialized_transaction = compiled_transaction.serialize(serialized_message);
+
+      std::cout << std::endl;
+      std::cout << base64::encode(serialized_transaction) << std::endl;
+      std::cout << std::endl;
 
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "sendTransaction"},
         {"params", {
-          base64::base64_encode(serialized_transaction.data(), serialized_transaction.size()),
+          base64::encode(serialized_transaction),
           {
             {"encoding", "base64"},
           },
@@ -2500,7 +2424,7 @@ namespace solana {
      *
      * @param signedTransaction The signed transaction to simulate
      */
-    SimulatedTransactionResponse simulateTransaction(const std::string& signedTransaction) {
+    SimulatedTransactionResponse simulate_transaction(const std::string& signedTransaction) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2516,7 +2440,7 @@ namespace solana {
 
     //-------- Websocket methods --------------------------------------------------------------------
 
-    int onAccountChange(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2535,7 +2459,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeAccountChangeListener(int subscriptionId) {
+    bool remove_account_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
@@ -2552,7 +2476,7 @@ namespace solana {
       return false;
     }
 
-    int onLogs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
+    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2573,7 +2497,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeOnLogsListener(int subscriptionId) {
+    bool remove_on_logs_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
@@ -2590,7 +2514,7 @@ namespace solana {
       return false;
     }
 
-    int onProgramAccountChange(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
+    int on_program_account_change(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2609,7 +2533,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeProgramAccountChangeListener(int subscriptionId) {
+    bool remove_program_account_change_listnener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
@@ -2626,7 +2550,7 @@ namespace solana {
       return false;
     }
 
-    int onSlotChange(std::function<void(Context context, SlotInfo slotInfo)> callback) {
+    int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
       //TODO _rpcWebSocket
       auto response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2638,7 +2562,7 @@ namespace solana {
       return subscriptionId;
     }
 
-    bool removeSlotChangeListener(int subscriptionId) {
+    bool remove_slot_change_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
         auto response = http::post(_rpcEndpoint, {
