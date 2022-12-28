@@ -571,10 +571,10 @@ namespace solana {
           }
         }
 
-        std::cout << "CONNECT" << std::endl;
-        std::cout << "  socket = " << std::to_string(_socket) << std::endl;
-        std::cout << "  tcp_address = " << tcp_address << std::endl;
-        std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
+        // std::cout << "CONNECT" << std::endl;
+        // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
+        // std::cout << "  tcp_address = " << tcp_address << std::endl;
+        // std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
 
         return true;
       }
@@ -667,7 +667,7 @@ namespace solana {
       char* response = client.post(request, &response_length);
       client.disconnect();
 
-      std::cout << response << std::endl << std::endl;
+      // std::cout << response << std::endl << std::endl;
       // std::cout << "response_length = " << response_length << std::endl;
 
       return json::parse(std::string(response, response_length));
@@ -976,10 +976,10 @@ namespace solana {
           }
         }
 
-        std::cout << "CONNECT" << std::endl;
-        std::cout << "  socket = " << std::to_string(_socket) << std::endl;
-        std::cout << "  tcp_address = " << tcp_address << std::endl;
-        std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
+        // std::cout << "CONNECT" << std::endl;
+        // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
+        // std::cout << "  tcp_address = " << tcp_address << std::endl;
+        // std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
 
         std::generate(_nonce.begin(), _nonce.end(), []() { return (uint8_t)std::rand(); });
         std::string websocket_key = base64::encode(_nonce.begin(), 16);
@@ -2117,7 +2117,7 @@ namespace solana {
      * @param publicKey The Pubkey of account to query
      */
     AccountInfo get_account_info(const PublicKey& publicKey) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getAccountInfo"},
@@ -2127,7 +2127,14 @@ namespace solana {
             {"encoding", "base64"},
           },
         }},
-      })["result"]["value"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting account info: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
@@ -2136,47 +2143,75 @@ namespace solana {
      * @param publicKey The Pubkey of the account to query
      */
     uint64_t get_balance(const PublicKey& publicKey) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getBalance"},
         {"params", {
           publicKey.to_base58(),
         }},
-      })["result"]["value"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting balance: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
      * Returns information about all the nodes participating in the cluster.
      */
     json get_cluster_nodes() {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getClusterNodes"},
-      })["result"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting cluster nodes: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"];
     }
 
     /**
      * Returns the identity Pubkey of the current node.
      */
     PublicKey get_identity() {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getIdentity"},
-      })["result"]["identity"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting identity: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["identity"];
     }
 
     /**
      * Returns the latest blockhash.
      */
     std::string get_latest_blockhash() const {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getLatestBlockhash"},
-      })["result"]["value"]["blockhash"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting latest blockhash: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"]["blockhash"];
     }
 
     /**
@@ -2185,7 +2220,7 @@ namespace solana {
      * @param leaderAddress The Pubkey of the leader to query
      */
     json get_leader_schedule(const PublicKey& leaderAddress) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getLeaderSchedule"},
@@ -2194,7 +2229,14 @@ namespace solana {
             {"identity", leaderAddress.to_base58()},
           },
         }},
-      })["result"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting leader schedule: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"];
     }
 
     /**
@@ -2207,7 +2249,7 @@ namespace solana {
       for (auto publicKey : publicKeys) {
         base58Keys.push_back(publicKey.to_base58());
       }
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getMultipleAccounts"},
@@ -2217,7 +2259,14 @@ namespace solana {
             {"encoding", "base64"},
           },
         }},
-      })["result"]["value"];
+      });
+      
+      if (resp.contains("error")) {
+        std::cout << "Error getting multiple accounts: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
@@ -2226,36 +2275,57 @@ namespace solana {
      * @param programId The Pubkey of the program to query
      */
     std::vector<AccountInfo> get_program_accounts(const PublicKey& programId) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getProgramAccounts"},
         {"params", {
           programId.to_base58(),
         }},
-      })["result"];
+      });
+      
+      if (resp.contains("error")) {
+        std::cout << "Error getting program accounts: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"];
     }
 
     /**
      * Returns the slot that has reached the given or default commitment level.
      */
     uint64_t get_slot(const Commitment& commitment = Commitment::Finalized) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getSlot"},
-      })["result"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting slot: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"];
     }
 
     /**
      * Returns the current slot leader.
      */
     PublicKey get_slot_leader() {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getSlotLeader"},
-      })["result"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting slot leader: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"];
     }
 
     /**
@@ -2264,14 +2334,21 @@ namespace solana {
      * @param tokenAddress The Pubkey of the token account to query
      */
     TokenBalance get_token_account_balance(const PublicKey& tokenAddress) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountBalance"},
         {"params", {
           tokenAddress.to_base58(),
         }},
-      })["result"]["value"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting token account balance: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
@@ -2280,7 +2357,7 @@ namespace solana {
      * @param ownerAddress The Pubkey of account owner to query
      */
     std::vector<TokenAccount> get_token_accounts_by_owner(const PublicKey& ownerAddress) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountsByOwner"},
@@ -2293,7 +2370,14 @@ namespace solana {
             {"encoding", "jsonParsed"},
           }
         }},
-      })["result"]["value"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting token accounts by owner: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
@@ -2303,7 +2387,7 @@ namespace solana {
      * @param mintAddress The mint of the token to query
      */
     std::vector<TokenAccount> get_token_accounts_by_owner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountsByOwner"},
@@ -2316,7 +2400,14 @@ namespace solana {
             {"encoding", "jsonParsed"},
           }
         }},
-      })["result"]["value"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting token accounts by owner: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
@@ -2325,14 +2416,21 @@ namespace solana {
      * @param tokenMintAddress The Pubkey of the token mint to query
      */
     TokenBalance get_token_supply(const PublicKey& tokenMintAddress) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenSupply"},
         {"params", {
           tokenMintAddress.to_base58(),
         }},
-      })["result"]["value"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting token supply: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["value"];
     }
 
     /**
@@ -2341,25 +2439,39 @@ namespace solana {
      * @param transactionSignature The signature of the transaction to query
      */
     TransactionResponse get_transaction(const std::string& transactionSignature) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTransaction"},
         {"params", {
           transactionSignature
         }},
-      })["result"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting transaction: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"];
     }
 
     /**
      * Returns the current solana versions running on the node.
      */
     std::string get_version() {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getVersion"},
-      })["result"]["solana-core"];
+      });
+
+      if (resp.contains("error")) {
+        std::cout << "Error getting version: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"]["solana-core"];
     }
 
     /**
@@ -2369,7 +2481,7 @@ namespace solana {
      * @param lamports The number of lamports to airdrop
      */
     std::string request_airdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "requestAirdrop"},
@@ -2377,7 +2489,14 @@ namespace solana {
           recipientAddress.to_base58(),
           lamports,
         }},
-      })["result"].get<std::string>();
+      });
+      
+      if (resp.contains("error")) {
+        std::cout << "Error requesting airdrop: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+      
+      return resp["result"].get<std::string>();
     };
 
     /**
@@ -2406,7 +2525,7 @@ namespace solana {
       std::cout << base64::encode(serialized_transaction) << std::endl;
       std::cout << std::endl;
 
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "sendTransaction"},
@@ -2417,6 +2536,13 @@ namespace solana {
           },
         }},
       });
+
+      if (resp.contains("error")) {
+        std::cout << "Error sending transaction: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+
+      return resp;
     }
 
     /**
@@ -2425,7 +2551,7 @@ namespace solana {
      * @param signedTransaction The signed transaction to simulate
      */
     SimulatedTransactionResponse simulate_transaction(const std::string& signedTransaction) {
-      return http::post(_rpcEndpoint, {
+      json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "simulateTransaction"},
@@ -2435,14 +2561,21 @@ namespace solana {
             {"encoding", "base64"},
           },
         }},
-      })["result"];
+      });
+      
+      if (resp.contains("error")) {
+        std::cout << "Error simulating transaction: " << std::endl;
+        throw std::runtime_error(resp["error"]["message"]);
+      }
+
+      return resp["result"];
     }
 
     //-------- Websocket methods --------------------------------------------------------------------
 
     int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       //TODO _rpcWebSocket
-      auto response = http::post(_rpcEndpoint, {
+      json response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "accountSubscribe"},
@@ -2462,7 +2595,7 @@ namespace solana {
     bool remove_account_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
-        auto response = http::post(_rpcEndpoint, {
+        json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
           {"id", 1},
           {"method", "accountUnsubscribe"},
@@ -2478,7 +2611,7 @@ namespace solana {
 
     int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
       //TODO _rpcWebSocket
-      auto response = http::post(_rpcEndpoint, {
+      json response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "logsSubscribe"},
@@ -2500,7 +2633,7 @@ namespace solana {
     bool remove_on_logs_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
-        auto response = http::post(_rpcEndpoint, {
+        json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
           {"id", 1},
           {"method", "logsUnsubscribe"},
@@ -2516,7 +2649,7 @@ namespace solana {
 
     int on_program_account_change(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
       //TODO _rpcWebSocket
-      auto response = http::post(_rpcEndpoint, {
+      json response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "programSubscribe"},
@@ -2536,7 +2669,7 @@ namespace solana {
     bool remove_program_account_change_listnener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
-        auto response = http::post(_rpcEndpoint, {
+        json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
           {"id", 1},
           {"method", "programUnsubscribe"},
@@ -2552,7 +2685,7 @@ namespace solana {
 
     int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
       //TODO _rpcWebSocket
-      auto response = http::post(_rpcEndpoint, {
+      json response = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "slotSubscribe"},
@@ -2565,7 +2698,7 @@ namespace solana {
     bool remove_slot_change_listener(int subscriptionId) {
       //TODO _rpcWebSocket
       if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
-        auto response = http::post(_rpcEndpoint, {
+        json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
           {"id", 1},
           {"method", "slotUnsubscribe"},
