@@ -2201,7 +2201,7 @@ namespace solana {
      * Returns the account information for a list of Pubkeys.
      *
      * @param publicKeys The Pubkeys of the accounts to query
-    */
+     */
     std::vector<AccountInfo> get_multiple_accounts(const std::vector<PublicKey>& publicKeys) {
       std::vector<std::string> base58Keys;
       for (auto publicKey : publicKeys) {
@@ -2224,7 +2224,7 @@ namespace solana {
      * Returns all accounts owned by the provided program Pubkey.
      *
      * @param programId The Pubkey of the program to query
-    */
+     */
     std::vector<AccountInfo> get_program_accounts(const PublicKey& programId) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2238,7 +2238,7 @@ namespace solana {
 
     /**
      * Returns the slot that has reached the given or default commitment level.
-    */
+     */
     uint64_t get_slot(const Commitment& commitment = Commitment::Finalized) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2367,7 +2367,7 @@ namespace solana {
      *
      * @param recipientAddress The Pubkey to airdrop lamports to
      * @param lamports The number of lamports to airdrop
-    */
+     */
     std::string request_airdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2381,7 +2381,7 @@ namespace solana {
     };
 
     /**
-     * Submits a signed transaction to the cluster for processing.
+     * Signs and submits a transaction to the cluster for processing.
      *
      * @param transaction The transaction to sign
      * @param signers The keypairs to sign the transaction
