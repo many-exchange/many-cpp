@@ -1,7 +1,7 @@
 .vscode/settings.json
 
 examples/*
-examples/!*.cpp
+!examples/*.cpp
 
 tests/*
-tests/!*.cpp
+!tests/*.cpp
