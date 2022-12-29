@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <array>
-#include <assert.h>
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
@@ -56,6 +55,15 @@ using json = nlohmann::json;
 #define SIGNATURE_LENGTH 64
 
 namespace solana {
+
+#define ASSERT(x)                                               \
+  do {                                                          \
+    if( ! (x) ) {                                               \
+      fprintf(stderr, "ERROR: ASSERT(%s) failed\n", #x);        \
+      fprintf(stderr, "ERROR: at %s:%d\n", __FILE__, __LINE__); \
+      abort();                                                  \
+    }                                                           \
+  } while( 0 )
 
   namespace base58 {
 
@@ -460,9 +468,9 @@ namespace solana {
 
       bool connect() {
         std::size_t index = _url.find("://");
-        assert(index != std::string::npos);
+        ASSERT(index != std::string::npos);
         std::string protocol = _url.substr(0, index);
-        assert(protocol == "https");
+        ASSERT(protocol == "https");
         index += 3; // "://"
         std::string hostname = _url.substr(index);
 
@@ -473,7 +481,7 @@ namespace solana {
           return false;
         }
 
-        assert(server->h_addrtype == AF_INET);
+        ASSERT(server->h_addrtype == AF_INET);
 
         int i = 0;
         while (server->h_addr_list[i] != NULL) {
@@ -489,7 +497,7 @@ namespace solana {
     private:
 
       bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port) {
-        assert(_socket == -1);
+        ASSERT(_socket == -1);
 
         _socket = socket(AF_INET, SOCK_STREAM, 0);
         if (_socket < 0) {
@@ -788,7 +796,7 @@ namespace solana {
           return false;
         }
 
-        assert(length > 0);
+        ASSERT(length > 0);
         int return_code = SSL_write(_ssl, buffer, length);
 
         if (_handshake_complete) {
@@ -861,9 +869,9 @@ namespace solana {
 
       bool connect() {
         std::size_t index = _url.find("://");
-        assert(index != std::string::npos);
+        ASSERT(index != std::string::npos);
         std::string protocol = _url.substr(0, index);
-        assert(protocol == "wss");
+        ASSERT(protocol == "wss");
         index += 3;
         std::size_t end = _url.find("/", index + 1);
         std::string hostname = _url.substr(index, end - index);
@@ -876,7 +884,7 @@ namespace solana {
           return false;
         }
 
-        assert(server->h_addrtype == AF_INET);
+        ASSERT(server->h_addrtype == AF_INET);
 
         int i = 0;
         while (server->h_addr_list[i] != NULL) {
@@ -892,7 +900,7 @@ namespace solana {
     private:
 
       bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port, const std::string& resource) {
-        assert(_socket == -1);
+        ASSERT(_socket == -1);
 
         _handshake_complete = false;
 
@@ -1188,7 +1196,7 @@ namespace solana {
         bytes.push_back(elem);
       }
     }
-    assert(bytes.size() <= 2);
+    ASSERT(bytes.size() <= 2);
     return bytes;
   }
 
@@ -1264,7 +1272,7 @@ namespace solana {
      * Check if this keypair is on the ed25519 curve
      */
     bool is_on_curve() const {
-      return crypto_core_ed25519_is_valid_point(bytes.data());
+      return crypto_core_ristretto255_is_valid_point(bytes.data()) == 0;
     }
 
     /**
@@ -1287,14 +1295,16 @@ namespace solana {
       buffer.insert(buffer.end(), program_id.bytes.begin(), program_id.bytes.end());
       std::string ProgramDerivedAddress = "ProgramDerivedAddress";
       buffer.insert(buffer.end(), ProgramDerivedAddress.begin(), ProgramDerivedAddress.end());
+
+      // Create a sha256 hash
       unsigned char hash[crypto_hash_sha256_BYTES];
+      assert(crypto_hash_sha256_BYTES == PUBLIC_KEY_LENGTH);
       crypto_hash_sha256(hash, buffer.data(), buffer.size());
-      PublicKey pubkey = PublicKey((uint8_t*) hash);
+
+      PublicKey pubkey = PublicKey((uint8_t*)hash);
       if (pubkey.is_on_curve()) {
-        std::cout << "Invalid seeds, address must fall off the curve" << std::endl;
         return std::nullopt;
       }
-
       return pubkey;
     }
 
@@ -1316,6 +1326,7 @@ namespace solana {
       while (nonce != 0) {
         std::vector<std::vector<uint8_t>> seedsWithNonce(seeds.begin(), seeds.end());
         seedsWithNonce.push_back({nonce});
+
         std::optional<PublicKey> address = create_program_address(seedsWithNonce, programId);
         if (address.has_value()) {
           return std::make_tuple(address.value(), nonce);
@@ -1637,7 +1648,7 @@ namespace solana {
       std::vector<uint8_t> signaturesLength = encode_length(signatures.size());
       buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
       for (auto& signature : signatures) {
-        assert(signature.size() == 64);
+        ASSERT(signature.size() == 64);
         buffer.insert(buffer.end(), signature.begin(), signature.end());
       }
       if (serialized_message.size() == 0) {
@@ -1651,7 +1662,7 @@ namespace solana {
      * Sign the transaction with the provided signers
      */
     void sign(const std::vector<uint8_t>& serialized_message, const std::vector<Keypair>& signers) {
-      assert(signatures.size() == 0);
+      ASSERT(signatures.size() == 0);
       for (auto& signer : signers) {
         //signatures.insert(signer.publicKey, signer.sign(serialized_message));
         signatures.push_back(signer.sign(serialized_message));
@@ -2133,7 +2144,7 @@ namespace solana {
         std::cout << "Error getting account info: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2156,7 +2167,7 @@ namespace solana {
         std::cout << "Error getting balance: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2174,7 +2185,7 @@ namespace solana {
         std::cout << "Error getting cluster nodes: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"];
     }
 
@@ -2192,7 +2203,7 @@ namespace solana {
         std::cout << "Error getting identity: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["identity"];
     }
 
@@ -2210,7 +2221,7 @@ namespace solana {
         std::cout << "Error getting latest blockhash: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"]["blockhash"];
     }
 
@@ -2235,7 +2246,7 @@ namespace solana {
         std::cout << "Error getting leader schedule: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"];
     }
 
@@ -2260,12 +2271,12 @@ namespace solana {
           },
         }},
       });
-      
+
       if (resp.contains("error")) {
         std::cout << "Error getting multiple accounts: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2283,12 +2294,12 @@ namespace solana {
           programId.to_base58(),
         }},
       });
-      
+
       if (resp.contains("error")) {
         std::cout << "Error getting program accounts: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"];
     }
 
@@ -2306,7 +2317,7 @@ namespace solana {
         std::cout << "Error getting slot: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"];
     }
 
@@ -2324,7 +2335,7 @@ namespace solana {
         std::cout << "Error getting slot leader: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"];
     }
 
@@ -2347,7 +2358,7 @@ namespace solana {
         std::cout << "Error getting token account balance: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2376,7 +2387,7 @@ namespace solana {
         std::cout << "Error getting token accounts by owner: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2406,7 +2417,7 @@ namespace solana {
         std::cout << "Error getting token accounts by owner: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2429,7 +2440,7 @@ namespace solana {
         std::cout << "Error getting token supply: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["value"];
     }
 
@@ -2452,7 +2463,7 @@ namespace solana {
         std::cout << "Error getting transaction: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"];
     }
 
@@ -2470,7 +2481,7 @@ namespace solana {
         std::cout << "Error getting version: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"]["solana-core"];
     }
 
@@ -2490,12 +2501,12 @@ namespace solana {
           lamports,
         }},
       });
-      
+
       if (resp.contains("error")) {
         std::cout << "Error requesting airdrop: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
       }
-      
+
       return resp["result"].get<std::string>();
     };
 
@@ -2521,9 +2532,9 @@ namespace solana {
 
       std::vector<uint8_t> serialized_transaction = compiled_transaction.serialize(serialized_message);
 
-      std::cout << std::endl;
-      std::cout << base64::encode(serialized_transaction) << std::endl;
-      std::cout << std::endl;
+      // std::cout << std::endl;
+      // std::cout << base64::encode(serialized_transaction) << std::endl;
+      // std::cout << std::endl;
 
       json resp = http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
@@ -2562,7 +2573,7 @@ namespace solana {
           },
         }},
       });
-      
+
       if (resp.contains("error")) {
         std::cout << "Error simulating transaction: " << std::endl;
         throw std::runtime_error(resp["error"]["message"]);
