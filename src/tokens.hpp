@@ -160,7 +160,7 @@ namespace solana {
         associatedTokenProgramId
       );
 
-      SendTransactionResult result = connection.sign_and_send_transaction(transaction, {payer});
+      // Result<std::string> result = connection.sign_and_send_transaction(transaction, {payer});
 
       return associatedToken;
     }

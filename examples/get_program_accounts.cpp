@@ -5,7 +5,7 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  auto programAccounts = connection.get_program_accounts(TOKEN_PROGRAM_ID);
+  auto programAccounts = connection.get_program_accounts(TOKEN_PROGRAM_ID).unwrap();
 
   for (AccountInfo programAccount : programAccounts) {
     std::cout << "owner = " << programAccount.owner.to_base58() << std::endl;

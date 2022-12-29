@@ -5,7 +5,7 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  auto nodes = connection.get_cluster_nodes();
+  auto nodes = connection.get_cluster_nodes().unwrap();
 
   std::cout << "nodes = " << nodes.dump() << std::endl << std::endl;
 
