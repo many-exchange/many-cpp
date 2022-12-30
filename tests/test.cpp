@@ -32,55 +32,55 @@ int main() {
 
   // Create connections to the clusters
   std::cout << "Connecting to clusters...";
-  Connection mainnetBetaConnection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  Connection devnetConnection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  Connection mainnet_beta_connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
+  Connection devnet_connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
   std::cout << " done." << std::endl;
 
   // Get the current version
   std::cout << "get_version()...";
-  std::string version = mainnetBetaConnection.get_version().unwrap().version;
+  std::string version = mainnet_beta_connection.get_version().unwrap().version;
   assert(atoi(&version[0]) > 0);
   std::cout << " done." << std::endl;
 
   // Get the Pubkey for the current node
   std::cout << "get_identity()...";
-  PublicKey node = mainnetBetaConnection.get_identity().unwrap().identity;
+  PublicKey node = mainnet_beta_connection.get_identity().unwrap().identity;
   assert(node.to_base58() != PublicKey().to_base58());
   std::cout << " done." << std::endl;
 
   // Get the current slot
   std::cout << "get_slot()...";
-  uint64_t slot = mainnetBetaConnection.get_slot().unwrap();
+  uint64_t slot = mainnet_beta_connection.get_slot().unwrap();
   assert(slot > 0);
   std::cout << " done." << std::endl;
 
   // Get the current slot leader
   std::cout << "get_slot_leader()...";
-  PublicKey leader = mainnetBetaConnection.get_slot_leader().unwrap();
+  PublicKey leader = mainnet_beta_connection.get_slot_leader().unwrap();
   assert(leader.to_base58() != PublicKey().to_base58());
   std::cout << " done." << std::endl;
 
   // Get the schedule for the current leader
   std::cout << "get_leader_schedule()...";
-  json schedule = mainnetBetaConnection.get_leader_schedule(leader).unwrap();
+  json schedule = mainnet_beta_connection.get_leader_schedule(leader).unwrap();
   assert(schedule[leader.to_base58()].size() > 0);
   std::cout << " done." << std::endl;
 
   // Get all cluster nodes
   std::cout << "get_cluster_nodes()...";
-  std::vector<json> nodes = mainnetBetaConnection.get_cluster_nodes().unwrap();
+  std::vector<json> nodes = mainnet_beta_connection.get_cluster_nodes().unwrap();
   assert(nodes.size() > 0 && json_includes_pubkey(nodes, leader) && json_includes_pubkey(nodes, node));
   std::cout << " done." << std::endl;
 
   // Get the latest blockhash
   std::cout << "get_latest_blockhash()...";
-  std::string blockhash = mainnetBetaConnection.get_latest_blockhash().unwrap().blockhash;
+  std::string blockhash = mainnet_beta_connection.get_latest_blockhash().unwrap().blockhash;
   assert(blockhash.length() > 0);
   std::cout << " done." << std::endl;
 
   // Get the current supply of USDC
   std::cout << "get_token_supply()...";
-  TokenBalance native_supply = mainnetBetaConnection.get_token_supply(USDC_MINT).unwrap();
+  TokenBalance native_supply = mainnet_beta_connection.get_token_supply(USDC_MINT).unwrap();
   assert(native_supply.amount > 0);
   std::cout << " done." << std::endl;
 
@@ -92,7 +92,7 @@ int main() {
 
   // Request an airdrop
   std::cout << "request_airdrop()...";
-  std::string tx_hash = devnetConnection.request_airdrop(keypair.publicKey).unwrap();
+  std::string tx_hash = devnet_connection.request_airdrop(keypair.publicKey).unwrap();
   assert(tx_hash.length() > 0);
   std::cout << " done." << std::endl;
 
@@ -101,7 +101,7 @@ int main() {
   uint64_t lamports = 0;
   while (lamports == 0) {
     sleep(5);
-    lamports = devnetConnection.get_balance(keypair.publicKey).unwrap();
+    lamports = devnet_connection.get_balance(keypair.publicKey).unwrap();
   }
   assert(lamports > 0);
   std::cout << " done." << std::endl;
@@ -111,7 +111,7 @@ int main() {
   TransactionResponse txResp;
   while (txResp.slot == 0) {
     sleep(5);
-    txResp = devnetConnection.get_transaction(tx_hash).unwrap();
+    txResp = devnet_connection.get_transaction(tx_hash).unwrap();
   }
   assert(pubkeys_include_pubkey(txResp.transaction.message.accountKeys, keypair.publicKey));
   std::cout << " done." << std::endl;
@@ -119,7 +119,7 @@ int main() {
   // Create associated token account
   std::cout << "token::create_associated_token_account()...";
   PublicKey associatedTokenAccount = token::create_associated_token_account(
-    devnetConnection,
+    devnet_connection,
     keypair,
     NATIVE_MINT,
     keypair.publicKey
@@ -129,19 +129,19 @@ int main() {
 
   // Verify that the account was created
   std::cout << "get_account_info()...";
-  AccountInfo accountInfo = devnetConnection.get_account_info(associatedTokenAccount).unwrap();
+  AccountInfo accountInfo = devnet_connection.get_account_info(associatedTokenAccount).unwrap();
   assert(accountInfo.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
   std::cout << " done." << std::endl;
 
   // Get the balance of the associated token account (should be 0)
   std::cout << "get_token_account_balance()...";
-  TokenBalance tokenBalance = devnetConnection.get_token_account_balance(associatedTokenAccount).unwrap();
+  TokenBalance tokenBalance = devnet_connection.get_token_account_balance(associatedTokenAccount).unwrap();
   assert(tokenBalance.amount == 0);
   std::cout << " done." << std::endl;
 
   // Get all token accounts for the keypair, check for ownership
   std::cout << "get_token_accounts_by_owner()...";
-  std::vector<TokenAccount> tokenAccounts = devnetConnection.get_token_accounts_by_owner(keypair.publicKey).unwrap();
+  std::vector<TokenAccount> tokenAccounts = devnet_connection.get_token_accounts_by_owner(keypair.publicKey).unwrap();
   assert(tokenAccounts[0].account.data.parsed.info.owner.to_base58() ==  keypair.publicKey.to_base58()
     && tokenAccounts[0].account.data.parsed.info.mint.to_base58() == NATIVE_MINT.to_base58());
   std::cout << " done." << std::endl;
