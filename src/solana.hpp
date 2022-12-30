@@ -676,7 +676,6 @@ namespace solana {
       client.disconnect();
 
       // std::cout << response << std::endl << std::endl;
-      // std::cout << "response_length = " << response_length << std::endl;
 
       return json::parse(std::string(response, response_length));
     }
@@ -2069,6 +2068,22 @@ namespace solana {
     simulatedTransactoinResponse.returnData = j["value"]["returnData"].get<TransactionResponseReturnData>();
   }
 
+  struct Version {
+    /** The current solana feature set enabled */
+    uint64_t feature_set;
+    /** The current solana version */
+    std::string version;
+  };
+
+  void from_json(const json& j, Version& version) {
+    if (j.contains("feature-set")) {
+      version.feature_set = j["feature-set"].get<uint64_t>();
+    }
+    if (j.contains("solana-core")) {
+      version.version = j["solana-core"].get<std::string>();
+    }
+  }
+
   /** Connection method results / error handling */
   struct ResultError {
     int64_t code;
@@ -2397,7 +2412,7 @@ namespace solana {
     /**
      * Returns the current solana versions running on the node.
      */
-    Result<std::string> get_version() {
+    Result<Version> get_version() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
