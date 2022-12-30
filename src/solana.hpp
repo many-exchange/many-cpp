@@ -1527,46 +1527,6 @@ namespace solana {
     std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback;
   };
 
-  struct ResultError {
-    int64_t code;
-    std::string message;
-  };
-
-  void from_json(const json& j, ResultError& t) {
-    t.code = j["code"].get<int64_t>();
-    t.message = j["message"].get<std::string>();
-  }
-
-  template <typename T>
-  class Result {
-  public:
-
-    std::optional<T> result;
-    std::optional<ResultError> error;
-
-    Result() = default;
-
-    T unwrap() {
-      if (error) {
-        throw std::runtime_error(error->message);
-      }
-      return result.value();
-    }
-  };
-
-  template <typename T>
-  void from_json(const json& j, Result<T>& r) {
-    if (j.contains("result")) {
-      if (j["result"].contains("value")) {
-        r.result = j["result"]["value"].get<T>();
-      } else {
-        r.result = j["result"].get<T>();
-      }
-    } else if (j.contains("error")) {
-      r.error = j["error"].get<ResultError>();
-    }
-  }
-
   struct SlotInfo {
     /** Currently processing slot */
     uint64_t slot;
@@ -2107,6 +2067,47 @@ namespace solana {
     simulatedTransactoinResponse.accounts = j["value"]["accounts"].get<std::vector<AccountInfo>>();
     simulatedTransactoinResponse.unitsConsumed = j["value"]["unitsConsumed"].get<uint64_t>();
     simulatedTransactoinResponse.returnData = j["value"]["returnData"].get<TransactionResponseReturnData>();
+  }
+
+  /** Connection method results / error handling */
+  struct ResultError {
+    int64_t code;
+    std::string message;
+  };
+
+  void from_json(const json& j, ResultError& t) {
+    t.code = j["code"].get<int64_t>();
+    t.message = j["message"].get<std::string>();
+  }
+
+  template <typename T>
+  class Result {
+  public:
+
+    std::optional<T> result;
+    std::optional<ResultError> error;
+
+    Result() = default;
+
+    T unwrap() {
+      if (error) {
+        throw std::runtime_error(error->message);
+      }
+      return result.value();
+    }
+  };
+
+  template <typename T>
+  void from_json(const json& j, Result<T>& r) {
+    if (j.contains("result")) {
+      if (j["result"].contains("value")) {
+        r.result = j["result"]["value"].get<T>();
+      } else {
+        r.result = j["result"].get<T>();
+      }
+    } else if (j.contains("error")) {
+      r.error = j["error"].get<ResultError>();
+    }
   }
 
   class Connection {
