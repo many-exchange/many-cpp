@@ -140,7 +140,7 @@ namespace solana {
     * @param programId SPL Token program account
     * @param associatedTokenProgramId SPL Associated Token program account
     */
-    PublicKey create_associated_token_account(
+    Result<PublicKey> create_associated_token_account(
       const Connection& connection,
       const Keypair& payer,
       const PublicKey& mint,
@@ -160,9 +160,14 @@ namespace solana {
         associatedTokenProgramId
       );
 
-      // Result<std::string> result = connection.sign_and_send_transaction(transaction, {payer});
+      Result<std::string> result = connection.sign_and_send_transaction(transaction, {payer});
+      if (result.error) {
+        return Result<PublicKey>(result.error.value());
+      }
 
-      return associatedToken;
+      std::cout << result.unwrap() << std::endl;
+
+      return Result<PublicKey>(associatedToken);;
     }
 
   }

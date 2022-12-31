@@ -316,6 +316,14 @@ namespace solana {
       return output;
     }
 
+    std::string encode(const std::string& input) {
+      int output_length = 4 * ((input.size() + 2) / 3);
+      char output[output_length + 1];
+      output[output_length] = '\0';
+      encode((unsigned char *)input.data(), input.size(), output, output_length);
+      return output;
+    }
+
     std::string encode(const std::vector<uint8_t>& input) {
       int output_length = 4 * ((input.size() + 2) / 3);
       char output[output_length + 1];
@@ -675,7 +683,7 @@ namespace solana {
       char* response = client.post(request, &response_length);
       client.disconnect();
 
-      // std::cout << response << std::endl << std::endl;
+      //std::cout << response << std::endl << std::endl;
 
       return json::parse(std::string(response, response_length));
     }
@@ -1193,10 +1201,30 @@ namespace solana {
     }
 
     /**
-     * Check if this keypair is on the ed25519 curve
+     * Check if this publickey is on the ed25519 curve
      */
     bool is_on_curve() const {
-      return crypto_core_ristretto255_is_valid_point(bytes.data()) == 0;
+      //unsigned char curve25519[crypto_scalarmult_BYTES];
+      //return crypto_sign_ed25519_pk_to_curve25519(curve25519, bytes.data()) != 0;
+
+      unsigned char curve25519[crypto_scalarmult_BYTES];
+
+      if (crypto_sign_ed25519_pk_to_curve25519(curve25519, bytes.data()) != 0) {
+
+        // if (crypto_core_ed25519_is_valid_point(curve25519) != 0) {
+        //   int n = 0;
+        // }
+
+        // if (crypto_core_ed25519_is_valid_point(bytes.data()) != 0) {
+        //   int n = 0;
+        // }
+
+        //if is_valid_y_coord.unwrap_u8() != 1u8 { return None; }
+
+        return false;
+      }
+
+      return true;
     }
 
     /**
@@ -1222,10 +1250,12 @@ namespace solana {
 
       // Create a sha256 hash
       unsigned char hash[crypto_hash_sha256_BYTES];
-      assert(crypto_hash_sha256_BYTES == PUBLIC_KEY_LENGTH);
+      memset(hash, 0, crypto_hash_sha256_BYTES);
+      static_assert(crypto_hash_sha256_BYTES == PUBLIC_KEY_LENGTH);
       crypto_hash_sha256(hash, buffer.data(), buffer.size());
 
       PublicKey pubkey = PublicKey((uint8_t*)hash);
+      std::cout << "pubkey = " << pubkey.to_base58() << std::endl;
       if (pubkey.is_on_curve()) {
         return std::nullopt;
       }
@@ -1342,6 +1372,9 @@ namespace solana {
     static Keypair generate() {
       Keypair result = Keypair();
       crypto_sign_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
+      if (!result.publicKey.is_on_curve()) {
+        return Keypair::generate();
+      }
       return result;
     }
 
@@ -1374,11 +1407,6 @@ namespace solana {
   };
 
   void from_json(const json& j, AccountInfo& accountInfo) {
-    if (j.is_null()) {
-      accountInfo = AccountInfo();
-      return;
-    }
-
     accountInfo.lamports = j["lamports"].get<uint64_t>();
     accountInfo.owner = j["owner"].get<PublicKey>();
     accountInfo.data = j["data"][0].get<std::string>();
@@ -1448,6 +1476,34 @@ namespace solana {
     }
   }
 
+  struct ClusterNode {
+    uint64_t featureSet;
+    std::string gossip;
+    PublicKey pubkey;
+    std::string rpc;
+    uint64_t shredVersion;
+    std::string tpu;
+    std::string version;
+  };
+
+  void from_json(const json& j, ClusterNode& cluster_node) {
+    if (!j["featureSet"].is_null()) {
+      cluster_node.featureSet = j["featureSet"].get<uint64_t>();
+    }
+    cluster_node.gossip = j["gossip"].get<std::string>();
+    cluster_node.pubkey = j["pubkey"].get<PublicKey>();
+    if (!j["rpc"].is_null()) {
+      cluster_node.rpc = j["rpc"].get<std::string>();
+    }
+    cluster_node.shredVersion = j["shredVersion"].get<uint64_t>();
+    if (!j["tpu"].is_null()) {
+      cluster_node.tpu = j["tpu"].get<std::string>();
+    }
+    if (!j["version"].is_null()) {
+      cluster_node.version = j["version"].get<std::string>();
+    }
+  }
+
   enum class Commitment {
     Processed,
     Confirmed,
@@ -1505,6 +1561,17 @@ namespace solana {
     PublicKey accountId;
     AccountInfo accountInfo;
   };
+
+  struct LeaderSchedule {
+    PublicKey leader;
+    std::vector<int> schedule;
+  };
+
+  void from_json(const json& j, LeaderSchedule& leader_schedule) {
+    auto it = j.begin();
+    leader_schedule.leader = PublicKey(it.key());
+    leader_schedule.schedule = it.value().get<std::vector<int>>();
+  }
 
   struct Logs {
     //TODO err: TransactionError | null;
@@ -2033,11 +2100,6 @@ namespace solana {
   }
 
   void from_json(const json& j, TransactionResponse& transactionResponse) {
-    if (j.is_null()) {
-      transactionResponse = TransactionResponse();
-      return;
-    }
-
     transactionResponse.slot = j["slot"].get<uint64_t>();
     transactionResponse.blockTime = j["blockTime"].get<uint64_t>();
     transactionResponse.transaction = j["transaction"].get<CompiledTransaction>();
@@ -2104,8 +2166,13 @@ namespace solana {
 
     Result() = default;
 
+    Result(T result) : result(result) {}
+
+    Result(ResultError error) : error(error) {}
+
     T unwrap() {
       if (error) {
+        std::cerr << error->message << std::endl;
         throw std::runtime_error(error->message);
       }
       return result.value();
@@ -2114,11 +2181,16 @@ namespace solana {
 
   template <typename T>
   void from_json(const json& j, Result<T>& r) {
+    //std::cout << j << std::endl;
     if (j.contains("result")) {
       if (j["result"].contains("value")) {
-        r.result = j["result"]["value"].get<T>();
+        if (!j["result"]["value"].is_null()) {
+          r.result = j["result"]["value"].get<T>();
+        }
       } else {
-        r.result = j["result"].get<T>();
+        if (!j["result"].is_null()) {
+          r.result = j["result"].get<T>();
+        }
       }
     } else if (j.contains("error")) {
       r.error = j["error"].get<ResultError>();
@@ -2207,7 +2279,7 @@ namespace solana {
     /**
      * Returns information about all the nodes participating in the cluster.
      */
-    Result<json> get_cluster_nodes() {
+    Result<std::vector<ClusterNode>> get_cluster_nodes() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2242,7 +2314,7 @@ namespace solana {
      *
      * @param leaderAddress The Pubkey of the leader to query
      */
-    Result<json> get_leader_schedule(const PublicKey& leaderAddress) {
+    Result<LeaderSchedule> get_leader_schedule(const PublicKey& leaderAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -2398,7 +2470,9 @@ namespace solana {
      *
      * @param transactionSignature The signature of the transaction to query
      */
-    Result<TransactionResponse> get_transaction(const std::string& transactionSignature) {
+    Result<TransactionResponse> get_transaction(const std::string& transactionSignature, const std::optional<Commitment> commitment) {
+      //TODO commitment
+
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},

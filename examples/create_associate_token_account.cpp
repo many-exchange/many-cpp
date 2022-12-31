@@ -28,7 +28,7 @@ int main() {
     keypair,
     NATIVE_MINT,
     keypair.publicKey
-  );
+  ).unwrap();
   std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl << std::endl;
 
   // Verify that the account was created
