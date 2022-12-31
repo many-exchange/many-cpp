@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <array>
+#include <endian.h>
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
@@ -3262,6 +3263,8 @@ namespace solana {
                         SlotInfo slotInfo = j["params"]["result"].get<SlotInfo>();
                         std::function<void(SlotInfo slotInfo)>* callback = (std::function<void(SlotInfo slotInfo)>*)_subscriptions[subscription_id];
                         (*callback)(slotInfo);
+                      } else if (method == "???") {
+                        //TODO add other notifications
                       }
                     }
                   }
