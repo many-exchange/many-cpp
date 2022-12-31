@@ -1255,7 +1255,6 @@ namespace solana {
       crypto_hash_sha256(hash, buffer.data(), buffer.size());
 
       PublicKey pubkey = PublicKey((uint8_t*)hash);
-      std::cout << "pubkey = " << pubkey.to_base58() << std::endl;
       if (pubkey.is_on_curve()) {
         return std::nullopt;
       }
