@@ -3744,7 +3744,7 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
     */
-    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)>* callback) {
+    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)>& callback) {
       return -1;
       // if (!_rpcWebSocket.is_connected()) {
       //   _rpcWebSocket.connect();
@@ -3788,7 +3788,7 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
     */
-    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)>* callback) {
+    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)>& callback) {
       return -1;
       // if (!_rpcWebSocket.is_connected()) {
       //   _rpcWebSocket.connect();
@@ -3835,8 +3835,8 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
     */
-    int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)>* callback) {
-      return _rpcWebSocket.subscribe("programSubscribe", { programId.to_base58(), {{"encoding", "base64"}, {"commitment", _commitment} } }, callback);
+    int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+      return _rpcWebSocket.subscribe("programSubscribe", { programId.to_base58(), {{"encoding", "base64"}, {"commitment", _commitment} } }, &callback);
     }
 
     /**
@@ -3857,8 +3857,8 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_slot_change_listener
     */
-    int on_slot_change(std::function<void(SlotInfo slotInfo)>* callback) {
-      return _rpcWebSocket.subscribe("slotSubscribe", {}, callback);
+    int on_slot_change(std::function<void(SlotInfo slotInfo)> callback) {
+      return _rpcWebSocket.subscribe("slotSubscribe", {}, &callback);
     }
 
     /**
