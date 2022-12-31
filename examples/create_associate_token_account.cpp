@@ -31,9 +31,22 @@ int main() {
   ).unwrap();
   std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl << std::endl;
 
-  // Verify that the account was created
-  AccountInfo accountInfo = connection.get_account_info(associatedTokenAccount).unwrap();
-  std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl << std::endl;
+  for (int i = 0; i < 10; i++) {
+    // Verify that the account was created
+    Result<Account> result = connection.get_account_info(associatedTokenAccount);
 
-  return 0;
+    if (result.result) { //TODO I don't like this syntax
+      Account& account = result.result.value(); //TODO I don't like this syntax
+      std::cout << "owner = " << account.owner.to_base58() << std::endl;
+      std::cout << "lamports = " << account.lamports << std::endl;
+      std::cout << "data = " << account.data << std::endl;
+      std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl << std::endl;
+      return 0;
+    }
+
+    sleep(2);
+  }
+
+  throw std::runtime_error("Failed to create associated token account");
+  return 1;
 }

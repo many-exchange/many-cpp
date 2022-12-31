@@ -12,7 +12,7 @@ int main() {
   std::cout << "instructions: " << std::endl;
   for (auto &instruction : transaction.transaction.message.instructions) {
     std::cout << "  programId index = " << instruction.programIdIndex << std::endl;
-    std::cout << "  data = " << instruction.data << std::endl;
+    std::cout << "  data = " << std::string(instruction.data.begin(), instruction.data.end()) << std::endl;
   }
   std::cout << "logs: " << std::endl;
   for (std::string &log : transaction.meta.logMessages) {

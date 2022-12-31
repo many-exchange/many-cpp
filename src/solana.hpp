@@ -1883,38 +1883,53 @@ namespace solana {
     }
   };
 
-  struct AccountInfo {
-    PublicKey pubkey;
-    struct Account {
-      /** Number of lamports assigned to this account */
-      uint64_t lamports;
-      /** Identifier of the program that owns the account */
-      PublicKey owner;
-      /** Data associated with the account */
-      std::string data;
-      /** Boolean indicating if the account contains a program (and is strictly read-only) */
-      bool executable;
-      /** The epoch at which this account will next owe rent */
-      uint64_t rentEpoch;
-    } account;
+  struct Account {
+    /** Number of lamports assigned to this account */
+    uint64_t lamports;
+    /** Identifier of the program that owns the account */
+    PublicKey owner;
+    /** Data associated with the account */
+    std::string data;
+    /** Boolean indicating if the account contains a program (and is strictly read-only) */
+    bool executable;
+    /** The epoch at which this account will next owe rent */
+    uint64_t rentEpoch;
   };
 
-  void from_json(const json& j, AccountInfo::Account& account) {
+  void from_json(const json& j, Account& account) {
     account.lamports = j["lamports"].get<uint64_t>();
     account.owner = j["owner"].get<PublicKey>();
-    account.data = j["data"][0].get<std::string>();
+
+    if (j["data"].is_string()) {
+      account.data = j["data"].get<std::string>();
+    } else {
+      auto encoding = j["data"][1].get<std::string>();
+      ASSERT(encoding == "base64");
+      account.data = j["data"][0].get<std::string>();
+    }
+
     account.executable = j["executable"].get<bool>();
     account.rentEpoch = j["rentEpoch"].get<uint64_t>();
   }
 
+  struct AccountInfo {
+    PublicKey pubkey;
+    Account account;
+  };
+
   void from_json(const json& j, AccountInfo& accountInfo) {
+    std::cout << j << std::endl;
     accountInfo.pubkey = j["pubkey"].get<PublicKey>();
-    accountInfo.account = j["account"].get<AccountInfo::Account>();
+    accountInfo.account = j["account"].get<Account>();
   }
 
   struct Context {
     uint64_t slot;
   };
+
+  void from_json(const json& j, Context& context) {
+    context.slot = j["slot"].get<uint64_t>();
+  }
 
   struct TokenBalance {
     /** The raw balance without decimals, as a string representation */
@@ -2049,6 +2064,25 @@ namespace solana {
     }
     ASSERT(bytes.size() <= 2);
     return bytes;
+  }
+
+  struct Identity {
+    PublicKey identity;
+  };
+
+  void from_json(const json& j, Identity& identity) {
+    identity.identity = PublicKey(j["identity"].get<std::string>());
+  }
+
+  struct LeaderSchedule {
+    PublicKey leader;
+    std::vector<int> schedule;
+  };
+
+  void from_json(const json& j, LeaderSchedule& leader_schedule) {
+    auto it = j.begin();
+    leader_schedule.leader = PublicKey(it.key());
+    leader_schedule.schedule = it.value().get<std::vector<int>>();
   }
 
   struct Logs {
@@ -2636,6 +2670,7 @@ namespace solana {
   class Result {
   public:
 
+    std::optional<Context> context;
     std::optional<T> result;
     std::optional<ResultError> error;
 
@@ -2658,6 +2693,10 @@ namespace solana {
   void from_json(const json& j, Result<T>& r) {
     //std::cout << j << std::endl;
     if (j.contains("result")) {
+      if (j["result"].contains("context")) {
+        r.context = j["result"]["context"].get<Context>();
+      }
+
       if (j["result"].contains("value")) {
         if (!j["result"]["value"].is_null()) {
           r.result = j["result"]["value"].get<T>();
@@ -3493,7 +3532,7 @@ namespace solana {
      *
      * @param publicKey The Pubkey of account to query
      */
-    Result<AccountInfo> get_account_info(const PublicKey& publicKey) {
+    Result<Account> get_account_info(const PublicKey& publicKey) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -3537,12 +3576,12 @@ namespace solana {
     /**
      * Returns the identity Pubkey of the current node.
      */
-    Result<PublicKey> get_identity() {
+    Result<Identity> get_identity() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getIdentity"},
-      })["identity"];
+      });
     }
 
     /**
@@ -3561,7 +3600,7 @@ namespace solana {
      *
      * @param leaderAddress The Pubkey of the leader to query
      */
-    Result<std::vector<uint64_t>> get_leader_schedule(const PublicKey& leaderAddress) {
+    Result<LeaderSchedule> get_leader_schedule(const PublicKey& leaderAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -3571,7 +3610,7 @@ namespace solana {
             {"identity", leaderAddress.to_base58()},
           },
         }},
-      })["result"][leaderAddress.to_base58()];
+      });
     }
 
     /**
@@ -3579,7 +3618,7 @@ namespace solana {
      *
      * @param publicKeys The Pubkeys of the accounts to query
      */
-    Result<std::vector<AccountInfo>> get_multiple_accounts(const std::vector<PublicKey>& publicKeys) {
+    Result<std::vector<Account>> get_multiple_accounts(const std::vector<PublicKey>& publicKeys) {
       std::vector<std::string> base58Keys;
       for (auto publicKey : publicKeys) {
         base58Keys.push_back(publicKey.to_base58());
@@ -3717,7 +3756,7 @@ namespace solana {
      *
      * @param transactionSignature The signature of the transaction to query
      */
-    Result<TransactionResponse> get_transaction(const std::string& transactionSignature, const std::optional<Commitment> commitment) {
+    Result<TransactionResponse> get_transaction(const std::string& transactionSignature) {
       //TODO commitment
 
       return http::post(_rpcEndpoint, {

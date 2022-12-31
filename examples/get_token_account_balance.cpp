@@ -12,7 +12,7 @@ int main() {
   }
   auto tokenBalance = connection.get_token_account_balance(tokenAccounts[0].pubkey).unwrap();
 
-  std::cout << "balance = " << tokenBalance.as_tokens() << std::endl << std::endl;
+  std::cout << "balance = " << tokenBalance.tokens() << std::endl << std::endl;
 
   return 0;
 }

@@ -5,14 +5,14 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  auto accountInfos = connection.get_multiple_accounts({PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"), NATIVE_MINT}).unwrap();
+  auto accounts = connection.get_multiple_accounts({PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"), NATIVE_MINT}).unwrap();
 
-  for (AccountInfo accountInfo : accountInfos) {
-    std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl;
-    std::cout << "owner = " << accountInfo.account.owner.to_base58() << std::endl;
-    std::cout << "lamports = " << accountInfo.account.lamports << std::endl;
-    std::cout << "data = " << accountInfo.account.data[0] << std::endl;
-    std::cout << "executable = " << (accountInfo.account.executable ? "true" : "false") << std::endl << std::endl;
+  for (Account account : accounts) {
+    std::cout << "owner = " << account.owner.to_base58() << std::endl;
+    std::cout << "lamports = " << account.lamports << std::endl;
+    std::cout << "data = " << account.data[0] << std::endl;
+    std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl << std::endl;
+    std::cout << std::endl;
   }
 
   return 0;
