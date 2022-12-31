@@ -1918,7 +1918,6 @@ namespace solana {
   };
 
   void from_json(const json& j, AccountInfo& accountInfo) {
-    std::cout << j << std::endl;
     accountInfo.pubkey = j["pubkey"].get<PublicKey>();
     accountInfo.account = j["account"].get<Account>();
   }
@@ -2691,7 +2690,6 @@ namespace solana {
 
   template <typename T>
   void from_json(const json& j, Result<T>& r) {
-    //std::cout << j << std::endl;
     if (j.contains("result")) {
       if (j["result"].contains("context")) {
         r.context = j["result"]["context"].get<Context>();
@@ -2710,175 +2708,6 @@ namespace solana {
       r.error = j["error"].get<ResultError>();
     }
   }
-
-  enum SubscriptionType { UNDEFINED, ACCOUNT, LOG, PROGRAM_ACCOUNT, SLOT };
-
-  union Subscription {
-    SubscriptionType type;
-
-    std::function<void(Context context, AccountInfo accountInfo)>* account;
-    std::function<void(Context context, Logs logs)>* logs;
-    std::function<void(Context context, SlotInfo slotInfo)>* slot;
-
-    Subscription() : type(SubscriptionType::UNDEFINED) {}
-
-    ~Subscription() {
-      switch (type) {
-        case SubscriptionType::ACCOUNT:
-        {
-          delete account;
-          break;
-        }
-        case SubscriptionType::LOG:
-        {
-          delete logs;
-          break;
-        }
-        case SubscriptionType::PROGRAM_ACCOUNT:
-        {
-          delete account;
-          break;
-        }
-        case SubscriptionType::SLOT:
-        {
-          delete slot;
-          break;
-        }
-      }
-    }
-
-    Subscription(const Subscription& other) {
-      switch (other.type) {
-        case SubscriptionType::ACCOUNT:
-        {
-          account = other.account;
-          break;
-        }
-        case SubscriptionType::LOG:
-        {
-          logs = other.logs;
-          break;
-        }
-        case SubscriptionType::PROGRAM_ACCOUNT:
-        {
-          account = other.account;
-          break;
-        }
-        case SubscriptionType::SLOT:
-        {
-          slot = other.slot;
-          break;
-        }
-      }
-      type = other.type;
-    }
-
-    Subscription(Subscription&& other) {
-      switch (other.type) {
-        case SubscriptionType::ACCOUNT:
-        {
-          account = std::move(other.account);
-          break;
-        }
-        case SubscriptionType::LOG:
-        {
-          logs = std::move(other.logs);
-          break;
-        }
-        case SubscriptionType::PROGRAM_ACCOUNT:
-        {
-          account = std::move(other.account);
-          break;
-        }
-        case SubscriptionType::SLOT:
-        {
-          slot = std::move(other.slot);
-          break;
-        }
-      }
-      type = other.type;
-    }
-
-    Subscription& operator=(const Subscription& other) {
-      switch (other.type) {
-        case SubscriptionType::ACCOUNT:
-        {
-          account = other.account;
-          break;
-        }
-        case SubscriptionType::LOG:
-        {
-          logs = other.logs;
-          break;
-        }
-        case SubscriptionType::PROGRAM_ACCOUNT:
-        {
-          account = other.account;
-          break;
-        }
-        case SubscriptionType::SLOT:
-        {
-          slot = other.slot;
-          break;
-        }
-      }
-      type = other.type;
-      return *this;
-    }
-
-    Subscription& operator=(Subscription&& other) {
-      switch (other.type) {
-        case SubscriptionType::ACCOUNT:
-        {
-          account = std::move(other.account);
-          break;
-        }
-        case SubscriptionType::LOG:
-        {
-          logs = std::move(other.logs);
-          break;
-        }
-        case SubscriptionType::PROGRAM_ACCOUNT:
-        {
-          account = std::move(other.account);
-          break;
-        }
-        case SubscriptionType::SLOT:
-        {
-          slot = std::move(other.slot);
-          break;
-        }
-      }
-      type = other.type;
-      return *this;
-    }
-
-    void call(json j) {
-      std::cout << j << std::endl;
-      switch (type) {
-        case SubscriptionType::ACCOUNT:
-        {
-          //accountChange(context, accountInfo);
-          break;
-        }
-        case SubscriptionType::LOG:
-        {
-          //logs(context, logs);
-          break;
-        }
-        case SubscriptionType::PROGRAM_ACCOUNT:
-        {
-          //accountChange(context, accountInfo);
-          break;
-        }
-        case SubscriptionType::SLOT:
-        {
-          //slot(context, slotInfo);
-          break;
-        }
-      }
-    }
-  };
 
   namespace websockets {
 
@@ -2916,6 +2745,10 @@ namespace solana {
       static const uint8_t OPCODE_PONG   = 0x0A;
       static const uint8_t FIN_FLAG      = 0x80;
       static const uint8_t MASK_FLAG     = 0x80;
+
+      int _nextSubscriptionId = 0;
+      std::map<int, void*> _subscriptions;
+      std::map<int, int> _subscription_map;
 
       void send_message(uint8_t opcode, const char* message, size_t message_size) {
         int send_length = 0;
@@ -3091,9 +2924,24 @@ namespace solana {
         return true;
       }
 
-    public:
+      // void send_close(std::string message) {
+      //   send_message(OPCODE_CLOSE, message.c_str(), message.size());
+      // }
 
-      std::map<int, Subscription> _subscriptions;
+      // void send_ping(std::string message) {
+      //   send_message(OPCODE_PING, message.c_str(), message.size());
+      // }
+
+      // void send_pong(std::string message) {
+      //   send_message(OPCODE_PONG, message.c_str(), message.size());
+      // }
+
+      void send_message(json j) {
+        std::string message = j.dump();
+        send_message(OPCODE_TEXT, message.c_str(), message.size());
+      }
+
+    public:
 
       WebSocketClient(const std::string url, int port, const std::string interface = "")
         : _url(url),
@@ -3317,12 +3165,8 @@ namespace solana {
         return true;
       }
 
-      bool can_read() {
-        return is_connected() && _handshake_complete;
-      }
-
       void poll() {
-        if (!is_connected()) {
+        if (!is_connected() || !_handshake_complete) {
           return;
         }
 
@@ -3409,16 +3253,22 @@ namespace solana {
                 json j = json::parse(message);
 
                 if (j.contains("params")) {
+                  std::string method = j["method"];
                   int subscription = j["params"]["subscription"];
-                  std::cout << j << std::endl;
-                  std::cout << subscription << std::endl;
-                  std::cout << _subscriptions.size() << std::endl;
-                  std::cout << std::endl;
-                  if (_subscriptions.find(subscription) != _subscriptions.end()) {
-                    _subscriptions[subscription].call(j);
+                  if (_subscription_map.find(subscription) != _subscription_map.end()) {
+                    int subscription_id = _subscription_map[subscription];
+                    if (_subscriptions.find(subscription_id) != _subscriptions.end()) {
+                      if (method == "slotNotification") {
+                        SlotInfo slotInfo = j["params"]["result"].get<SlotInfo>();
+                        std::function<void(SlotInfo slotInfo)>* callback = (std::function<void(SlotInfo slotInfo)>*)_subscriptions[subscription_id];
+                        (*callback)(slotInfo);
+                      }
+                    }
                   }
-                } else if (j.contains("result")) {
-                  std::cout << j << std::endl;
+                } else if (j.contains("id") && j.contains("result")) {
+                  int id = j["id"];
+                  int result = j["result"];
+                  _subscription_map[result] = id;
                 }
               }
               break;
@@ -3460,30 +3310,47 @@ namespace solana {
         }
       }
 
-      void send_close(std::string message) {
-        send_message(OPCODE_CLOSE, message.c_str(), message.size());
+      int subscribe(std::string method, json params, void* callback) {
+        if (!is_connected()) {
+          connect();
+        }
+        ASSERT(is_connected());
+
+        int subscriptionId = ++_nextSubscriptionId;
+        if (params.is_null()) {
+          send_message({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", method},
+          });
+        } else {
+          send_message({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", method},
+            {"params", params},
+          });
+        }
+
+        _subscriptions[subscriptionId] = callback;
+        return subscriptionId;
       }
 
-      void send_ping(std::string message) {
-        send_message(OPCODE_PING, message.c_str(), message.size());
+      void unsubscribe(int subscriptionId, std::string method) {
+        if (_subscriptions.find(subscriptionId) != _subscriptions.end()) {
+          if (is_connected()) {
+            send_message({
+              {"jsonrpc", "2.0"},
+              {"id", subscriptionId},
+              {"method", method},
+              {"params", {
+                subscriptionId,
+              }},
+            });
+          }
+          _subscriptions.erase(subscriptionId);
+        }
       }
-
-      void send_pong(std::string message) {
-        send_message(OPCODE_PONG, message.c_str(), message.size());
-      }
-
-      void send_text(json j) {
-        std::string message = j.dump();
-        send_message(OPCODE_TEXT, message.c_str(), message.size());
-      }
-
-      // void send_text(std::string message) {
-      //   send_message(OPCODE_TEXT, message.c_str(), message.size());
-      // }
-
-      // void send_text(const char* message, size_t message_size) {
-      //   send_message(OPCODE_TEXT, message, message_size);
-      // }
 
     };
 
@@ -3494,7 +3361,6 @@ namespace solana {
     std::string _rpcEndpoint;
     std::string _rpcWsEndpoint;
     websockets::WebSocketClient _rpcWebSocket;
-    int _nextSubscriptionId = 0;
 
     static std::string make_websocket_url(std::string endpoint) {
       auto url = endpoint;
@@ -3875,28 +3741,29 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
     */
-    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-      if (!_rpcWebSocket.is_connected()) {
-        _rpcWebSocket.connect();
-      }
-      int subscriptionId = ++_nextSubscriptionId;
-      _rpcWebSocket.send_text({
-        {"jsonrpc", "2.0"},
-        {"id", subscriptionId},
-        {"method", "accountSubscribe"},
-        {"params", {
-          accountId.to_base58(),
-          {
-            {"encoding", "base64"},
-            {"commitment", _commitment},
-          },
-        }},
-      });
-      Subscription subscription;
-      subscription.type = SubscriptionType::ACCOUNT;
-      subscription.account = &callback;
-      _rpcWebSocket._subscriptions[subscriptionId] = subscription;
-      return subscriptionId;
+    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)>* callback) {
+      return -1;
+      // if (!_rpcWebSocket.is_connected()) {
+      //   _rpcWebSocket.connect();
+      // }
+      // int subscriptionId = ++_nextSubscriptionId;
+      // _rpcWebSocket.subscribe({
+      //   {"jsonrpc", "2.0"},
+      //   {"id", subscriptionId},
+      //   {"method", "accountSubscribe"},
+      //   {"params", {
+      //     accountId.to_base58(),
+      //     {
+      //       {"encoding", "base64"},
+      //       {"commitment", _commitment},
+      //     },
+      //   }},
+      // });
+      // Subscription subscription;
+      // subscription.type = SubscriptionType::ACCOUNT;
+      // subscription.account = &callback;
+      // _rpcWebSocket._subscriptions[subscriptionId] = subscription;
+      // return subscriptionId;
     }
 
     /**
@@ -3906,22 +3773,8 @@ namespace solana {
      *
      * @return True if the listener was removed, false if the subscriptionId was not found
     */
-    bool remove_account_listener(int subscriptionId) {
-      if (_rpcWebSocket._subscriptions.find(subscriptionId) != _rpcWebSocket._subscriptions.end()) {
-        if (_rpcWebSocket.is_connected()) {
-          _rpcWebSocket.send_text({
-            {"jsonrpc", "2.0"},
-            {"id", subscriptionId},
-            {"method", "accountUnsubscribe"},
-            {"params", {
-              subscriptionId,
-            }},
-          });
-          _rpcWebSocket._subscriptions.erase(subscriptionId);
-          return true;
-        }
-      }
-      return false;
+    void remove_account_listener(int subscriptionId) {
+      _rpcWebSocket.unsubscribe(subscriptionId, "accountUnsubscribe");
     }
 
     /**
@@ -3932,30 +3785,31 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
     */
-    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
-      if (!_rpcWebSocket.is_connected()) {
-        _rpcWebSocket.connect();
-      }
-      int subscriptionId = ++_nextSubscriptionId;
-      _rpcWebSocket.send_text({
-        {"jsonrpc", "2.0"},
-        {"id", subscriptionId},
-        {"method", "logsSubscribe"},
-        {"params", {
-          "mentions",
-          {
-            {"mentions", accountId.to_base58()},
-          },
-          {
-            {"commitment", _commitment},
-          },
-        }},
-      });
-      Subscription subscription;
-      subscription.type = SubscriptionType::LOG;
-      subscription.logs = &callback;
-      _rpcWebSocket._subscriptions[subscriptionId] = subscription;
-      return subscriptionId;
+    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)>* callback) {
+      return -1;
+      // if (!_rpcWebSocket.is_connected()) {
+      //   _rpcWebSocket.connect();
+      // }
+      // int subscriptionId = ++_nextSubscriptionId;
+      // _rpcWebSocket.subscribe({
+      //   {"jsonrpc", "2.0"},
+      //   {"id", subscriptionId},
+      //   {"method", "logsSubscribe"},
+      //   {"params", {
+      //     "mentions",
+      //     {
+      //       {"mentions", accountId.to_base58()},
+      //     },
+      //     {
+      //       {"commitment", _commitment},
+      //     },
+      //   }},
+      // });
+      // Subscription subscription;
+      // subscription.type = SubscriptionType::LOG;
+      // subscription.logs = &callback;
+      // _rpcWebSocket._subscriptions[subscriptionId] = subscription;
+      // return subscriptionId;
     }
 
 
@@ -3966,22 +3820,8 @@ namespace solana {
      *
      * @return true if the listener was removed, false if the subscriptionId was not found
     */
-    bool remove_on_logs_listener(int subscriptionId) {
-      if (_rpcWebSocket._subscriptions.find(subscriptionId) != _rpcWebSocket._subscriptions.end()) {
-        if (_rpcWebSocket.is_connected()) {
-          _rpcWebSocket.send_text({
-            {"jsonrpc", "2.0"},
-            {"id", subscriptionId},
-            {"method", "logsUnsubscribe"},
-            {"params", {
-              subscriptionId,
-            }},
-          });
-          _rpcWebSocket._subscriptions.erase(subscriptionId);
-          return true;
-        }
-      }
-      return false;
+    void remove_on_logs_listener(int subscriptionId) {
+      _rpcWebSocket.unsubscribe(subscriptionId, "logsUnsubscribe");
     }
 
     /**
@@ -3992,28 +3832,8 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
     */
-    int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-      if (!_rpcWebSocket.is_connected()) {
-        _rpcWebSocket.connect();
-      }
-      int subscriptionId = ++_nextSubscriptionId;
-      _rpcWebSocket.send_text({
-        {"jsonrpc", "2.0"},
-        {"id", subscriptionId},
-        {"method", "programSubscribe"},
-        {"params", {
-          programId.to_base58(),
-          {
-            {"encoding", "base64"},
-            {"commitment", _commitment},
-          },
-        }},
-      });
-      Subscription subscription;
-      subscription.type = SubscriptionType::PROGRAM_ACCOUNT;
-      subscription.account = &callback;
-      _rpcWebSocket._subscriptions[subscriptionId] = subscription;
-      return subscriptionId;
+    int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)>* callback) {
+      return _rpcWebSocket.subscribe("programSubscribe", { programId.to_base58(), {{"encoding", "base64"}, {"commitment", _commitment} } }, callback);
     }
 
     /**
@@ -4023,22 +3843,8 @@ namespace solana {
      *
      * @return true if the listener was removed, false if the subscriptionId was not found
     */
-    bool remove_program_account_change_listnener(int subscriptionId) {
-      if (_rpcWebSocket._subscriptions.find(subscriptionId) != _rpcWebSocket._subscriptions.end()) {
-        if (_rpcWebSocket.is_connected()) {
-          _rpcWebSocket.send_text({
-            {"jsonrpc", "2.0"},
-            {"id", subscriptionId},
-            {"method", "programUnsubscribe"},
-            {"params", {
-              subscriptionId,
-            }},
-          });
-          _rpcWebSocket._subscriptions.erase(subscriptionId);
-          return true;
-        }
-      }
-      return false;
+    void remove_program_account_change_listnener(int subscriptionId) {
+      _rpcWebSocket.unsubscribe(subscriptionId, "programUnsubscribe");
     }
 
     /**
@@ -4048,21 +3854,8 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_slot_change_listener
     */
-    int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
-      if (!_rpcWebSocket.is_connected()) {
-        _rpcWebSocket.connect();
-      }
-      int subscriptionId = ++_nextSubscriptionId;
-      _rpcWebSocket.send_text({
-        {"jsonrpc", "2.0"},
-        {"id", subscriptionId},
-        {"method", "slotSubscribe"},
-      });
-      Subscription subscription;
-      subscription.type = SubscriptionType::SLOT;
-      subscription.slot = &callback;
-      _rpcWebSocket._subscriptions[subscriptionId] = subscription;
-      return subscriptionId;
+    int on_slot_change(std::function<void(SlotInfo slotInfo)>* callback) {
+      return _rpcWebSocket.subscribe("slotSubscribe", {}, callback);
     }
 
     /**
@@ -4072,22 +3865,8 @@ namespace solana {
      *
      * @return true if the listener was removed, false if the subscriptionId was not found
     */
-    bool remove_slot_change_listener(int subscriptionId) {
-      if (_rpcWebSocket._subscriptions.find(subscriptionId) != _rpcWebSocket._subscriptions.end()) {
-        if (_rpcWebSocket.is_connected()) {
-          _rpcWebSocket.send_text({
-            {"jsonrpc", "2.0"},
-            {"id", subscriptionId},
-            {"method", "slotUnsubscribe"},
-            {"params", {
-              subscriptionId,
-            }},
-          });
-          _rpcWebSocket._subscriptions.erase(subscriptionId);
-          return true;
-        }
-      }
-      return false;
+    void remove_slot_change_listener(int subscriptionId) {
+      _rpcWebSocket.unsubscribe(subscriptionId, "slotUnsubscribe");
     }
 
   };
