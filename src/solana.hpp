@@ -3744,7 +3744,7 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
     */
-    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)>& callback) {
+    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       return -1;
       // if (!_rpcWebSocket.is_connected()) {
       //   _rpcWebSocket.connect();
@@ -3788,7 +3788,7 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
     */
-    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)>& callback) {
+    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
       return -1;
       // if (!_rpcWebSocket.is_connected()) {
       //   _rpcWebSocket.connect();
