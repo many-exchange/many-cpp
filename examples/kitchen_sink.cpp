@@ -36,7 +36,7 @@ int main() {
 
   // Get the Pubkey for the current node
   std::cout << "get_identity()...";
-  PublicKey node = mainnet_beta_connection.get_identity().unwrap().identity;
+  PublicKey node = mainnet_beta_connection.get_identity().unwrap();
   ASSERT(node.to_base58() != PublicKey().to_base58());
   std::cout << " done." << std::endl;
 
@@ -54,8 +54,8 @@ int main() {
 
   // Get the schedule for the current leader
   std::cout << "get_leader_schedule()...";
-  LeaderSchedule leader_schedule = mainnet_beta_connection.get_leader_schedule(leader).unwrap();
-  ASSERT(leader_schedule.schedule.size() > 0);
+  std::vector<uint64_t> leader_schedule = mainnet_beta_connection.get_leader_schedule(leader).unwrap();
+  ASSERT(leader_schedule.size() > 0);
   std::cout << " done." << std::endl;
 
   // Get all cluster nodes
