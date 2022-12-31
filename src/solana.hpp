@@ -3716,12 +3716,10 @@ namespace solana {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
-
       int subscriptionId = _nextSubscriptionId++;
-
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
-        {"id", 1},
+        {"id", subscriptionId},
         {"method", "accountSubscribe"},
         {"params", {
           accountId.to_base58(),
@@ -3731,7 +3729,6 @@ namespace solana {
           },
         }},
       });
-
       _accountChangeSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
@@ -3745,18 +3742,19 @@ namespace solana {
     */
     bool remove_account_listener(int subscriptionId) {
       if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
-        json response = http::post(_rpcEndpoint, {
-          {"jsonrpc", "2.0"},
-          {"id", 1},
-          {"method", "accountUnsubscribe"},
-          {"params", {
-            subscriptionId,
-          }},
-        });
-        _accountChangeSubscriptions.erase(subscriptionId);
-        return response["result"].get<bool>();
+        if (_rpcWebSocket.is_connected()) {
+          _rpcWebSocket.send_text({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", "accountUnsubscribe"},
+            {"params", {
+              subscriptionId,
+            }},
+          });
+          _accountChangeSubscriptions.erase(subscriptionId);
+          return true;
+        }
       }
-
       return false;
     }
 
@@ -3772,12 +3770,10 @@ namespace solana {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
-
       int subscriptionId = _nextSubscriptionId++;
-
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
-        {"id", 1},
+        {"id", subscriptionId},
         {"method", "logsSubscribe"},
         {"params", {
           "mentions",
@@ -3789,7 +3785,6 @@ namespace solana {
           },
         }},
       });
-
       _logsSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
@@ -3804,18 +3799,19 @@ namespace solana {
     */
     bool remove_on_logs_listener(int subscriptionId) {
       if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
-        json response = http::post(_rpcEndpoint, {
-          {"jsonrpc", "2.0"},
-          {"id", 1},
-          {"method", "logsUnsubscribe"},
-          {"params", {
-            subscriptionId,
-          }},
-        });
-        _logsSubscriptions.erase(subscriptionId);
-        return response["result"].get<bool>();
+        if (_rpcWebSocket.is_connected()) {
+          _rpcWebSocket.send_text({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", "logsUnsubscribe"},
+            {"params", {
+              subscriptionId,
+            }},
+          });
+          _logsSubscriptions.erase(subscriptionId);
+          return true;
+        }
       }
-
       return false;
     }
 
@@ -3831,12 +3827,10 @@ namespace solana {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
-
       int subscriptionId = _nextSubscriptionId++;
-
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
-        {"id", 1},
+        {"id", subscriptionId},
         {"method", "programSubscribe"},
         {"params", {
           programId.to_base58(),
@@ -3846,7 +3840,6 @@ namespace solana {
           },
         }},
       });
-
       _programAccountChangeSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
@@ -3860,18 +3853,19 @@ namespace solana {
     */
     bool remove_program_account_change_listnener(int subscriptionId) {
       if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
-        json response = http::post(_rpcEndpoint, {
-          {"jsonrpc", "2.0"},
-          {"id", 1},
-          {"method", "programUnsubscribe"},
-          {"params", {
-            subscriptionId,
-          }},
-        });
-        _programAccountChangeSubscriptions.erase(subscriptionId);
-        return response["result"].get<bool>();
+        if (_rpcWebSocket.is_connected()) {
+          _rpcWebSocket.send_text({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", "programUnsubscribe"},
+            {"params", {
+              subscriptionId,
+            }},
+          });
+          _programAccountChangeSubscriptions.erase(subscriptionId);
+          return true;
+        }
       }
-
       return false;
     }
 
@@ -3886,15 +3880,12 @@ namespace solana {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
-
       int subscriptionId = _nextSubscriptionId++;
-
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
-        {"id", 1},
+        {"id", subscriptionId},
         {"method", "slotSubscribe"},
       });
-
       _slotSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
@@ -3911,7 +3902,7 @@ namespace solana {
         if (_rpcWebSocket.is_connected()) {
           _rpcWebSocket.send_text({
             {"jsonrpc", "2.0"},
-            {"id", 1},
+            {"id", subscriptionId},
             {"method", "slotUnsubscribe"},
             {"params", {
               subscriptionId,
