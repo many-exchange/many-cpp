@@ -1314,9 +1314,9 @@ namespace solana {
     class HttpClient {
       const std::string _interface;
       const std::string _url;
-      const int _port;
 
       int _socket;
+      bool _use_ssl = false;
       SSL_CTX *_ssl_ctx;
       SSL *_ssl;
 
@@ -1324,11 +1324,20 @@ namespace solana {
       char* _recv_buffer = nullptr;
 
       bool write(const char *data, size_t length) {
-        int ret = SSL_write(_ssl, data, (int)length);
-        if (ret <= 0) {
-          std::cerr << "Error: SSL_write() failed" << std::endl;
-          disconnect();
-          return false;
+        if (_use_ssl) {
+          int ret = SSL_write(_ssl, data, (int)length);
+          if (ret <= 0) {
+            std::cerr << "Error: SSL_write() failed" << std::endl;
+            disconnect();
+            return false;
+          }
+        } else {
+          int ret = ::write(_socket, data, (int)length);
+          if (ret <= 0) {
+            std::cerr << "Error: write() failed" << std::endl;
+            disconnect();
+            return false;
+          }
         }
         return true;
       }
@@ -1350,20 +1359,29 @@ namespace solana {
       }
 
       int read(char *data, int length) {
-        int ret = SSL_read(_ssl, data, length);
-        if (ret <= 0) {
-          std::cerr << "Error: SSL_read() failed" << std::endl;
-          disconnect();
-          return 0;
+        if (_use_ssl) {
+          int ret = SSL_read(_ssl, data, length);
+          if (ret <= 0) {
+            std::cerr << "Error: SSL_read() failed" << std::endl;
+            disconnect();
+            return 0;
+          }
+          return ret;
+        } else {
+          int ret = ::read(_socket, data, length);
+          if (ret <= 0) {
+            std::cerr << "Error: SSL_read() failed" << std::endl;
+            disconnect();
+            return 0;
+          }
+          return ret;
         }
-        return ret;
       }
 
     public:
 
-      HttpClient(const std::string url, int port, const std::string interface = "")
+      HttpClient(const std::string url, const std::string interface = "")
         : _url(url),
-        _port(port),
         _interface(interface),
         _socket(-1),
         _ssl_ctx(nullptr),
@@ -1387,16 +1405,23 @@ namespace solana {
       HttpClient& operator=(HttpClient&&) = delete;
 
       bool is_connected() {
-        return _socket != -1 && _ssl != nullptr;
+        return _socket != -1;
       }
 
       bool connect() {
         std::size_t index = _url.find("://");
         ASSERT(index != std::string::npos);
         std::string protocol = _url.substr(0, index);
-        ASSERT(protocol == "https");
+        _use_ssl = (protocol == "https");
+        int port = _use_ssl ? 443 : 80;
         index += 3; // "://"
-        std::string hostname = _url.substr(index);
+        std::size_t end = _url.find("/", index + 1);
+        std::string hostname = _url.substr(index, end - index);
+        index = hostname.find(":");
+        if (index != std::string::npos) {
+          port = std::stoi(hostname.substr(index + 1));
+          hostname = hostname.substr(0, index);
+        }
 
         struct hostent *server;
         server = gethostbyname(hostname.c_str());
@@ -1409,7 +1434,7 @@ namespace solana {
 
         int i = 0;
         while (server->h_addr_list[i] != NULL) {
-          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port)) {
+          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], port)) {
             return true;
           }
           i++;
@@ -1420,7 +1445,7 @@ namespace solana {
 
     private:
 
-      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port) {
+      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t port) {
         ASSERT(_socket == -1);
 
         _socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -1442,64 +1467,66 @@ namespace solana {
         struct sockaddr_in remoteaddr;
         bzero(&remoteaddr, sizeof(remoteaddr));
         remoteaddr.sin_family = AF_INET;
-        remoteaddr.sin_port = htons(_port);
+        remoteaddr.sin_port = htons(port);
         remoteaddr.sin_addr.s_addr = *(long *)addr;
 
-        std::string tcp_address = inet_ntoa(*addr);
+        std::string address = inet_ntoa(*addr);
 
         if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1) {
           std::cerr << "CONNECT FAILED" << std::endl;
           std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
-          std::cerr << "  tcp_address = " << tcp_address << std::endl;
-          std::cerr << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
+          std::cerr << "  address = " << address << std::endl;
+          std::cerr << "  port = " << std::to_string(port) << std::endl << std::endl;
           disconnect();
           return false;
         }
 
-        const SSL_METHOD *method = TLS_client_method();
+        if (_use_ssl) {
+          const SSL_METHOD *method = TLS_client_method();
 
-        _ssl_ctx = SSL_CTX_new(method);
-        if (_ssl_ctx == NULL) {
-          std::cerr << "Error: SSL_CTX_new() failed" << std::endl;
-          disconnect();
-          return false;
-        }
-
-        _ssl = SSL_new(_ssl_ctx);
-        if (_ssl == NULL) {
-          std::cerr << "Error: SSL_new() failed" << std::endl;
-          int err;
-          while ((err = ERR_get_error()) != 0) {
-            char *str = ERR_error_string(err, 0);
-            if (str != nullptr) {
-              std::cerr << str << std::endl;
-            }
-          }
-          disconnect();
-          return false;
-        }
-
-        if (SSL_set_fd(_ssl, _socket) == 0) {
-          std::cerr << "Error: SSL_set_fd() failed" << std::endl;
-          disconnect();
-          return false;
-        }
-
-        SSL_set_tlsext_host_name(_ssl, hostname.c_str());
-
-        while (true) {
-          int ret = SSL_connect(_ssl);
-
-          if (ret == 1) {
-            break;
-          }
-          else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
-            // Not enough data because we are using non-blocking IO.
-          }
-          else {
-            std::cerr << "Error: SSL_connect() failed" << std::endl;
+          _ssl_ctx = SSL_CTX_new(method);
+          if (_ssl_ctx == NULL) {
+            std::cerr << "Error: SSL_CTX_new() failed" << std::endl;
             disconnect();
             return false;
+          }
+
+          _ssl = SSL_new(_ssl_ctx);
+          if (_ssl == NULL) {
+            std::cerr << "Error: SSL_new() failed" << std::endl;
+            int err;
+            while ((err = ERR_get_error()) != 0) {
+              char *str = ERR_error_string(err, 0);
+              if (str != nullptr) {
+                std::cerr << str << std::endl;
+              }
+            }
+            disconnect();
+            return false;
+          }
+
+          if (SSL_set_fd(_ssl, _socket) == 0) {
+            std::cerr << "Error: SSL_set_fd() failed" << std::endl;
+            disconnect();
+            return false;
+          }
+
+          SSL_set_tlsext_host_name(_ssl, hostname.c_str());
+
+          while (true) {
+            int ret = SSL_connect(_ssl);
+
+            if (ret == 1) {
+              break;
+            }
+            else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
+              // Not enough data because we are using non-blocking IO.
+            }
+            else {
+              std::cerr << "Error: SSL_connect() failed" << std::endl;
+              disconnect();
+              return false;
+            }
           }
         }
 
@@ -1514,14 +1541,16 @@ namespace solana {
     public:
 
       bool disconnect() {
-        if (_ssl != nullptr) {
-          SSL_shutdown(_ssl);
-          SSL_free(_ssl);
-          _ssl = nullptr;
-        }
-        if (_ssl_ctx != nullptr) {
-          SSL_CTX_free(_ssl_ctx);
-          _ssl_ctx = nullptr;
+        if (_use_ssl) {
+          if (_ssl != nullptr) {
+            SSL_shutdown(_ssl);
+            SSL_free(_ssl);
+            _ssl = nullptr;
+          }
+          if (_ssl_ctx != nullptr) {
+            SSL_CTX_free(_ssl_ctx);
+            _ssl_ctx = nullptr;
+          }
         }
         if (_socket != -1) {
           close(_socket);
@@ -1542,7 +1571,6 @@ namespace solana {
         send_length += json_string.size();
 
         write(_send_buffer, send_length);
-        // std::cout << _send_buffer << std::endl << std::endl;
 
         *recv_length = read(&_recv_buffer[*recv_length], 8192);
 
@@ -1589,7 +1617,7 @@ namespace solana {
      * @param request The json request object
      */
     json post(const std::string url, json request) {
-      HttpClient client(url, 443);
+      HttpClient client(url);
       client.connect();
       if (!client.is_connected()) {
         throw std::runtime_error("Unable to connect to HttpClient.");
@@ -1611,19 +1639,26 @@ namespace solana {
     class WebSocketClient {
       const std::string _interface;
       const std::string _url;
-      const int _port;
 
       int _socket;
+      bool _use_ssl = false;
       SSL_CTX *_ssl_ctx;
       SSL *_ssl;
 
       std::array<uint8_t, 17> _nonce;
       bool _handshake_complete = false;
 
+      static const int SEND_BUFFER_SIZE = 65536;
+      static const int RECEIVE_BUFFER_SIZE = 8388608;
+
       char* _send_buffer = nullptr;
       char* _recv_buffer = nullptr;
-      //static const int RECEIVE_BUFFER_SIZE = 65536;
-      //static const int SEND_BUFFER_SIZE = 8192;
+
+      static const int MESSAGE_BUFFER_SIZE = 1048576; // 1024 * 1024
+
+      char* _message_buffer;
+      int _message_start = 0;
+      int _message_end = 0;
 
       uint8_t _send_mask[4];
 
@@ -1712,50 +1747,99 @@ namespace solana {
         return accept;
       }
 
+      char* read(int& length) {
+        length = 0;
+
+        if (!is_connected()) {
+          return nullptr;
+        }
+
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(_socket, &readfds);
+        int rv = select(_socket + 1, &readfds, NULL, NULL, &tv);
+
+        if(rv > 0 && FD_ISSET(_socket, &readfds)) {
+          length = (_use_ssl) ? SSL_read(_ssl, _recv_buffer, 8192) : ::read(_socket, _recv_buffer, 8192);
+
+          if (length > 0) {
+            return _recv_buffer;
+          }
+          else if (length < 0) {
+            std::cerr << "READ FAILED" << std::endl;
+
+            if (_use_ssl) {
+              switch (SSL_get_error(_ssl, length)) {
+                case SSL_ERROR_WANT_WRITE: std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl; break;
+                case SSL_ERROR_WANT_READ: std::cerr << "SSL_ERROR_WANT_READ" << std::endl; break;
+                case SSL_ERROR_ZERO_RETURN: std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl; break;
+                case SSL_ERROR_SYSCALL: std::cerr << "SSL_ERROR_SYSCALL" << std::endl; break;
+                case SSL_ERROR_SSL: std::cerr << "SSL_ERROR_SSL" << std::endl; break;
+              }
+            }
+
+            disconnect();
+
+            return nullptr;
+          }
+
+          return nullptr;
+        }
+        else {
+          return nullptr;
+        }
+      }
+
       bool write(const void* buffer, const int length) {
-        if (is_connected()) {
+        if (!is_connected()) {
           return false;
         }
 
         ASSERT(length > 0);
-        int return_code = SSL_write(_ssl, buffer, length);
+        int return_code = (_use_ssl) ? SSL_write(_ssl, buffer, length) : ::write(_socket, buffer, length);
 
         if (_handshake_complete) {
           //TODO: log
         }
 
         if (return_code <= 0) {
+          if (_use_ssl) {
             int err = SSL_get_error(_ssl, length);
             switch (err) {
-                case SSL_ERROR_WANT_WRITE:
-                {
-                    std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl;
-                    break;
-                }
-                case SSL_ERROR_WANT_READ:
-                {
-                    std::cerr << "SSL_ERROR_WANT_READ" << std::endl;
-                    break;
-                }
-                case SSL_ERROR_ZERO_RETURN:
-                {
-                    std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl;
-                    break;
-                }
-                case SSL_ERROR_SYSCALL:
-                {
-                    std::cerr << "SSL_ERROR_SYSCALL" << std::endl;
-                    break;
-                }
-                case SSL_ERROR_SSL:
-                {
-                    std::cerr << "SSL_ERROR_SSL" << std::endl;
-                    break;
-                }
+              case SSL_ERROR_WANT_WRITE:
+              {
+                std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl;
+                break;
+              }
+              case SSL_ERROR_WANT_READ:
+              {
+                std::cerr << "SSL_ERROR_WANT_READ" << std::endl;
+                break;
+              }
+              case SSL_ERROR_ZERO_RETURN:
+              {
+                std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl;
+                break;
+              }
+              case SSL_ERROR_SYSCALL:
+              {
+                std::cerr << "SSL_ERROR_SYSCALL" << std::endl;
+                break;
+              }
+              case SSL_ERROR_SSL:
+              {
+                std::cerr << "SSL_ERROR_SSL" << std::endl;
+                break;
+              }
             }
-            std::cerr << "SEND FAILED" << std::endl;
-            disconnect();
-            return false;
+          }
+
+          std::cerr << "SEND FAILED" << std::endl;
+          disconnect();
+          return false;
         }
 
         return true;
@@ -1765,7 +1849,6 @@ namespace solana {
 
       WebSocketClient(const std::string url, int port, const std::string interface = "")
         : _url(url),
-        _port(port),
         _interface(interface),
         _socket(-1),
         _ssl_ctx(nullptr),
@@ -1773,8 +1856,9 @@ namespace solana {
       {
         _nonce[16] = 0;
 
-        _send_buffer = (char*)malloc(65536);
-        _recv_buffer = (char*)malloc(8388608);
+        _send_buffer = (char*)malloc(SEND_BUFFER_SIZE);
+        _recv_buffer = (char*)malloc(RECEIVE_BUFFER_SIZE);
+        _message_buffer = (char*)malloc(MESSAGE_BUFFER_SIZE);
       }
 
       ~WebSocketClient() {
@@ -1782,6 +1866,7 @@ namespace solana {
 
         free(_send_buffer);
         free(_recv_buffer);
+        free(_message_buffer);
       }
 
       WebSocketClient() = delete;
@@ -1791,17 +1876,24 @@ namespace solana {
       WebSocketClient& operator=(WebSocketClient&&) = delete;
 
       bool is_connected() {
-        return _socket != -1 && _ssl != nullptr;
+        return _socket != -1;
       }
 
       bool connect() {
         std::size_t index = _url.find("://");
         ASSERT(index != std::string::npos);
         std::string protocol = _url.substr(0, index);
-        ASSERT(protocol == "wss");
-        index += 3;
+        _use_ssl = (protocol == "wss");
+        int port = _use_ssl ? 443 : 80;
+        index += 3; // "://"
         std::size_t end = _url.find("/", index + 1);
         std::string hostname = _url.substr(index, end - index);
+        index = hostname.find(":");
+        if (index != std::string::npos) {
+          port = std::stoi(hostname.substr(index + 1));
+          hostname = hostname.substr(0, index);
+        }
+        port++;
 
         struct hostent *server;
         server = gethostbyname(hostname.c_str());
@@ -1814,7 +1906,7 @@ namespace solana {
 
         int i = 0;
         while (server->h_addr_list[i] != NULL) {
-          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port)) {
+          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], port)) {
             return true;
           }
           i++;
@@ -1825,7 +1917,7 @@ namespace solana {
 
     private:
 
-      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port) {
+      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t port) {
         ASSERT(_socket == -1);
 
         _handshake_complete = false;
@@ -1849,78 +1941,80 @@ namespace solana {
         struct sockaddr_in remoteaddr;
         bzero(&remoteaddr, sizeof(remoteaddr));
         remoteaddr.sin_family = AF_INET;
-        remoteaddr.sin_port = htons(_port);
+        remoteaddr.sin_port = htons(port);
         remoteaddr.sin_addr.s_addr = *(long *)addr;
 
-        std::string tcp_address = inet_ntoa(*addr);
+        std::string address = inet_ntoa(*addr);
 
         if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1) {
           std::cerr << "CONNECT FAILED" << std::endl;
           std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
-          std::cerr << "  tcp_address = " << tcp_address << std::endl;
-          std::cerr << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
+          std::cerr << "  address = " << address << std::endl;
+          std::cerr << "  port = " << std::to_string(port) << std::endl << std::endl;
           disconnect();
           return false;
         }
 
-        const SSL_METHOD *method = TLS_client_method();
+        if (_use_ssl) {
+          const SSL_METHOD *method = TLS_client_method();
 
-        _ssl_ctx = SSL_CTX_new(method);
-        if (_ssl_ctx == NULL) {
-          std::cerr << "Error: SSL_CTX_new() failed" << std::endl;
-          disconnect();
-          return false;
-        }
-
-        _ssl = SSL_new(_ssl_ctx);
-        if (_ssl == NULL) {
-          std::cerr << "Error: SSL_new() failed" << std::endl;
-          int err;
-          while ((err = ERR_get_error()) != 0) {
-            char *str = ERR_error_string(err, 0);
-            if (str != nullptr) {
-              std::cerr << str << std::endl;
-            }
-          }
-          disconnect();
-          return false;
-        }
-
-        if (SSL_set_fd(_ssl, _socket) == 0) {
-          std::cerr << "Error: SSL_set_fd() failed" << std::endl;
-          disconnect();
-          return false;
-        }
-
-        SSL_set_tlsext_host_name(_ssl, hostname.c_str());
-
-        while (true) {
-          int ret = SSL_connect(_ssl);
-
-          if (ret == 1) {
-            break;
-          }
-          else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
-            // Not enough data because we are using non-blocking IO.
-          }
-          else {
-            std::cerr << "Error: SSL_connect() failed" << std::endl;
+          _ssl_ctx = SSL_CTX_new(method);
+          if (_ssl_ctx == NULL) {
+            std::cerr << "Error: SSL_CTX_new() failed" << std::endl;
             disconnect();
             return false;
+          }
+
+          _ssl = SSL_new(_ssl_ctx);
+          if (_ssl == NULL) {
+            std::cerr << "Error: SSL_new() failed" << std::endl;
+            int err;
+            while ((err = ERR_get_error()) != 0) {
+              char *str = ERR_error_string(err, 0);
+              if (str != nullptr) {
+                std::cerr << str << std::endl;
+              }
+            }
+            disconnect();
+            return false;
+          }
+
+          if (SSL_set_fd(_ssl, _socket) == 0) {
+            std::cerr << "Error: SSL_set_fd() failed" << std::endl;
+            disconnect();
+            return false;
+          }
+
+          SSL_set_tlsext_host_name(_ssl, hostname.c_str());
+
+          while (true) {
+            int ret = SSL_connect(_ssl);
+
+            if (ret == 1) {
+              break;
+            }
+            else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
+              // Not enough data because we are using non-blocking IO.
+            }
+            else {
+              std::cerr << "Error: SSL_connect() failed" << std::endl;
+              disconnect();
+              return false;
+            }
           }
         }
 
         // std::cout << "CONNECT" << std::endl;
         // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
-        // std::cout << "  tcp_address = " << tcp_address << std::endl;
-        // std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
+        // std::cout << "  address = " << address << std::endl;
+        // std::cout << "  port = " << std::to_string(port) << std::endl << std::endl;
 
         std::generate(_nonce.begin(), _nonce.end(), []() { return (uint8_t)std::rand(); });
         std::string websocket_key = base64::encode(_nonce.begin(), 16);
 
         int send_length = 0;
         send_length += sprintf(&_send_buffer[send_length], "GET / HTTP/1.1\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "Host: %s:%u\r\n", hostname.c_str(), tcp_port);
+        send_length += sprintf(&_send_buffer[send_length], "Host: %s:%u\r\n", hostname.c_str(), port);
         send_length += sprintf(&_send_buffer[send_length], "Upgrade: websocket\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Connection: Upgrade\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Sec-WebSocket-Key: %s\r\n", websocket_key.c_str());
@@ -1957,14 +2051,16 @@ namespace solana {
     public:
 
       bool disconnect() {
-        if (_ssl != nullptr) {
-          SSL_shutdown(_ssl);
-          SSL_free(_ssl);
-          _ssl = nullptr;
-        }
-        if (_ssl_ctx != nullptr) {
-          SSL_CTX_free(_ssl_ctx);
-          _ssl_ctx = nullptr;
+        if (_use_ssl) {
+          if (_ssl != nullptr) {
+            SSL_shutdown(_ssl);
+            SSL_free(_ssl);
+            _ssl = nullptr;
+          }
+          if (_ssl_ctx != nullptr) {
+            SSL_CTX_free(_ssl_ctx);
+            _ssl_ctx = nullptr;
+          }
         }
         if (_socket != -1) {
           close(_socket);
@@ -1977,47 +2073,130 @@ namespace solana {
         return is_connected() && _handshake_complete;
       }
 
-      char* read(int& length) {
-        length = 0;
-
+      void poll() {
         if (!is_connected()) {
-          return nullptr;
+          return;
         }
 
-        struct timeval tv;
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(_socket, &readfds);
-        int rv = select(_socket + 1, &readfds, NULL, NULL, &tv);
+        int length = 0;
+        char* buffer = read(length);
 
-        if(rv > 0 && FD_ISSET(_socket, &readfds)) {
-          length = SSL_read(_ssl, _recv_buffer, 8192);
+        if ((_message_end + length) >= MESSAGE_BUFFER_SIZE)
+        {
+          std::cerr << "Message buffer out of space." << std::endl;
+          disconnect();
+          _message_start = 0;
+          _message_end = 0;
+          return;
+        }
 
-          if (length > 0) {
-            return _recv_buffer;
-          }
-          else if (length < 0) {
-            std::cerr << "READ FAILED" << std::endl;
+        memcpy(&_message_buffer[_message_end], buffer, length);
+        _message_end += length;
 
-            switch (SSL_get_error(_ssl, length)) {
-              case SSL_ERROR_WANT_WRITE: std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl; break;
-              case SSL_ERROR_WANT_READ: std::cerr << "SSL_ERROR_WANT_READ" << std::endl; break;
-              case SSL_ERROR_ZERO_RETURN: std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl; break;
-              case SSL_ERROR_SYSCALL: std::cerr << "SSL_ERROR_SYSCALL" << std::endl; break;
-              case SSL_ERROR_SSL: std::cerr << "SSL_ERROR_SSL" << std::endl; break;
-            }
+        while ((_message_start + 1) < _message_end)
+        {
+          uint8_t opcode = _message_buffer[_message_start] & 0x0F;
+          bool fin = ((_message_buffer[_message_start] >> 7) & 0x01) != 0;
 
+          bool mask = ((_message_buffer[_message_start + 1] >> 7) & 0x01) != 0;
+
+          if (mask)
+          {
+            std::cerr << "Mask not expected." << std::endl;
             disconnect();
-
-            return nullptr;
+            _message_start = 0;
+            _message_end = 0;
+            return;
           }
 
-          return nullptr;
+          size_t payload_size = _message_buffer[_message_start + 1] & ~MASK_FLAG;
+
+          if (payload_size <= 125)
+          {
+            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
+            if ((_message_start + 2 + payload_size) > _message_end)
+            {
+              break;
+            }
+            _message_start += 2;
+          }
+          else if (payload_size == 126)
+          {
+            payload_size = ntohs(*(uint16_t*)&_message_buffer[_message_start + 2]);
+            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
+            if ((_message_start + 4 + payload_size) > _message_end)
+            {
+              break;
+            }
+            _message_start += 4;
+          }
+          else if (payload_size == 127)
+          {
+            payload_size = be64toh(*(uint64_t*)&_message_buffer[_message_start + 2]);
+            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
+            if ((_message_start + 10 + payload_size) > _message_end)
+            {
+              break;
+            }
+            _message_start += 10;
+          }
+
+          ASSERT((_message_start + payload_size) <= _message_end);
+
+          switch (opcode)
+          {
+            case OPCODE_TEXT:
+            {
+              if (_message_buffer[_message_start] != '{')
+              {
+                std::cerr << "Expected '{'." << std::endl;
+                disconnect();
+                _message_start = 0;
+                _message_end = 0;
+                return;
+              }
+
+              if (payload_size > 0) {
+                std::string message = std::string(&_message_buffer[_message_start], payload_size);
+                std::cout << "Received: " << message << std::endl;
+              }
+
+              break;
+            }
+            case OPCODE_CLOSE:
+            {
+              disconnect();
+              return;
+            }
+            case OPCODE_PING:
+            {
+              //if (_pong_message.size() > 0)
+              //{
+                //send_pong(_pong_message);
+              //}
+              break;
+            }
+            case OPCODE_PONG:
+            {
+              //LastPongTimestamp = timestamp;
+              break;
+            }
+          }
+
+          _message_start += payload_size;
         }
-        else {
-          return nullptr;
+
+        if (_message_start == _message_end)
+        {
+          _message_start = 0;
+          _message_end = 0;
+        }
+        else if (_message_start >= 8192)
+        {
+          ASSERT(_message_end > _message_start);
+          memmove(_message_buffer, &_message_buffer[_message_start], _message_end - _message_start);
+          _message_end -= _message_start;
+          _message_start = 0;
         }
       }
 
@@ -2038,13 +2217,13 @@ namespace solana {
         send_message(OPCODE_TEXT, message.c_str(), message.size());
       }
 
-      void send_text(std::string message) {
-        send_message(OPCODE_TEXT, message.c_str(), message.size());
-      }
+      // void send_text(std::string message) {
+      //   send_message(OPCODE_TEXT, message.c_str(), message.size());
+      // }
 
-      void send_text(const char* message, size_t message_size) {
-        send_message(OPCODE_TEXT, message, message_size);
-      }
+      // void send_text(const char* message, size_t message_size) {
+      //   send_message(OPCODE_TEXT, message, message_size);
+      // }
 
     };
 
@@ -2438,7 +2617,7 @@ namespace solana {
       case Cluster::Testnet:
         return "https://api.testnet.solana.com";
       case Cluster::Localnet:
-        return "http://localhost:8899";
+        return "http://127.0.0.1:8899";
       default:
         throw std::runtime_error("Invalid cluster.");
     }
@@ -3521,27 +3700,24 @@ namespace solana {
      */
     void poll() {
       if (_rpcWebSocket.is_connected()) {
-        int length;
-        char* data = _rpcWebSocket.read(length);
-        if (length > 0) {
-          // TODO: handle data and call callbacks, clear buffer
-          std::cout << "Received: " << data << std::endl;
-        }
+        _rpcWebSocket.poll();
       }
     }
 
     /**
      * Add an account change listener.
-     * 
+     *
      * @param accountId The account to listen for changes
      * @param callback The callback function to call when the account changes
-     * 
+     *
      * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
     */
     int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
+
+      int subscriptionId = _nextSubscriptionId++;
 
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
@@ -3556,16 +3732,15 @@ namespace solana {
         }},
       });
 
-      int subscriptionId = _nextSubscriptionId++;
       _accountChangeSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
 
     /**
      * Remove an account change listener.
-     * 
+     *
      * @param subscriptionId The subscription id returned by on_account_change
-     * 
+     *
      * @return True if the listener was removed, false if the subscriptionId was not found
     */
     bool remove_account_listener(int subscriptionId) {
@@ -3581,22 +3756,24 @@ namespace solana {
         _accountChangeSubscriptions.erase(subscriptionId);
         return response["result"].get<bool>();
       }
-      
+
       return false;
     }
 
     /**
      * Add a logs listener.
-     * 
+     *
      * @param accountId The account to listen for logs on
      * @param callback The callback function to call when logs are received
-     * 
+     *
      * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
     */
     int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
+
+      int subscriptionId = _nextSubscriptionId++;
 
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
@@ -3613,7 +3790,6 @@ namespace solana {
         }},
       });
 
-      int subscriptionId = _nextSubscriptionId++;
       _logsSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
@@ -3621,9 +3797,9 @@ namespace solana {
 
     /**
      * Remove a logs listener.
-     * 
+     *
      * @param subscriptionId The subscription id returned by on_logs
-     * 
+     *
      * @return true if the listener was removed, false if the subscriptionId was not found
     */
     bool remove_on_logs_listener(int subscriptionId) {
@@ -3645,16 +3821,18 @@ namespace solana {
 
     /**
      * Add a program account change listener.
-     * 
+     *
      * @param programId The program id to listen for
      * @param callback The callback function to call when a program account changes
-     * 
+     *
      * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
     */
     int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
       }
+
+      int subscriptionId = _nextSubscriptionId++;
 
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
@@ -3669,16 +3847,15 @@ namespace solana {
         }},
       });
 
-      int subscriptionId = _nextSubscriptionId++;
       _programAccountChangeSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
 
     /**
      * Remove a program account change listener.
-     * 
+     *
      * @param subscriptionId The subscription id returned by on_program_account_change
-     * 
+     *
      * @return true if the listener was removed, false if the subscriptionId was not found
     */
     bool remove_program_account_change_listnener(int subscriptionId) {
@@ -3700,9 +3877,9 @@ namespace solana {
 
     /**
      * Add a slot change listener.
-     * 
+     *
      * @param callback The callback function to call when a slot changes
-     * 
+     *
      * @return The subscription id. This can be used to remove the listener with remove_slot_change_listener
     */
     int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
@@ -3710,38 +3887,40 @@ namespace solana {
         _rpcWebSocket.connect();
       }
 
+      int subscriptionId = _nextSubscriptionId++;
+
       _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "slotSubscribe"},
       });
 
-      int subscriptionId = _nextSubscriptionId++;
       _slotSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
 
     /**
      * Remove a slot change listener.
-     * 
+     *
      * @param subscriptionId The subscription id to remove (returned by on_slot_change)
-     * 
+     *
      * @return true if the listener was removed, false if the subscriptionId was not found
     */
     bool remove_slot_change_listener(int subscriptionId) {
       if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
-        json response = http::post(_rpcEndpoint, {
-          {"jsonrpc", "2.0"},
-          {"id", 1},
-          {"method", "slotUnsubscribe"},
-          {"params", {
-            subscriptionId,
-          }},
-        });
-        _slotSubscriptions.erase(subscriptionId);
-        return response["result"].get<bool>();
+        if (_rpcWebSocket.is_connected()) {
+          _rpcWebSocket.send_text({
+            {"jsonrpc", "2.0"},
+            {"id", 1},
+            {"method", "slotUnsubscribe"},
+            {"params", {
+              subscriptionId,
+            }},
+          });
+          _slotSubscriptions.erase(subscriptionId);
+          return true;
+        }
       }
-
       return false;
     }
 
