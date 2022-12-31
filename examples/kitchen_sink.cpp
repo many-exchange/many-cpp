@@ -120,7 +120,7 @@ int main() {
   // Verify that the account was created
   std::cout << "get_account_info()...";
   AccountInfo accountInfo = devnet_connection.get_account_info(associatedTokenAccount).unwrap();
-  ASSERT(accountInfo.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
+  ASSERT(accountInfo.account.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
   std::cout << " done." << std::endl;
 
   // Get the balance of the associated token account (should be 0)

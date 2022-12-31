@@ -47,7 +47,7 @@ int main() {
 
   // Verify that the account was created
   AccountInfo accountInfo = connection.get_account_info(associatedTokenAccount);
-  std::cout << "accountInfo owner = " << accountInfo.owner.to_base58() << std::endl << std::endl;
+  std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl << std::endl;
 
   return 0;
 }

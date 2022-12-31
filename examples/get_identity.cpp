@@ -3,6 +3,7 @@
 
 using namespace solana;
 
+// TODO test this example
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   auto identity = connection.get_identity().unwrap();

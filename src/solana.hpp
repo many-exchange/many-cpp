@@ -2358,24 +2358,32 @@ namespace solana {
   };
 
   struct AccountInfo {
-    /** Number of lamports assigned to this account */
-    uint64_t lamports;
-    /** Identifier of the program that owns the account */
-    PublicKey owner;
-    /** Data associated with the account */
-    std::string data;
-    /** Boolean indicating if the account contains a program (and is strictly read-only) */
-    bool executable;
-    /** The epoch at which this account will next owe rent */
-    uint64_t rentEpoch;
+    PublicKey pubkey;
+    struct Account {
+      /** Number of lamports assigned to this account */
+      uint64_t lamports;
+      /** Identifier of the program that owns the account */
+      PublicKey owner;
+      /** Data associated with the account */
+      std::string data;
+      /** Boolean indicating if the account contains a program (and is strictly read-only) */
+      bool executable;
+      /** The epoch at which this account will next owe rent */
+      uint64_t rentEpoch;
+    } account;
   };
 
+  void from_json(const json& j, AccountInfo::Account& account) {
+    account.lamports = j["lamports"].get<uint64_t>();
+    account.owner = j["owner"].get<PublicKey>();
+    account.data = j["data"][0].get<std::string>();
+    account.executable = j["executable"].get<bool>();
+    account.rentEpoch = j["rentEpoch"].get<uint64_t>();
+  }
+
   void from_json(const json& j, AccountInfo& accountInfo) {
-    accountInfo.lamports = j["lamports"].get<uint64_t>();
-    accountInfo.owner = j["owner"].get<PublicKey>();
-    accountInfo.data = j["data"][0].get<std::string>();
-    accountInfo.executable = j["executable"].get<bool>();
-    accountInfo.rentEpoch = j["rentEpoch"].get<uint64_t>();
+    accountInfo.pubkey = j["pubkey"].get<PublicKey>();
+    accountInfo.account = j["account"].get<AccountInfo::Account>();
   }
 
   struct Context {
@@ -2400,13 +2408,6 @@ namespace solana {
     tokenAmount.amount = stol(j["amount"].get<std::string>());
     tokenAmount.decimals = j["decimals"].get<uint64_t>();
   }
-
-  struct AccountChangeSubscriptionInfo {
-    /** The Pubkey of the account to subscribe to */
-    PublicKey accountId;
-    /** The callback function that will fire on a subscription event for the account */
-    std::function<void(Context context, AccountInfo accountInfo)> callback;
-  };
 
   struct Blockhash {
     std::string blockhash;
@@ -2440,14 +2441,22 @@ namespace solana {
     }
   }
 
+
   struct ClusterNode {
-    uint64_t featureSet;
-    std::string gossip;
+    /** Node public key */
     PublicKey pubkey;
-    std::string rpc;
-    uint64_t shredVersion;
+    /** Gossip network address for the node */
+    std::string gossip;
+    /** TPU network address for the node */
     std::string tpu;
+    /** JSON RPC network address for the node, if the JSON RPC service is enabled */
+    std::string rpc;
+    /** The software version of the node, if the version information is available */
     std::string version;
+    /** The unique identifier of the node's feature set */
+    uint64_t featureSet;
+    /** The shred version the node has been configured to use */
+    uint64_t shredVersion;
   };
 
   void from_json(const json& j, ClusterNode& cluster_node) {
@@ -2513,49 +2522,16 @@ namespace solana {
     return bytes;
   }
 
-  struct Identity {
-    PublicKey identity;
-  };
-
-  void from_json(const json& j, Identity& identity) {
-    identity.identity = PublicKey(j["identity"].get<std::string>());
-  }
-
-  struct KeyedAccountInfo {
-    PublicKey accountId;
-    AccountInfo accountInfo;
-  };
-
-  struct LeaderSchedule {
-    PublicKey leader;
-    std::vector<int> schedule;
-  };
-
-  void from_json(const json& j, LeaderSchedule& leader_schedule) {
-    auto it = j.begin();
-    leader_schedule.leader = PublicKey(it.key());
-    leader_schedule.schedule = it.value().get<std::vector<int>>();
-  }
-
   struct Logs {
     //TODO err: TransactionError | null;
     std::vector<std::string> logs;
     std::string signature;
   };
 
-  struct LogsSubscriptionInfo {
-    /** The Pubkey of the account to subscribe to for logs */
-    PublicKey accountId;
-    /** The callback function that will fire on a subscription event for logs */
-    std::function<void(Context context, Logs logs)> callback;
-  };
-
-  struct ProgramAccountChangeSubscriptionInfo {
-    /** The Pubkey of the program to subscribe to */
-    PublicKey programId;
-    /** The callback function that will fire on a subscription event for the program */
-    std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback;
-  };
+  void from_json(const json& j, Logs& logs) {
+    logs.logs = j["logs"].get<std::vector<std::string>>();
+    logs.signature = j["signature"].get<std::string>();
+  }
 
   struct SlotInfo {
     /** Currently processing slot */
@@ -2565,6 +2541,12 @@ namespace solana {
     /** The root block of the current slot's fork */
     uint64_t root;
   };
+
+  void from_json(const json& j, SlotInfo& slot_info) {
+    slot_info.slot = j["slot"].get<uint64_t>();
+    slot_info.parent = j["parent"].get<uint64_t>();
+    slot_info.root = j["root"].get<uint64_t>();
+  }
 
   struct TokenAccount {
     /** The account's Pubkey */
@@ -3168,9 +3150,9 @@ namespace solana {
     websockets::WebSocketClient _rpcWebSocket;
     int _nextSubscriptionId = 0;
 
-    std::map<int, AccountChangeSubscriptionInfo> _accountChangeSubscriptions;
-    std::map<int, LogsSubscriptionInfo> _logsSubscriptions;
-    std::map<int, ProgramAccountChangeSubscriptionInfo> _programAccountChangeSubscriptions;
+    std::map<int, std::function<void(Context context, AccountInfo accountInfo)>> _accountChangeSubscriptions;
+    std::map<int, std::function<void(Context context, Logs logs)>> _logsSubscriptions;
+    std::map<int, std::function<void(Context context, AccountInfo accountInfo)>> _programAccountChangeSubscriptions;
     std::map<int, std::function<void(Context context, SlotInfo slotInfo)>> _slotSubscriptions;
 
     static std::string make_websocket_url(std::string endpoint) {
@@ -3253,12 +3235,12 @@ namespace solana {
     /**
      * Returns the identity Pubkey of the current node.
      */
-    Result<Identity> get_identity() {
+    Result<PublicKey> get_identity() {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getIdentity"},
-      });
+      })["identity"];
     }
 
     /**
@@ -3277,7 +3259,7 @@ namespace solana {
      *
      * @param leaderAddress The Pubkey of the leader to query
      */
-    Result<LeaderSchedule> get_leader_schedule(const PublicKey& leaderAddress) {
+    Result<std::vector<uint64_t>> get_leader_schedule(const PublicKey& leaderAddress) {
       return http::post(_rpcEndpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
@@ -3287,7 +3269,7 @@ namespace solana {
             {"identity", leaderAddress.to_base58()},
           },
         }},
-      });
+      })["result"][leaderAddress.to_base58()];
     }
 
     /**
@@ -3531,16 +3513,34 @@ namespace solana {
 
     //-------- Websocket methods --------------------------------------------------------------------
 
+    /**
+     * Poll the websocket for new messages.
+     */
     void poll() {
       if (_rpcWebSocket.is_connected()) {
-        //Call read. If length > 0, try and process the message.
-        //_rpcWebSocket.poll();
+        int length;
+        char* data = _rpcWebSocket.read(length);
+        if (length > 0) {
+          // TODO: handle data and call callbacks, clear buffer
+          std::cout << "Received: " << data << std::endl;
+        }
       }
     }
 
+    /**
+     * Add an account change listener.
+     * 
+     * @param accountId The account to listen for changes
+     * @param callback The callback function to call when the account changes
+     * 
+     * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
+    */
     int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-      //TODO _rpcWebSocket
-      json response = http::post(_rpcEndpoint, {
+      if (!_rpcWebSocket.is_connected()) {
+        _rpcWebSocket.connect();
+      }
+
+      _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "accountSubscribe"},
@@ -3552,13 +3552,20 @@ namespace solana {
           },
         }},
       });
-      int subscriptionId = response["result"].get<int>();
-      _accountChangeSubscriptions[subscriptionId] = { accountId, callback };
+
+      int subscriptionId = _nextSubscriptionId++;
+      _accountChangeSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
 
+    /**
+     * Remove an account change listener.
+     * 
+     * @param subscriptionId The subscription id returned by on_account_change
+     * 
+     * @return True if the listener was removed, false if the subscriptionId was not found
+    */
     bool remove_account_listener(int subscriptionId) {
-      //TODO _rpcWebSocket
       if (_accountChangeSubscriptions.find(subscriptionId) != _accountChangeSubscriptions.end()) {
         json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
@@ -3571,12 +3578,24 @@ namespace solana {
         _accountChangeSubscriptions.erase(subscriptionId);
         return response["result"].get<bool>();
       }
+      
       return false;
     }
 
+    /**
+     * Add a logs listener.
+     * 
+     * @param accountId The account to listen for logs on
+     * @param callback The callback function to call when logs are received
+     * 
+     * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
+    */
     int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
-      //TODO _rpcWebSocket
-      json response = http::post(_rpcEndpoint, {
+      if (!_rpcWebSocket.is_connected()) {
+        _rpcWebSocket.connect();
+      }
+
+      _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "logsSubscribe"},
@@ -3590,13 +3609,21 @@ namespace solana {
           },
         }},
       });
-      int subscriptionId = response["result"].get<int>();
-      _logsSubscriptions[subscriptionId] = { accountId, callback };
+
+      int subscriptionId = _nextSubscriptionId++;
+      _logsSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
 
+
+    /**
+     * Remove a logs listener.
+     * 
+     * @param subscriptionId The subscription id returned by on_logs
+     * 
+     * @return true if the listener was removed, false if the subscriptionId was not found
+    */
     bool remove_on_logs_listener(int subscriptionId) {
-      //TODO _rpcWebSocket
       if (_logsSubscriptions.find(subscriptionId) != _logsSubscriptions.end()) {
         json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
@@ -3609,12 +3636,24 @@ namespace solana {
         _logsSubscriptions.erase(subscriptionId);
         return response["result"].get<bool>();
       }
+
       return false;
     }
 
-    int on_program_account_change(PublicKey programId, std::function<void(Context context, KeyedAccountInfo keyedAccountInfo)> callback) {
-      //TODO _rpcWebSocket
-      json response = http::post(_rpcEndpoint, {
+    /**
+     * Add a program account change listener.
+     * 
+     * @param programId The program id to listen for
+     * @param callback The callback function to call when a program account changes
+     * 
+     * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
+    */
+    int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+      if (!_rpcWebSocket.is_connected()) {
+        _rpcWebSocket.connect();
+      }
+
+      _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "programSubscribe"},
@@ -3626,13 +3665,20 @@ namespace solana {
           },
         }},
       });
-      int subscriptionId = response["result"].get<int>();
-      _programAccountChangeSubscriptions[subscriptionId] = { programId, callback };
+
+      int subscriptionId = _nextSubscriptionId++;
+      _programAccountChangeSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
 
+    /**
+     * Remove a program account change listener.
+     * 
+     * @param subscriptionId The subscription id returned by on_program_account_change
+     * 
+     * @return true if the listener was removed, false if the subscriptionId was not found
+    */
     bool remove_program_account_change_listnener(int subscriptionId) {
-      //TODO _rpcWebSocket
       if (_programAccountChangeSubscriptions.find(subscriptionId) != _programAccountChangeSubscriptions.end()) {
         json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
@@ -3645,9 +3691,17 @@ namespace solana {
         _programAccountChangeSubscriptions.erase(subscriptionId);
         return response["result"].get<bool>();
       }
+
       return false;
     }
 
+    /**
+     * Add a slot change listener.
+     * 
+     * @param callback The callback function to call when a slot changes
+     * 
+     * @return The subscription id. This can be used to remove the listener with remove_slot_change_listener
+    */
     int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
       if (!_rpcWebSocket.is_connected()) {
         _rpcWebSocket.connect();
@@ -3664,8 +3718,14 @@ namespace solana {
       return subscriptionId;
     }
 
+    /**
+     * Remove a slot change listener.
+     * 
+     * @param subscriptionId The subscription id to remove (returned by on_slot_change)
+     * 
+     * @return true if the listener was removed, false if the subscriptionId was not found
+    */
     bool remove_slot_change_listener(int subscriptionId) {
-      //TODO _rpcWebSocket
       if (_slotSubscriptions.find(subscriptionId) != _slotSubscriptions.end()) {
         json response = http::post(_rpcEndpoint, {
           {"jsonrpc", "2.0"},
@@ -3678,6 +3738,7 @@ namespace solana {
         _slotSubscriptions.erase(subscriptionId);
         return response["result"].get<bool>();
       }
+
       return false;
     }
 
