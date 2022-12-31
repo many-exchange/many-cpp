@@ -13,7 +13,9 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <array>
-#include <endian.h>
+extern "C" {
+  #include <endian.h>
+}
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
