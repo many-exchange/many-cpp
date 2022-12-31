@@ -2418,9 +2418,10 @@ namespace solana {
   }
 
   enum class Cluster {
+    MainnetBeta,
     Devnet,
     Testnet,
-    MainnetBeta
+    Localnet
   };
 
   /**
@@ -2430,12 +2431,14 @@ namespace solana {
   */
   std::string cluster_api_url(Cluster cluster) {
     switch (cluster) {
+      case Cluster::MainnetBeta:
+        return "https://api.mainnet-beta.solana.com";
       case Cluster::Devnet:
         return "https://api.devnet.solana.com";
       case Cluster::Testnet:
         return "https://api.testnet.solana.com";
-      case Cluster::MainnetBeta:
-        return "https://api.mainnet-beta.solana.com";
+      case Cluster::Localnet:
+        return "http://localhost:8899";
       default:
         throw std::runtime_error("Invalid cluster.");
     }

@@ -25,7 +25,7 @@ int main() {
   // Create connections to the clusters
   std::cout << "Connecting to clusters...";
   Connection mainnet_beta_connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  Connection devnet_connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  Connection devnet_connection(cluster_api_url(Cluster::Localnet), Commitment::Processed);
   std::cout << " done." << std::endl;
 
   // Get the current version
