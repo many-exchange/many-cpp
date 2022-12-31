@@ -13,6 +13,7 @@ int main() {
     std::cout << "data = " << accountInfo.account.data << std::endl;
     std::cout << "executable = " << (accountInfo.account.executable ? "true" : "false") << std::endl << std::endl;
   });
+  ASSERT(connection.is_connected());
 
   for (int i = 0; i < 10; i++) {
     connection.poll();
