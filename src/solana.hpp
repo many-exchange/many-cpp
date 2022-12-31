@@ -704,13 +704,11 @@ namespace solana {
       std::array<uint8_t, 17> _nonce;
       bool _handshake_complete = false;
 
-      static const int RECEIVE_BUFFER_SIZE = 65536;
+      char* _send_buffer = nullptr;
+      char* _recv_buffer = nullptr;
+      //static const int RECEIVE_BUFFER_SIZE = 65536;
+      //static const int SEND_BUFFER_SIZE = 8192;
 
-      char _receive_buffer[RECEIVE_BUFFER_SIZE];
-
-      static const int SEND_BUFFER_SIZE = 8192;
-
-      char _send_buffer[SEND_BUFFER_SIZE];
       uint8_t _send_mask[4];
 
       //static const uint8_t OPCODE_CONT   = 0x00;
@@ -858,10 +856,16 @@ namespace solana {
         _ssl(nullptr)
       {
         _nonce[16] = 0;
+
+        _send_buffer = (char*)malloc(65536);
+        _recv_buffer = (char*)malloc(8388608);
       }
 
       ~WebSocketClient() {
         disconnect();
+
+        free(_send_buffer);
+        free(_recv_buffer);
       }
 
       WebSocketClient() = delete;
@@ -882,7 +886,6 @@ namespace solana {
         index += 3;
         std::size_t end = _url.find("/", index + 1);
         std::string hostname = _url.substr(index, end - index);
-        std::string resource = _url.substr(end);
 
         struct hostent *server;
         server = gethostbyname(hostname.c_str());
@@ -895,7 +898,7 @@ namespace solana {
 
         int i = 0;
         while (server->h_addr_list[i] != NULL) {
-          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port, resource)) {
+          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], _port)) {
             return true;
           }
           i++;
@@ -906,7 +909,7 @@ namespace solana {
 
     private:
 
-      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port, const std::string& resource) {
+      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t tcp_port) {
         ASSERT(_socket == -1);
 
         _handshake_complete = false;
@@ -1000,7 +1003,7 @@ namespace solana {
         std::string websocket_key = base64::encode(_nonce.begin(), 16);
 
         int send_length = 0;
-        send_length += sprintf(&_send_buffer[send_length], "GET %s HTTP/1.1\r\n", resource.c_str());
+        send_length += sprintf(&_send_buffer[send_length], "GET / HTTP/1.1\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Host: %s:%u\r\n", hostname.c_str(), tcp_port);
         send_length += sprintf(&_send_buffer[send_length], "Upgrade: websocket\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Connection: Upgrade\r\n");
@@ -1012,17 +1015,17 @@ namespace solana {
 
         while (is_connected()) {
           int length;
-          char *buffer = begin_read(length);
+          char *buffer = read(length);
 
           if (length > 0) {
             if (validate_handshake(buffer, length)) {
-              end_read(0);
+              //end_read(0);
               _handshake_complete = true;
               *((uint32_t *)_send_mask) = rand();
               return true;
             }
             else {
-              end_read(0);
+              //end_read(0);
               std::cerr << "HANDSHAKE FAILED" << std::endl;
               disconnect();
               return false;
@@ -1058,7 +1061,7 @@ namespace solana {
         return is_connected() && _handshake_complete;
       }
 
-      char* begin_read(int& length) {
+      char* read(int& length) {
         length = 0;
 
         if (!is_connected()) {
@@ -1074,10 +1077,10 @@ namespace solana {
         int rv = select(_socket + 1, &readfds, NULL, NULL, &tv);
 
         if(rv > 0 && FD_ISSET(_socket, &readfds)) {
-          length = SSL_read(_ssl, _receive_buffer, 8192);
+          length = SSL_read(_ssl, _recv_buffer, 8192);
 
           if (length > 0) {
-            return _receive_buffer;
+            return _recv_buffer;
           }
           else if (length < 0) {
             std::cerr << "READ FAILED" << std::endl;
@@ -1102,12 +1105,6 @@ namespace solana {
         }
       }
 
-      void end_read(uint64_t timestamp) {
-        if (_handshake_complete) {
-          //TODO: log
-        }
-      }
-
       void send_close(std::string message) {
         send_message(OPCODE_CLOSE, message.c_str(), message.size());
       }
@@ -1118,6 +1115,11 @@ namespace solana {
 
       void send_pong(std::string message) {
         send_message(OPCODE_PONG, message.c_str(), message.size());
+      }
+
+      void send_text(json j) {
+        std::string message = j.dump();
+        send_message(OPCODE_TEXT, message.c_str(), message.size());
       }
 
       void send_text(std::string message) {
@@ -1204,28 +1206,47 @@ namespace solana {
      * Check if this publickey is on the ed25519 curve
      */
     bool is_on_curve() const {
-      //unsigned char curve25519[crypto_scalarmult_BYTES];
-      //return crypto_sign_ed25519_pk_to_curve25519(curve25519, bytes.data()) != 0;
-
       unsigned char curve25519[crypto_scalarmult_BYTES];
-
-      if (crypto_sign_ed25519_pk_to_curve25519(curve25519, bytes.data()) != 0) {
-
-        // if (crypto_core_ed25519_is_valid_point(curve25519) != 0) {
-        //   int n = 0;
-        // }
-
-        // if (crypto_core_ed25519_is_valid_point(bytes.data()) != 0) {
-        //   int n = 0;
-        // }
-
-        //if is_valid_y_coord.unwrap_u8() != 1u8 { return None; }
-
-        return false;
-      }
-
-      return true;
+      return crypto_sign_ed25519_pk_to_curve25519(curve25519, bytes.data()) != 0;
     }
+
+    /*
+5.1.3.  Decoding
+
+   Decoding a point, given as a 32-octet string, is a little more
+   complicated.
+
+   1.  First, interpret the string as an integer in little-endian
+       representation.  Bit 255 of this number is the least significant
+       bit of the x-coordinate and denote this value x_0.  The
+       y-coordinate is recovered simply by clearing this bit.  If the
+       resulting value is >= p, decoding fails.
+
+   2.  To recover the x-coordinate, the curve equation implies
+       x^2 = (y^2 - 1) / (d y^2 + 1) (mod p).  The denominator is always
+       non-zero mod p.  Let u = y^2 - 1 and v = d y^2 + 1.  To compute
+       the square root of (u/v), the first step is to compute the
+       candidate root x = (u/v)^((p+3)/8).  This can be done with the
+       following trick, using a single modular powering for both the
+       inversion of v and the square root:
+
+                          (p+3)/8      3        (p-5)/8
+                 x = (u/v)        = u v  (u v^7)         (mod p)
+
+   3.  Again, there are three cases:
+
+       1.  If v x^2 = u (mod p), x is a square root.
+
+       2.  If v x^2 = -u (mod p), set x <-- x * 2^((p-1)/4), which is a
+           square root.
+
+       3.  Otherwise, no square root exists for modulo p, and decoding
+           fails.
+
+   4.  Finally, use the x_0 bit to select the right square root.  If
+       x = 0, and x_0 = 1, decoding fails.  Otherwise, if x_0 != x mod
+       2, set x <-- p - x.  Return the decoded point (x,y).
+    */
 
     /**
      * Derive a program address from seeds and a program ID.
@@ -1301,6 +1322,10 @@ namespace solana {
     PublicKey publicKey;
 
     Keypair() {
+      auto sodium_result = sodium_init();
+      if (sodium_result == -1) {
+        throw std::runtime_error("Failed to initialize libsodium");
+      }
       for (int i = 0; i < crypto_sign_SECRETKEYBYTES; i++) {
         secretKey[i] = 0;
       }
@@ -1320,6 +1345,10 @@ namespace solana {
      * @param options: skip secret key validation
      */
     Keypair(std::array<char, PUBLIC_KEY_LENGTH> secretKey, bool skipValidation = false) {
+      auto sodium_result = sodium_init();
+      if (sodium_result == -1) {
+        throw std::runtime_error("Failed to initialize libsodium");
+      }
       if (!skipValidation && crypto_sign_ed25519_sk_to_pk((unsigned char *)publicKey.bytes.data(), (unsigned char *)secretKey.data()) != 0) {
         throw std::runtime_error("invalid secret key");
       }
@@ -1372,9 +1401,6 @@ namespace solana {
     static Keypair generate() {
       Keypair result = Keypair();
       crypto_sign_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
-      if (!result.publicKey.is_on_curve()) {
-        return Keypair::generate();
-      }
       return result;
     }
 
@@ -2201,8 +2227,8 @@ namespace solana {
     Commitment _commitment;
     std::string _rpcEndpoint;
     std::string _rpcWsEndpoint;
-    // http::HttpClient _rpcClient;
-    // websockets::WebSocketClient _rpcWebSocket;
+    websockets::WebSocketClient _rpcWebSocket;
+    int _nextSubscriptionId = 0;
 
     std::map<int, AccountChangeSubscriptionInfo> _accountChangeSubscriptions;
     std::map<int, LogsSubscriptionInfo> _logsSubscriptions;
@@ -2220,9 +2246,8 @@ namespace solana {
     Connection(std::string endpoint, Commitment commitment)
       : _commitment(commitment),
       _rpcEndpoint(endpoint),
-      _rpcWsEndpoint(make_websocket_url(endpoint))
-      // _rpcClient(_rpcEndpoint, 443),
-      // _rpcWebSocket(_rpcWsEndpoint, 443)
+      _rpcWsEndpoint(make_websocket_url(endpoint)),
+      _rpcWebSocket(_rpcWsEndpoint, 443)
     {
       auto sodium_result = sodium_init();
       if (sodium_result == -1) {
@@ -2568,6 +2593,13 @@ namespace solana {
 
     //-------- Websocket methods --------------------------------------------------------------------
 
+    void poll() {
+      if (_rpcWebSocket.is_connected()) {
+        //Call read. If length > 0, try and process the message.
+        _rpcWebSocket.poll();
+      }
+    }
+
     int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
       //TODO _rpcWebSocket
       json response = http::post(_rpcEndpoint, {
@@ -2679,13 +2711,17 @@ namespace solana {
     }
 
     int on_slot_change(std::function<void(Context context, SlotInfo slotInfo)> callback) {
-      //TODO _rpcWebSocket
-      json response = http::post(_rpcEndpoint, {
+      if (!_rpcWebSocket.is_connected()) {
+        _rpcWebSocket.connect();
+      }
+
+      _rpcWebSocket.send_text({
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "slotSubscribe"},
       });
-      int subscriptionId = response["result"].get<int>();
+
+      int subscriptionId = _nextSubscriptionId++;
       _slotSubscriptions[subscriptionId] = callback;
       return subscriptionId;
     }
