@@ -2989,10 +2989,9 @@ namespace solana {
         std::string hostname = _url.substr(index, end - index);
         index = hostname.find(":");
         if (index != std::string::npos) {
-          port = std::stoi(hostname.substr(index + 1));
+          port = std::stoi(hostname.substr(index + 1)) + 1;
           hostname = hostname.substr(0, index);
         }
-        port++;
 
         struct hostent *server;
         server = gethostbyname(hostname.c_str());
@@ -3135,6 +3134,7 @@ namespace solana {
             }
             else {
               //end_read(0);
+std::cout << buffer << std::endl;
               std::cerr << "HANDSHAKE FAILED" << std::endl;
               disconnect();
               return false;
@@ -3267,6 +3267,8 @@ namespace solana {
                         (*callback)(slotInfo);
                       } else if (method == "???") {
                         //TODO add other notifications
+                      } else {
+                        std::cerr << "Unknown notification: " << method << std::endl;
                       }
                     }
                   }
@@ -3747,28 +3749,13 @@ namespace solana {
      * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
     */
     int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
-      return -1;
-      // if (!_rpcWebSocket.is_connected()) {
-      //   _rpcWebSocket.connect();
-      // }
-      // int subscriptionId = ++_nextSubscriptionId;
-      // _rpcWebSocket.subscribe({
-      //   {"jsonrpc", "2.0"},
-      //   {"id", subscriptionId},
-      //   {"method", "accountSubscribe"},
-      //   {"params", {
-      //     accountId.to_base58(),
-      //     {
-      //       {"encoding", "base64"},
-      //       {"commitment", _commitment},
-      //     },
-      //   }},
-      // });
-      // Subscription subscription;
-      // subscription.type = SubscriptionType::ACCOUNT;
-      // subscription.account = &callback;
-      // _rpcWebSocket._subscriptions[subscriptionId] = subscription;
-      // return subscriptionId;
+      return _rpcWebSocket.subscribe("accountSubscribe", {
+          accountId.to_base58(),
+          {
+            {"encoding", "base64"},
+            {"commitment", _commitment},
+          },
+        }, &callback);
     }
 
     /**
