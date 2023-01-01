@@ -38,8 +38,8 @@ int main() {
 
   // Get the Pubkey for the current node
   std::cout << "get_identity()...";
-  PublicKey node = mainnet_beta_connection.get_identity().unwrap();
-  ASSERT(node.to_base58() != PublicKey().to_base58());
+  Identity identity = mainnet_beta_connection.get_identity().unwrap();
+  ASSERT(identity.identity.to_base58() != PublicKey().to_base58());
   std::cout << " done." << std::endl;
 
   // Get the current slot
@@ -56,8 +56,8 @@ int main() {
 
   // Get the schedule for the current leader
   std::cout << "get_leader_schedule()...";
-  std::vector<uint64_t> leader_schedule = mainnet_beta_connection.get_leader_schedule(leader).unwrap();
-  ASSERT(leader_schedule.size() > 0);
+  LeaderSchedule leader_schedule = mainnet_beta_connection.get_leader_schedule(leader).unwrap();
+  ASSERT(leader_schedule.schedule.size() > 0);
   std::cout << " done." << std::endl;
 
   // Get all cluster nodes
@@ -102,7 +102,7 @@ int main() {
 
   // Fetch transaction using hash from the airdrop
   std::cout << "get_transaction()...";
-  TransactionResponse txResp = devnet_connection.get_transaction(tx_hash, Commitment::Confirmed).unwrap();
+  TransactionResponse txResp = devnet_connection.get_transaction(tx_hash).unwrap(); //TODO add support for , Commitment::Confirmed
   ASSERT(std::find(txResp.transaction.message.accountKeys.begin(), txResp.transaction.message.accountKeys.end(), keypair.publicKey) != txResp.transaction.message.accountKeys.end());
   std::cout << " done." << std::endl;
 
@@ -121,8 +121,8 @@ int main() {
 
   // Verify that the account was created
   std::cout << "get_account_info()...";
-  AccountInfo accountInfo = devnet_connection.get_account_info(associatedTokenAccount).unwrap();
-  ASSERT(accountInfo.account.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
+  Account account = devnet_connection.get_account_info(associatedTokenAccount).unwrap();
+  ASSERT(account.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
   std::cout << " done." << std::endl;
 
   // Get the balance of the associated token account (should be 0)
