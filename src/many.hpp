@@ -394,6 +394,14 @@ namespace many {
 
   } // namespace base64
 
+  struct Context {
+    uint64_t slot;
+  };
+
+  void from_json(const json& j, Context& context) {
+    context.slot = j["slot"].get<uint64_t>();
+  }
+
   namespace endian {
 
     /**
@@ -1649,26 +1657,26 @@ namespace many {
   class Result {
   public:
 
-    std::optional<Context> context;
-    std::optional<T> result;
-    std::optional<ResultError> error;
+    std::optional<Context> _context;
+    std::optional<T> _result;
+    std::optional<ResultError> _error;
 
     Result() = default;
 
-    Result(T result) : result(result) {}
+    Result(T result) : _result(result) {}
 
-    Result(ResultError error) : error(error) {}
+    Result(ResultError error) : _error(error) {}
 
     bool ok() const {
-      return result != std::nullopt;
+      return _result != std::nullopt;
     }
 
     T unwrap() {
-      if (error) {
-        std::cerr << error->message << std::endl;
-        throw std::runtime_error(error->message);
+      if (_error) {
+        std::cerr << _error->message << std::endl;
+        throw std::runtime_error(_error->message);
       }
-      return result.value();
+      return _result.value();
     }
   };
 
@@ -1676,20 +1684,20 @@ namespace many {
   void from_json(const json& j, Result<T>& r) {
     if (j.contains("result")) {
       if (j["result"].contains("context")) {
-        r.context = j["result"]["context"].get<Context>();
+        r._context = j["result"]["context"].get<Context>();
       }
 
       if (j["result"].contains("value")) {
         if (!j["result"]["value"].is_null()) {
-          r.result = j["result"]["value"].get<T>();
+          r._result = j["result"]["value"].get<T>();
         }
       } else {
         if (!j["result"].is_null()) {
-          r.result = j["result"].get<T>();
+          r._result = j["result"].get<T>();
         }
       }
     } else if (j.contains("error")) {
-      r.error = j["error"].get<ResultError>();
+      r._error = j["error"].get<ResultError>();
     }
   }
 
@@ -1731,7 +1739,7 @@ namespace many {
       static const uint8_t MASK_FLAG     = 0x80;
 
       int _nextSubscriptionId = 0;
-      std::map<int, void*> _subscriptions;
+      std::map<int, std::function<void(json)>> _subscriptions;
       std::map<int, int> _subscription_map;
 
       void send_message(uint8_t opcode, const char* message, size_t message_size) {
@@ -2231,9 +2239,7 @@ namespace many {
                   if (_subscription_map.find(subscription) != _subscription_map.end()) {
                     int subscription_id = _subscription_map[subscription];
                     if (_subscriptions.find(subscription_id) != _subscriptions.end()) {
-                      auto result_params = j["params"]["result"];
-                      std::function<void(nlohmann::json)>* callback = (std::function<void(nlohmann::json)>*)_subscriptions[subscription_id];
-                      (*callback)(result_params);
+                      _subscriptions[subscription_id](j["params"]);
                     }
                   }
                 } else if (j.contains("id") && j.contains("result")) {
@@ -2279,7 +2285,7 @@ namespace many {
         }
       }
 
-      int subscribe(std::string method, json params, void* callback) {
+      int subscribe(std::string method, json params, std::function<void(json)> callback) {
         if (!is_connected()) {
           connect();
         }

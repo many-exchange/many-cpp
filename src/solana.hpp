@@ -33,10 +33,8 @@
 #include <vector>
 
 #include "many.hpp"
-#include "json.hpp"
 
 using namespace many;
-using json = nlohmann::json;
 
 #define LAMPORTS_PER_SOL 1000000000
 
@@ -98,14 +96,6 @@ namespace solana {
     bool preflight_commitment = false;
     bool encoding = "base64";
   };
-
-  struct Context {
-    uint64_t slot;
-  };
-
-  void from_json(const json& j, Context& context) {
-    context.slot = j["slot"].get<uint64_t>();
-  }
 
   struct Blockhash {
     std::string blockhash;
@@ -1201,9 +1191,9 @@ namespace solana {
         {"method", "getProgramAccounts"},
         {"params", {
           program_id.to_base58(),
-          // {
-          //   "encoding", "base64"
-          // }
+          {
+            {"encoding", "base64"},
+          },
         }},
       });
     }
@@ -1438,7 +1428,10 @@ namespace solana {
             {"encoding", "base64"},
             {"commitment", _commitment},
           },
-        }, &callback);
+        }, [callback](const json& j) {
+          callback(Result<Account>(j));
+        }
+      );
     }
 
     /**
@@ -1461,15 +1454,18 @@ namespace solana {
      * @return The subscription ID. This can be used to remove the listener with remove_on_logs_listener
     */
     int on_logs(PublicKey account_id, std::function<void(Result<Logs>)> callback) {
-      return _rpc_web_socket.subscribe("programSubscribe", { 
-          "mentions", 
+      return _rpc_web_socket.subscribe("programSubscribe", {
+          "mentions",
           {
             {"mentions", account_id.to_base58()}
-          }, 
+          },
           {
             {"commitment", _commitment }
           },
-        },  &callback);
+        }, [callback](const json& j) {
+          callback(Result<Logs>(j));
+        }
+      );
     }
 
 
@@ -1499,7 +1495,10 @@ namespace solana {
             {"encoding", "base64"},
             {"commitment", _commitment},
           },
-        }, &callback);
+        }, [callback](const json& j) {
+          callback(Result<Account>(j));
+        }
+      );
     }
 
     /**
@@ -1520,8 +1519,12 @@ namespace solana {
      *
      * @return The subscription ID. This can be used to remove the listener with remove_slot_change_listener
     */
-    int on_slot_change(std::function<void(SlotInfo slotInfo)> callback) {
-      return _rpc_web_socket.subscribe("slotSubscribe", {}, &callback);
+    int on_slot_change(std::function<void(Result<SlotInfo>)> callback) {
+      return _rpc_web_socket.subscribe("slotSubscribe", {
+        }, [callback](const json& j) {
+          callback(j);
+        }
+      );
     }
 
     /**
@@ -1693,12 +1696,7 @@ namespace solana {
         associated_token_program_id
       );
 
-      Result<std::string> result = connection.sign_and_send_transaction(transaction, {payer});
-      if (result.error) {
-        return Result<PublicKey>(result.error.value());
-      }
-
-      std::cout << result.unwrap() << std::endl;
+      std::string txid = connection.sign_and_send_transaction(transaction, {payer}).unwrap();
 
       return Result<PublicKey>(associated_token);;
     }

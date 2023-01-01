@@ -7,8 +7,8 @@ using json = nlohmann::json;
 using namespace solana;
 
 int main() {
-  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  int subscriptionId = connection.on_logs(TOKEN_PROGRAM_ID, [&](Result<Logs> result) {
+  Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  int subscriptionId = connection.on_logs(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s"), [&](Result<Logs> result) {
     Logs logs = result.unwrap();
     std::cout << "signature = " << logs.signature << std::endl;
     for (auto log : logs.logs) {

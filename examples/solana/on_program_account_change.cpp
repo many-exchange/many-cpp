@@ -8,8 +8,8 @@ using namespace solana;
 
 //TODO not working
 int main() {
-  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  AccountInfo programAccountInfo = connection.get_program_accounts(TOKEN_PROGRAM_ID).unwrap()[0];
+  Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  AccountInfo programAccountInfo = connection.get_program_accounts(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s")).unwrap()[0];
   int subscriptionId = connection.on_program_account_change(programAccountInfo.pubkey, [&](Result<Account> result) {
     Account account = result.unwrap();
     std::cout << "owner = " << account.owner.to_base58() << std::endl;
