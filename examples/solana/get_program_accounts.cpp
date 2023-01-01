@@ -8,13 +8,13 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  auto programAccounts = connection.get_program_accounts(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s")).unwrap();
+  std::vector<AccountInfo> program_accounts = connection.get_program_accounts(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s")).unwrap();
 
-  for (AccountInfo programAccount : programAccounts) {
-    std::cout << "owner = " << programAccount.account.owner.to_base58() << std::endl;
-    std::cout << "lamports = " << programAccount.account.lamports << std::endl;
-    std::cout << "data = " << programAccount.account.data[0] << std::endl;
-    std::cout << "executable = " << (programAccount.account.executable ? "true" : "false") << std::endl;
+  for (AccountInfo program_account : program_accounts) {
+    std::cout << "owner = " << program_account.account.owner.to_base58() << std::endl;
+    std::cout << "lamports = " << program_account.account.lamports << std::endl;
+    std::cout << "data = " << program_account.account.data[0] << std::endl;
+    std::cout << "executable = " << (program_account.account.executable ? "true" : "false") << std::endl;
   }
 
   return 0;
