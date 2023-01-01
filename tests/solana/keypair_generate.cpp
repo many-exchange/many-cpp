@@ -17,6 +17,6 @@ TEST_CASE("Keypair::generate") {
   std::cout << "mint = " << mint.public_key.to_base58() << std::endl;
   std::cout << "owner = " << owner.public_key.to_base58() << std::endl;
 
-  const PublicKey associatedToken = token::get_associated_token_address(mint.public_key, owner.public_key);
-  std::cout << "associatedToken = " << associatedToken.to_base58() << std::endl;
+  const PublicKey associated_token = token::get_associated_token_address(mint.public_key, owner.public_key);
+  std::cout << "associated token = " << associated_token.to_base58() << std::endl;
 }
