@@ -736,638 +736,6 @@ namespace many {
 
   } // namespace http
 
-  namespace websockets {
-
-    class WebSocketClient {
-      const std::string _interface;
-      const std::string _url;
-
-      int _socket;
-      bool _use_ssl = false;
-      SSL_CTX *_ssl_ctx;
-      SSL *_ssl;
-
-      std::array<uint8_t, 17> _nonce;
-      bool _handshake_complete = false;
-
-      static const int SEND_BUFFER_SIZE = 65536;
-      static const int RECEIVE_BUFFER_SIZE = 8388608;
-
-      char* _send_buffer = nullptr;
-      char* _recv_buffer = nullptr;
-
-      static const int MESSAGE_BUFFER_SIZE = 1048576; // 1024 * 1024
-
-      char* _message_buffer;
-      int _message_start = 0;
-      int _message_end = 0;
-
-      uint8_t _send_mask[4];
-
-      //static const uint8_t OPCODE_CONT   = 0x00;
-      static const uint8_t OPCODE_TEXT   = 0x01;
-      //static const uint8_t OPCODE_BINARY = 0x02;
-      static const uint8_t OPCODE_CLOSE  = 0x08;
-      static const uint8_t OPCODE_PING   = 0x09;
-      static const uint8_t OPCODE_PONG   = 0x0A;
-      static const uint8_t FIN_FLAG      = 0x80;
-      static const uint8_t MASK_FLAG     = 0x80;
-
-      int _nextSubscriptionId = 0;
-      std::map<int, void*> _subscriptions;
-      std::map<int, int> _subscription_map;
-
-      void send_message(uint8_t opcode, const char* message, size_t message_size) {
-        int send_length = 0;
-
-        _send_buffer[send_length] = opcode | FIN_FLAG;
-        send_length++;
-
-        //size_t message_size = message.size();
-
-        if (message_size <= 125) {
-          _send_buffer[send_length] = message_size | MASK_FLAG;
-          send_length++;
-        }
-        else if (message_size <= 65535) {
-          _send_buffer[send_length] = (uint8_t)(126 | MASK_FLAG);
-          _send_buffer[send_length + 1] = (message_size >> 8) & 0xFF;
-          _send_buffer[send_length + 2] = message_size & 0xFF;
-          send_length += 3;
-        }
-        else {
-          std::cerr << "Message too big." << std::endl;
-          disconnect();
-          return;
-        }
-
-        _send_buffer[send_length] = _send_mask[0];
-        _send_buffer[send_length + 1] = _send_mask[1];
-        _send_buffer[send_length + 2] = _send_mask[2];
-        _send_buffer[send_length + 3] = _send_mask[3];
-        send_length += 4;
-
-        //const char* msg = message.c_str();
-        for (size_t i = 0; i < message_size; ++i) {
-            _send_buffer[send_length + i] = message[i] ^ _send_mask[i % 4];
-        }
-
-        send_length += message_size;
-
-        write(_send_buffer, send_length);
-      }
-
-      bool validate_handshake(char *buffer, int length) {
-        bool accept = false;
-
-        int start = 0;
-        int end = 0;
-        while (end < length) {
-          end++;
-
-          if (buffer[end] == '\n') {
-            if (strncasecmp(&buffer[start], "Connection: ", 12) == 0) {
-              if (strncasecmp(&buffer[start], "Connection: Upgrade", 19) != 0 && strncasecmp(&buffer[start], "Connection: upgrade", 19) != 0) {
-                return false;
-              }
-            }
-            else if (strncasecmp(&buffer[start], "Upgrade: ", 9) == 0) {
-              if (strncasecmp(&buffer[start], "Upgrade: websocket", 18) != 0) {
-                return false;
-              }
-            }
-            else if (strncasecmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0) {
-              std::string key = base64::encode(_nonce.begin(), 16) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-              char sha1[20];
-              SHA1((const unsigned char *)key.data(), key.size(), (unsigned char *)sha1);
-              std::string hash = base64::encode((unsigned char *)sha1, 20);
-
-              accept = (strncasecmp(&buffer[start + 22], hash.c_str(), 20) == 0);
-            }
-
-            start = end + 1;
-          }
-        }
-
-        return accept;
-      }
-
-      char* read(int& length) {
-        length = 0;
-
-        if (!is_connected()) {
-          return nullptr;
-        }
-
-        struct timeval tv;
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(_socket, &readfds);
-        int rv = select(_socket + 1, &readfds, NULL, NULL, &tv);
-
-        if(rv > 0 && FD_ISSET(_socket, &readfds)) {
-          length = (_use_ssl) ? SSL_read(_ssl, _recv_buffer, 8192) : ::read(_socket, _recv_buffer, 8192);
-
-          if (length > 0) {
-            return _recv_buffer;
-          }
-          else if (length < 0) {
-            std::cerr << "READ FAILED" << std::endl;
-
-            if (_use_ssl) {
-              switch (SSL_get_error(_ssl, length)) {
-                case SSL_ERROR_WANT_WRITE: std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl; break;
-                case SSL_ERROR_WANT_READ: std::cerr << "SSL_ERROR_WANT_READ" << std::endl; break;
-                case SSL_ERROR_ZERO_RETURN: std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl; break;
-                case SSL_ERROR_SYSCALL: std::cerr << "SSL_ERROR_SYSCALL" << std::endl; break;
-                case SSL_ERROR_SSL: std::cerr << "SSL_ERROR_SSL" << std::endl; break;
-              }
-            }
-
-            disconnect();
-
-            return nullptr;
-          }
-
-          return nullptr;
-        }
-        else {
-          return nullptr;
-        }
-      }
-
-      bool write(const void* buffer, const int length) {
-        if (!is_connected()) {
-          return false;
-        }
-
-        ASSERT(length > 0);
-        int return_code = (_use_ssl) ? SSL_write(_ssl, buffer, length) : ::write(_socket, buffer, length);
-
-        if (_handshake_complete) {
-          //TODO: log
-        }
-
-        if (return_code <= 0) {
-          if (_use_ssl) {
-            int err = SSL_get_error(_ssl, length);
-            switch (err) {
-              case SSL_ERROR_WANT_WRITE:
-              {
-                std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl;
-                break;
-              }
-              case SSL_ERROR_WANT_READ:
-              {
-                std::cerr << "SSL_ERROR_WANT_READ" << std::endl;
-                break;
-              }
-              case SSL_ERROR_ZERO_RETURN:
-              {
-                std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl;
-                break;
-              }
-              case SSL_ERROR_SYSCALL:
-              {
-                std::cerr << "SSL_ERROR_SYSCALL" << std::endl;
-                break;
-              }
-              case SSL_ERROR_SSL:
-              {
-                std::cerr << "SSL_ERROR_SSL" << std::endl;
-                break;
-              }
-            }
-          }
-
-          std::cerr << "SEND FAILED" << std::endl;
-          disconnect();
-          return false;
-        }
-
-        return true;
-      }
-
-      // void send_close(std::string message) {
-      //   send_message(OPCODE_CLOSE, message.c_str(), message.size());
-      // }
-
-      // void send_ping(std::string message) {
-      //   send_message(OPCODE_PING, message.c_str(), message.size());
-      // }
-
-      // void send_pong(std::string message) {
-      //   send_message(OPCODE_PONG, message.c_str(), message.size());
-      // }
-
-      void send_message(json j) {
-        std::string message = j.dump();
-        send_message(OPCODE_TEXT, message.c_str(), message.size());
-      }
-
-    public:
-
-      WebSocketClient(const std::string url, const std::string interface = "")
-        : _url(url),
-        _interface(interface),
-        _socket(-1),
-        _ssl_ctx(nullptr),
-        _ssl(nullptr)
-      {
-        _nonce[16] = 0;
-
-        _send_buffer = (char*)malloc(SEND_BUFFER_SIZE);
-        _recv_buffer = (char*)malloc(RECEIVE_BUFFER_SIZE);
-        _message_buffer = (char*)malloc(MESSAGE_BUFFER_SIZE);
-      }
-
-      ~WebSocketClient() {
-        disconnect();
-
-        free(_send_buffer);
-        free(_recv_buffer);
-        free(_message_buffer);
-      }
-
-      WebSocketClient() = delete;
-      WebSocketClient(const WebSocketClient&) = delete;
-      WebSocketClient(WebSocketClient&&) = delete;
-      WebSocketClient& operator=(const WebSocketClient&) = delete;
-      WebSocketClient& operator=(WebSocketClient&&) = delete;
-
-      bool is_connected() {
-        return _socket != -1;
-      }
-
-      bool connect() {
-        std::size_t index = _url.find("://");
-        ASSERT(index != std::string::npos);
-        std::string protocol = _url.substr(0, index);
-        _use_ssl = (protocol == "wss");
-        int port = _use_ssl ? 443 : 80;
-        index += 3; // "://"
-        std::size_t end = _url.find("/", index + 1);
-        std::string hostname = _url.substr(index, end - index);
-        index = hostname.find(":");
-        if (index != std::string::npos) {
-          port = std::stoi(hostname.substr(index + 1)) + 1;
-          hostname = hostname.substr(0, index);
-        }
-
-        struct hostent *server;
-        server = gethostbyname(hostname.c_str());
-        if (server == NULL) {
-          std::cerr << "Error: gethostbyname() failed" << std::endl;
-          return false;
-        }
-
-        ASSERT(server->h_addrtype == AF_INET);
-
-        int i = 0;
-        while (server->h_addr_list[i] != NULL) {
-          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], port)) {
-            return true;
-          }
-          i++;
-        }
-
-        return false;
-      }
-
-    private:
-
-      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t port) {
-        ASSERT(_socket == -1);
-
-        _handshake_complete = false;
-
-        _socket = socket(AF_INET, SOCK_STREAM, 0);
-        if (_socket < 0) {
-          std::cerr << "Error: socket() failed" << std::endl;
-          disconnect();
-          return false;
-        }
-
-        struct sockaddr_in localaddr;
-        memset(&localaddr, 0, sizeof(localaddr));
-        localaddr.sin_family = AF_INET;
-
-        if (_interface.size() > 0) {
-          localaddr.sin_addr.s_addr = inet_addr(_interface.c_str());
-          bind(_socket, (sockaddr *)&localaddr, sizeof(localaddr));
-        }
-
-        struct sockaddr_in remoteaddr;
-        bzero(&remoteaddr, sizeof(remoteaddr));
-        remoteaddr.sin_family = AF_INET;
-        remoteaddr.sin_port = htons(port);
-        remoteaddr.sin_addr.s_addr = *(long *)addr;
-
-        std::string address = inet_ntoa(*addr);
-
-        if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1) {
-          std::cerr << "CONNECT FAILED" << std::endl;
-          std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
-          std::cerr << "  address = " << address << std::endl;
-          std::cerr << "  port = " << std::to_string(port) << std::endl << std::endl;
-          disconnect();
-          return false;
-        }
-
-        if (_use_ssl) {
-          const SSL_METHOD *method = TLS_client_method();
-
-          _ssl_ctx = SSL_CTX_new(method);
-          if (_ssl_ctx == NULL) {
-            std::cerr << "Error: SSL_CTX_new() failed" << std::endl;
-            disconnect();
-            return false;
-          }
-
-          _ssl = SSL_new(_ssl_ctx);
-          if (_ssl == NULL) {
-            std::cerr << "Error: SSL_new() failed" << std::endl;
-            int err;
-            while ((err = ERR_get_error()) != 0) {
-              char *str = ERR_error_string(err, 0);
-              if (str != nullptr) {
-                std::cerr << str << std::endl;
-              }
-            }
-            disconnect();
-            return false;
-          }
-
-          if (SSL_set_fd(_ssl, _socket) == 0) {
-            std::cerr << "Error: SSL_set_fd() failed" << std::endl;
-            disconnect();
-            return false;
-          }
-
-          SSL_set_tlsext_host_name(_ssl, hostname.c_str());
-
-          while (true) {
-            int ret = SSL_connect(_ssl);
-
-            if (ret == 1) {
-              break;
-            }
-            else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
-              // Not enough data because we are using non-blocking IO.
-            }
-            else {
-              std::cerr << "Error: SSL_connect() failed" << std::endl;
-              disconnect();
-              return false;
-            }
-          }
-        }
-
-        // std::cout << "CONNECT" << std::endl;
-        // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
-        // std::cout << "  address = " << address << std::endl;
-        // std::cout << "  port = " << std::to_string(port) << std::endl << std::endl;
-
-        std::generate(_nonce.begin(), _nonce.end(), []() { return (uint8_t)std::rand(); });
-        std::string websocket_key = base64::encode(_nonce.begin(), 16);
-
-        int send_length = 0;
-        send_length += sprintf(&_send_buffer[send_length], "GET / HTTP/1.1\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "Host: %s\r\n", hostname.c_str());
-        send_length += sprintf(&_send_buffer[send_length], "Upgrade: websocket\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "Connection: Upgrade\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "Sec-WebSocket-Key: %s\r\n", websocket_key.c_str());
-        send_length += sprintf(&_send_buffer[send_length], "Sec-WebSocket-Version: 13\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "\r\n");
-
-        write(_send_buffer, send_length);
-
-        while (is_connected()) {
-          int length;
-          char *buffer = read(length);
-
-          if (length > 0) {
-            if (validate_handshake(buffer, length)) {
-              //end_read(0);
-              _handshake_complete = true;
-              *((uint32_t *)_send_mask) = rand();
-              return true;
-            }
-            else {
-              //end_read(0);
-              std::cerr << "HANDSHAKE FAILED" << std::endl;
-              disconnect();
-              return false;
-            }
-
-            break;
-          }
-        }
-
-        return false;
-      }
-
-    public:
-
-      bool disconnect() {
-        if (_use_ssl) {
-          if (_ssl != nullptr) {
-            SSL_shutdown(_ssl);
-            SSL_free(_ssl);
-            _ssl = nullptr;
-          }
-          if (_ssl_ctx != nullptr) {
-            SSL_CTX_free(_ssl_ctx);
-            _ssl_ctx = nullptr;
-          }
-        }
-        if (_socket != -1) {
-          close(_socket);
-          _socket = -1;
-        }
-        return true;
-      }
-
-      void poll() {
-        if (!is_connected() || !_handshake_complete) {
-          return;
-        }
-
-        int length = 0;
-        char* buffer = read(length);
-
-        if ((_message_end + length) >= MESSAGE_BUFFER_SIZE) {
-          std::cerr << "Message buffer out of space." << std::endl;
-          disconnect();
-          _message_start = 0;
-          _message_end = 0;
-          return;
-        }
-
-        memcpy(&_message_buffer[_message_end], buffer, length);
-        _message_end += length;
-
-        while ((_message_start + 1) < _message_end) {
-          uint8_t opcode = _message_buffer[_message_start] & 0x0F;
-          bool fin = ((_message_buffer[_message_start] >> 7) & 0x01) != 0;
-
-          bool mask = ((_message_buffer[_message_start + 1] >> 7) & 0x01) != 0;
-
-          if (mask) {
-            std::cerr << "Mask not expected." << std::endl;
-            disconnect();
-            _message_start = 0;
-            _message_end = 0;
-            return;
-          }
-
-          size_t payload_size = _message_buffer[_message_start + 1] & ~MASK_FLAG;
-
-          if (payload_size <= 125) {
-            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
-            if ((_message_start + 2 + payload_size) > _message_end)
-            {
-              break;
-            }
-            _message_start += 2;
-          }
-          else if (payload_size == 126) {
-            payload_size = ntohs(*(uint16_t*)&_message_buffer[_message_start + 2]);
-            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
-            if ((_message_start + 4 + payload_size) > _message_end) {
-              break;
-            }
-            _message_start += 4;
-          }
-          else if (payload_size == 127) {
-            payload_size = endian::be64toh(*(uint64_t*)&_message_buffer[_message_start + 2]);
-            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
-            if ((_message_start + 10 + payload_size) > _message_end) {
-              break;
-            }
-            _message_start += 10;
-          }
-
-          ASSERT((_message_start + payload_size) <= _message_end);
-
-          switch (opcode) {
-            case OPCODE_TEXT:
-            {
-              if (_message_buffer[_message_start] != '{') {
-                std::cerr << "Expected '{'." << std::endl;
-                disconnect();
-                _message_start = 0;
-                _message_end = 0;
-                return;
-              }
-
-              if (payload_size > 0) {
-                std::string message = std::string(&_message_buffer[_message_start], payload_size);
-                json j = json::parse(message);
-
-                if (j.contains("params")) {
-                  std::string method = j["method"];
-                  int subscription = j["params"]["subscription"];
-                  if (_subscription_map.find(subscription) != _subscription_map.end()) {
-                    int subscription_id = _subscription_map[subscription];
-                    if (_subscriptions.find(subscription_id) != _subscriptions.end()) {
-                      auto result_params = j["params"]["result"];
-                      std::function<void(nlohmann::json)>* callback = (std::function<void(nlohmann::json)>*)_subscriptions[subscription_id];
-                      (*callback)(result_params);
-                    }
-                  }
-                } else if (j.contains("id") && j.contains("result")) {
-                  int id = j["id"];
-                  int result = j["result"];
-                  _subscription_map[result] = id;
-                }
-              }
-              break;
-            }
-            case OPCODE_CLOSE:
-            {
-              disconnect();
-              return;
-            }
-            case OPCODE_PING:
-            {
-              //if (_pong_message.size() > 0)
-              //{
-                //send_pong(_pong_message);
-              //}
-              break;
-            }
-            case OPCODE_PONG:
-            {
-              //LastPongTimestamp = timestamp;
-              break;
-            }
-          }
-
-          _message_start += payload_size;
-        }
-
-        if (_message_start == _message_end) {
-          _message_start = 0;
-          _message_end = 0;
-        }
-        else if (_message_start >= 8192) {
-          ASSERT(_message_end > _message_start);
-          memmove(_message_buffer, &_message_buffer[_message_start], _message_end - _message_start);
-          _message_end -= _message_start;
-          _message_start = 0;
-        }
-      }
-
-      int subscribe(std::string method, json params, void* callback) {
-        if (!is_connected()) {
-          connect();
-        }
-        ASSERT(is_connected());
-
-        int subscriptionId = ++_nextSubscriptionId;
-        if (params.is_null()) {
-          send_message({
-            {"jsonrpc", "2.0"},
-            {"id", subscriptionId},
-            {"method", method},
-          });
-        } else {
-          send_message({
-            {"jsonrpc", "2.0"},
-            {"id", subscriptionId},
-            {"method", method},
-            {"params", params},
-          });
-        }
-
-        _subscriptions[subscriptionId] = callback;
-        return subscriptionId;
-      }
-
-      void unsubscribe(int subscriptionId, std::string method) {
-        if (_subscriptions.find(subscriptionId) != _subscriptions.end()) {
-          if (is_connected()) {
-            send_message({
-              {"jsonrpc", "2.0"},
-              {"id", subscriptionId},
-              {"method", method},
-              {"params", {
-                subscriptionId,
-              }},
-            });
-          }
-          _subscriptions.erase(subscriptionId);
-        }
-      }
-
-    };
-
-  } // namespace websockets
-
   namespace libsodium {
 
     /**
@@ -2266,5 +1634,695 @@ namespace many {
     }
 
   } // namespace libsodium
+
+  struct ResultError {
+    int64_t code;
+    std::string message;
+  };
+
+  void from_json(const json& j, ResultError& t) {
+    t.code = j["code"].get<int64_t>();
+    t.message = j["message"].get<std::string>();
+  }
+
+  template <typename T>
+  class Result {
+  public:
+
+    std::optional<Context> context;
+    std::optional<T> result;
+    std::optional<ResultError> error;
+
+    Result() = default;
+
+    Result(T result) : result(result) {}
+
+    Result(ResultError error) : error(error) {}
+
+    bool ok() const {
+      return result != std::nullopt;
+    }
+
+    T unwrap() {
+      if (error) {
+        std::cerr << error->message << std::endl;
+        throw std::runtime_error(error->message);
+      }
+      return result.value();
+    }
+  };
+
+  template <typename T>
+  void from_json(const json& j, Result<T>& r) {
+    if (j.contains("result")) {
+      if (j["result"].contains("context")) {
+        r.context = j["result"]["context"].get<Context>();
+      }
+
+      if (j["result"].contains("value")) {
+        if (!j["result"]["value"].is_null()) {
+          r.result = j["result"]["value"].get<T>();
+        }
+      } else {
+        if (!j["result"].is_null()) {
+          r.result = j["result"].get<T>();
+        }
+      }
+    } else if (j.contains("error")) {
+      r.error = j["error"].get<ResultError>();
+    }
+  }
+
+  namespace websockets {
+
+    class WebSocketClient {
+      const std::string _interface;
+      const std::string _url;
+
+      int _socket;
+      bool _use_ssl = false;
+      SSL_CTX *_ssl_ctx;
+      SSL *_ssl;
+
+      std::array<uint8_t, 17> _nonce;
+      bool _handshake_complete = false;
+
+      static const int SEND_BUFFER_SIZE = 65536;
+      static const int RECEIVE_BUFFER_SIZE = 8388608;
+
+      char* _send_buffer = nullptr;
+      char* _recv_buffer = nullptr;
+
+      static const int MESSAGE_BUFFER_SIZE = 1048576; // 1024 * 1024
+
+      char* _message_buffer;
+      int _message_start = 0;
+      int _message_end = 0;
+
+      uint8_t _send_mask[4];
+
+      //static const uint8_t OPCODE_CONT   = 0x00;
+      static const uint8_t OPCODE_TEXT   = 0x01;
+      //static const uint8_t OPCODE_BINARY = 0x02;
+      static const uint8_t OPCODE_CLOSE  = 0x08;
+      static const uint8_t OPCODE_PING   = 0x09;
+      static const uint8_t OPCODE_PONG   = 0x0A;
+      static const uint8_t FIN_FLAG      = 0x80;
+      static const uint8_t MASK_FLAG     = 0x80;
+
+      int _nextSubscriptionId = 0;
+      std::map<int, void*> _subscriptions;
+      std::map<int, int> _subscription_map;
+
+      void send_message(uint8_t opcode, const char* message, size_t message_size) {
+        int send_length = 0;
+
+        _send_buffer[send_length] = opcode | FIN_FLAG;
+        send_length++;
+
+        //size_t message_size = message.size();
+
+        if (message_size <= 125) {
+          _send_buffer[send_length] = message_size | MASK_FLAG;
+          send_length++;
+        }
+        else if (message_size <= 65535) {
+          _send_buffer[send_length] = (uint8_t)(126 | MASK_FLAG);
+          _send_buffer[send_length + 1] = (message_size >> 8) & 0xFF;
+          _send_buffer[send_length + 2] = message_size & 0xFF;
+          send_length += 3;
+        }
+        else {
+          std::cerr << "Message too big." << std::endl;
+          disconnect();
+          return;
+        }
+
+        _send_buffer[send_length] = _send_mask[0];
+        _send_buffer[send_length + 1] = _send_mask[1];
+        _send_buffer[send_length + 2] = _send_mask[2];
+        _send_buffer[send_length + 3] = _send_mask[3];
+        send_length += 4;
+
+        //const char* msg = message.c_str();
+        for (size_t i = 0; i < message_size; ++i) {
+            _send_buffer[send_length + i] = message[i] ^ _send_mask[i % 4];
+        }
+
+        send_length += message_size;
+
+        write(_send_buffer, send_length);
+      }
+
+      bool validate_handshake(char *buffer, int length) {
+        bool accept = false;
+
+        int start = 0;
+        int end = 0;
+        while (end < length) {
+          end++;
+
+          if (buffer[end] == '\n') {
+            if (strncasecmp(&buffer[start], "Connection: ", 12) == 0) {
+              if (strncasecmp(&buffer[start], "Connection: Upgrade", 19) != 0 && strncasecmp(&buffer[start], "Connection: upgrade", 19) != 0) {
+                return false;
+              }
+            }
+            else if (strncasecmp(&buffer[start], "Upgrade: ", 9) == 0) {
+              if (strncasecmp(&buffer[start], "Upgrade: websocket", 18) != 0) {
+                return false;
+              }
+            }
+            else if (strncasecmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0) {
+              std::string key = base64::encode(_nonce.begin(), 16) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+              char sha1[20];
+              SHA1((const unsigned char *)key.data(), key.size(), (unsigned char *)sha1);
+              std::string hash = base64::encode((unsigned char *)sha1, 20);
+
+              accept = (strncasecmp(&buffer[start + 22], hash.c_str(), 20) == 0);
+            }
+
+            start = end + 1;
+          }
+        }
+
+        return accept;
+      }
+
+      char* read(int& length) {
+        length = 0;
+
+        if (!is_connected()) {
+          return nullptr;
+        }
+
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(_socket, &readfds);
+        int rv = select(_socket + 1, &readfds, NULL, NULL, &tv);
+
+        if(rv > 0 && FD_ISSET(_socket, &readfds)) {
+          length = (_use_ssl) ? SSL_read(_ssl, _recv_buffer, 8192) : ::read(_socket, _recv_buffer, 8192);
+
+          if (length > 0) {
+            return _recv_buffer;
+          }
+          else if (length < 0) {
+            std::cerr << "READ FAILED" << std::endl;
+
+            if (_use_ssl) {
+              switch (SSL_get_error(_ssl, length)) {
+                case SSL_ERROR_WANT_WRITE: std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl; break;
+                case SSL_ERROR_WANT_READ: std::cerr << "SSL_ERROR_WANT_READ" << std::endl; break;
+                case SSL_ERROR_ZERO_RETURN: std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl; break;
+                case SSL_ERROR_SYSCALL: std::cerr << "SSL_ERROR_SYSCALL" << std::endl; break;
+                case SSL_ERROR_SSL: std::cerr << "SSL_ERROR_SSL" << std::endl; break;
+              }
+            }
+
+            disconnect();
+
+            return nullptr;
+          }
+
+          return nullptr;
+        }
+        else {
+          return nullptr;
+        }
+      }
+
+      bool write(const void* buffer, const int length) {
+        if (!is_connected()) {
+          return false;
+        }
+
+        ASSERT(length > 0);
+        int return_code = (_use_ssl) ? SSL_write(_ssl, buffer, length) : ::write(_socket, buffer, length);
+
+        if (_handshake_complete) {
+          //TODO: log
+        }
+
+        if (return_code <= 0) {
+          if (_use_ssl) {
+            int err = SSL_get_error(_ssl, length);
+            switch (err) {
+              case SSL_ERROR_WANT_WRITE:
+              {
+                std::cerr << "SSL_ERROR_WANT_WRITE" << std::endl;
+                break;
+              }
+              case SSL_ERROR_WANT_READ:
+              {
+                std::cerr << "SSL_ERROR_WANT_READ" << std::endl;
+                break;
+              }
+              case SSL_ERROR_ZERO_RETURN:
+              {
+                std::cerr << "SSL_ERROR_ZERO_RETURN" << std::endl;
+                break;
+              }
+              case SSL_ERROR_SYSCALL:
+              {
+                std::cerr << "SSL_ERROR_SYSCALL" << std::endl;
+                break;
+              }
+              case SSL_ERROR_SSL:
+              {
+                std::cerr << "SSL_ERROR_SSL" << std::endl;
+                break;
+              }
+            }
+          }
+
+          std::cerr << "SEND FAILED" << std::endl;
+          disconnect();
+          return false;
+        }
+
+        return true;
+      }
+
+      // void send_close(std::string message) {
+      //   send_message(OPCODE_CLOSE, message.c_str(), message.size());
+      // }
+
+      // void send_ping(std::string message) {
+      //   send_message(OPCODE_PING, message.c_str(), message.size());
+      // }
+
+      // void send_pong(std::string message) {
+      //   send_message(OPCODE_PONG, message.c_str(), message.size());
+      // }
+
+      void send_message(json j) {
+        std::string message = j.dump();
+        send_message(OPCODE_TEXT, message.c_str(), message.size());
+      }
+
+    public:
+
+      WebSocketClient(const std::string url, const std::string interface = "")
+        : _url(url),
+        _interface(interface),
+        _socket(-1),
+        _ssl_ctx(nullptr),
+        _ssl(nullptr)
+      {
+        _nonce[16] = 0;
+
+        _send_buffer = (char*)malloc(SEND_BUFFER_SIZE);
+        _recv_buffer = (char*)malloc(RECEIVE_BUFFER_SIZE);
+        _message_buffer = (char*)malloc(MESSAGE_BUFFER_SIZE);
+      }
+
+      ~WebSocketClient() {
+        disconnect();
+
+        free(_send_buffer);
+        free(_recv_buffer);
+        free(_message_buffer);
+      }
+
+      WebSocketClient() = delete;
+      WebSocketClient(const WebSocketClient&) = delete;
+      WebSocketClient(WebSocketClient&&) = delete;
+      WebSocketClient& operator=(const WebSocketClient&) = delete;
+      WebSocketClient& operator=(WebSocketClient&&) = delete;
+
+      bool is_connected() {
+        return _socket != -1;
+      }
+
+      bool connect() {
+        std::size_t index = _url.find("://");
+        ASSERT(index != std::string::npos);
+        std::string protocol = _url.substr(0, index);
+        _use_ssl = (protocol == "wss");
+        int port = _use_ssl ? 443 : 80;
+        index += 3; // "://"
+        std::size_t end = _url.find("/", index + 1);
+        std::string hostname = _url.substr(index, end - index);
+        index = hostname.find(":");
+        if (index != std::string::npos) {
+          port = std::stoi(hostname.substr(index + 1)) + 1;
+          hostname = hostname.substr(0, index);
+        }
+
+        struct hostent *server;
+        server = gethostbyname(hostname.c_str());
+        if (server == NULL) {
+          std::cerr << "Error: gethostbyname() failed" << std::endl;
+          return false;
+        }
+
+        ASSERT(server->h_addrtype == AF_INET);
+
+        int i = 0;
+        while (server->h_addr_list[i] != NULL) {
+          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], port)) {
+            return true;
+          }
+          i++;
+        }
+
+        return false;
+      }
+
+    private:
+
+      bool connect(const std::string& hostname, struct in_addr *addr, uint16_t port) {
+        ASSERT(_socket == -1);
+
+        _handshake_complete = false;
+
+        _socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (_socket < 0) {
+          std::cerr << "Error: socket() failed" << std::endl;
+          disconnect();
+          return false;
+        }
+
+        struct sockaddr_in localaddr;
+        memset(&localaddr, 0, sizeof(localaddr));
+        localaddr.sin_family = AF_INET;
+
+        if (_interface.size() > 0) {
+          localaddr.sin_addr.s_addr = inet_addr(_interface.c_str());
+          bind(_socket, (sockaddr *)&localaddr, sizeof(localaddr));
+        }
+
+        struct sockaddr_in remoteaddr;
+        bzero(&remoteaddr, sizeof(remoteaddr));
+        remoteaddr.sin_family = AF_INET;
+        remoteaddr.sin_port = htons(port);
+        remoteaddr.sin_addr.s_addr = *(long *)addr;
+
+        std::string address = inet_ntoa(*addr);
+
+        if (::connect(_socket, (sockaddr *)&remoteaddr, (int)sizeof(remoteaddr)) == -1) {
+          std::cerr << "CONNECT FAILED" << std::endl;
+          std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
+          std::cerr << "  address = " << address << std::endl;
+          std::cerr << "  port = " << std::to_string(port) << std::endl << std::endl;
+          disconnect();
+          return false;
+        }
+
+        if (_use_ssl) {
+          const SSL_METHOD *method = TLS_client_method();
+
+          _ssl_ctx = SSL_CTX_new(method);
+          if (_ssl_ctx == NULL) {
+            std::cerr << "Error: SSL_CTX_new() failed" << std::endl;
+            disconnect();
+            return false;
+          }
+
+          _ssl = SSL_new(_ssl_ctx);
+          if (_ssl == NULL) {
+            std::cerr << "Error: SSL_new() failed" << std::endl;
+            int err;
+            while ((err = ERR_get_error()) != 0) {
+              char *str = ERR_error_string(err, 0);
+              if (str != nullptr) {
+                std::cerr << str << std::endl;
+              }
+            }
+            disconnect();
+            return false;
+          }
+
+          if (SSL_set_fd(_ssl, _socket) == 0) {
+            std::cerr << "Error: SSL_set_fd() failed" << std::endl;
+            disconnect();
+            return false;
+          }
+
+          SSL_set_tlsext_host_name(_ssl, hostname.c_str());
+
+          while (true) {
+            int ret = SSL_connect(_ssl);
+
+            if (ret == 1) {
+              break;
+            }
+            else if (SSL_get_error(_ssl, ret) == SSL_ERROR_WANT_READ) {
+              // Not enough data because we are using non-blocking IO.
+            }
+            else {
+              std::cerr << "Error: SSL_connect() failed" << std::endl;
+              disconnect();
+              return false;
+            }
+          }
+        }
+
+        // std::cout << "CONNECT" << std::endl;
+        // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
+        // std::cout << "  address = " << address << std::endl;
+        // std::cout << "  port = " << std::to_string(port) << std::endl << std::endl;
+
+        std::generate(_nonce.begin(), _nonce.end(), []() { return (uint8_t)std::rand(); });
+        std::string websocket_key = base64::encode(_nonce.begin(), 16);
+
+        int send_length = 0;
+        send_length += sprintf(&_send_buffer[send_length], "GET / HTTP/1.1\r\n");
+        send_length += sprintf(&_send_buffer[send_length], "Host: %s\r\n", hostname.c_str());
+        send_length += sprintf(&_send_buffer[send_length], "Upgrade: websocket\r\n");
+        send_length += sprintf(&_send_buffer[send_length], "Connection: Upgrade\r\n");
+        send_length += sprintf(&_send_buffer[send_length], "Sec-WebSocket-Key: %s\r\n", websocket_key.c_str());
+        send_length += sprintf(&_send_buffer[send_length], "Sec-WebSocket-Version: 13\r\n");
+        send_length += sprintf(&_send_buffer[send_length], "\r\n");
+
+        write(_send_buffer, send_length);
+
+        while (is_connected()) {
+          int length;
+          char *buffer = read(length);
+
+          if (length > 0) {
+            if (validate_handshake(buffer, length)) {
+              //end_read(0);
+              _handshake_complete = true;
+              *((uint32_t *)_send_mask) = rand();
+              return true;
+            }
+            else {
+              //end_read(0);
+              std::cerr << "HANDSHAKE FAILED" << std::endl;
+              disconnect();
+              return false;
+            }
+
+            break;
+          }
+        }
+
+        return false;
+      }
+
+    public:
+
+      bool disconnect() {
+        if (_use_ssl) {
+          if (_ssl != nullptr) {
+            SSL_shutdown(_ssl);
+            SSL_free(_ssl);
+            _ssl = nullptr;
+          }
+          if (_ssl_ctx != nullptr) {
+            SSL_CTX_free(_ssl_ctx);
+            _ssl_ctx = nullptr;
+          }
+        }
+        if (_socket != -1) {
+          close(_socket);
+          _socket = -1;
+        }
+        return true;
+      }
+
+      void poll() {
+        if (!is_connected() || !_handshake_complete) {
+          return;
+        }
+
+        int length = 0;
+        char* buffer = read(length);
+
+        if ((_message_end + length) >= MESSAGE_BUFFER_SIZE) {
+          std::cerr << "Message buffer out of space." << std::endl;
+          disconnect();
+          _message_start = 0;
+          _message_end = 0;
+          return;
+        }
+
+        memcpy(&_message_buffer[_message_end], buffer, length);
+        _message_end += length;
+
+        while ((_message_start + 1) < _message_end) {
+          uint8_t opcode = _message_buffer[_message_start] & 0x0F;
+          bool fin = ((_message_buffer[_message_start] >> 7) & 0x01) != 0;
+
+          bool mask = ((_message_buffer[_message_start + 1] >> 7) & 0x01) != 0;
+
+          if (mask) {
+            std::cerr << "Mask not expected." << std::endl;
+            disconnect();
+            _message_start = 0;
+            _message_end = 0;
+            return;
+          }
+
+          size_t payload_size = _message_buffer[_message_start + 1] & ~MASK_FLAG;
+
+          if (payload_size <= 125) {
+            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
+            if ((_message_start + 2 + payload_size) > _message_end)
+            {
+              break;
+            }
+            _message_start += 2;
+          }
+          else if (payload_size == 126) {
+            payload_size = ntohs(*(uint16_t*)&_message_buffer[_message_start + 2]);
+            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
+            if ((_message_start + 4 + payload_size) > _message_end) {
+              break;
+            }
+            _message_start += 4;
+          }
+          else if (payload_size == 127) {
+            payload_size = endian::be64toh(*(uint64_t*)&_message_buffer[_message_start + 2]);
+            ASSERT((_message_start + payload_size) < MESSAGE_BUFFER_SIZE);
+            if ((_message_start + 10 + payload_size) > _message_end) {
+              break;
+            }
+            _message_start += 10;
+          }
+
+          ASSERT((_message_start + payload_size) <= _message_end);
+
+          switch (opcode) {
+            case OPCODE_TEXT:
+            {
+              if (_message_buffer[_message_start] != '{') {
+                std::cerr << "Expected '{'." << std::endl;
+                disconnect();
+                _message_start = 0;
+                _message_end = 0;
+                return;
+              }
+
+              if (payload_size > 0) {
+                std::string message = std::string(&_message_buffer[_message_start], payload_size);
+                json j = json::parse(message);
+
+                if (j.contains("params")) {
+                  std::string method = j["method"];
+                  int subscription = j["params"]["subscription"];
+                  if (_subscription_map.find(subscription) != _subscription_map.end()) {
+                    int subscription_id = _subscription_map[subscription];
+                    if (_subscriptions.find(subscription_id) != _subscriptions.end()) {
+                      auto result_params = j["params"]["result"];
+                      std::function<void(nlohmann::json)>* callback = (std::function<void(nlohmann::json)>*)_subscriptions[subscription_id];
+                      (*callback)(result_params);
+                    }
+                  }
+                } else if (j.contains("id") && j.contains("result")) {
+                  int id = j["id"];
+                  int result = j["result"];
+                  _subscription_map[result] = id;
+                }
+              }
+              break;
+            }
+            case OPCODE_CLOSE:
+            {
+              disconnect();
+              return;
+            }
+            case OPCODE_PING:
+            {
+              //if (_pong_message.size() > 0)
+              //{
+                //send_pong(_pong_message);
+              //}
+              break;
+            }
+            case OPCODE_PONG:
+            {
+              //LastPongTimestamp = timestamp;
+              break;
+            }
+          }
+
+          _message_start += payload_size;
+        }
+
+        if (_message_start == _message_end) {
+          _message_start = 0;
+          _message_end = 0;
+        }
+        else if (_message_start >= 8192) {
+          ASSERT(_message_end > _message_start);
+          memmove(_message_buffer, &_message_buffer[_message_start], _message_end - _message_start);
+          _message_end -= _message_start;
+          _message_start = 0;
+        }
+      }
+
+      int subscribe(std::string method, json params, void* callback) {
+        if (!is_connected()) {
+          connect();
+        }
+        ASSERT(is_connected());
+
+        int subscriptionId = ++_nextSubscriptionId;
+        if (params.is_null()) {
+          send_message({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", method},
+          });
+        } else {
+          send_message({
+            {"jsonrpc", "2.0"},
+            {"id", subscriptionId},
+            {"method", method},
+            {"params", params},
+          });
+        }
+
+        _subscriptions[subscriptionId] = callback;
+        return subscriptionId;
+      }
+
+      void unsubscribe(int subscriptionId, std::string method) {
+        if (_subscriptions.find(subscriptionId) != _subscriptions.end()) {
+          if (is_connected()) {
+            send_message({
+              {"jsonrpc", "2.0"},
+              {"id", subscriptionId},
+              {"method", method},
+              {"params", {
+                subscriptionId,
+              }},
+            });
+          }
+          _subscriptions.erase(subscriptionId);
+        }
+      }
+
+    };
+
+  } // namespace websockets
 
 }
