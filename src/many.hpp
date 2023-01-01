@@ -12,6 +12,8 @@
 
 #include <vector>
 
+namespace many {
+
 #define ASSERT(x)                                               \
   do {                                                          \
     if(!(x)) {                                                  \
@@ -20,8 +22,6 @@
       abort();                                                  \
     }                                                           \
   } while(0)
-
-namespace many {
 
   /**
    * Decodes a variable length integer
