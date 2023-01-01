@@ -33,10 +33,8 @@
 #include <vector>
 
 #include "many.hpp"
-#include "json.hpp"
 
 using namespace many;
-using json = nlohmann::json;
 
 #define LAMPORTS_PER_SOL 1000000000
 
@@ -98,14 +96,6 @@ namespace solana {
     bool preflightCommitment = false;
     bool encoding = "base64";
   };
-
-  struct Context {
-    uint64_t slot;
-  };
-
-  void from_json(const json& j, Context& context) {
-    context.slot = j["slot"].get<uint64_t>();
-  }
 
   struct Blockhash {
     std::string blockhash;
@@ -1201,9 +1191,9 @@ namespace solana {
         {"method", "getProgramAccounts"},
         {"params", {
           programId.to_base58(),
-          // {
-          //   "encoding", "base64"
-          // }
+          {
+            {"encoding", "base64"},
+          },
         }},
       });
     }
@@ -1702,12 +1692,7 @@ namespace solana {
         associatedTokenProgramId
       );
 
-      Result<std::string> result = connection.sign_and_send_transaction(transaction, {payer});
-      if (result.error) {
-        return Result<PublicKey>(result.error.value());
-      }
-
-      std::cout << result.unwrap() << std::endl;
+      std::string txid = connection.sign_and_send_transaction(transaction, {payer}).unwrap();
 
       return Result<PublicKey>(associatedToken);;
     }

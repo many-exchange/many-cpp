@@ -394,6 +394,14 @@ namespace many {
 
   } // namespace base64
 
+  struct Context {
+    uint64_t slot;
+  };
+
+  void from_json(const json& j, Context& context) {
+    context.slot = j["slot"].get<uint64_t>();
+  }
+
   namespace endian {
 
     /**
@@ -1649,26 +1657,26 @@ namespace many {
   class Result {
   public:
 
-    std::optional<Context> context;
-    std::optional<T> result;
-    std::optional<ResultError> error;
+    std::optional<Context> _context;
+    std::optional<T> _result;
+    std::optional<ResultError> _error;
 
     Result() = default;
 
-    Result(T result) : result(result) {}
+    Result(T result) : _result(result) {}
 
-    Result(ResultError error) : error(error) {}
+    Result(ResultError error) : _error(error) {}
 
     bool ok() const {
-      return result != std::nullopt;
+      return _result != std::nullopt;
     }
 
     T unwrap() {
-      if (error) {
-        std::cerr << error->message << std::endl;
-        throw std::runtime_error(error->message);
+      if (_error) {
+        std::cerr << _error->message << std::endl;
+        throw std::runtime_error(_error->message);
       }
-      return result.value();
+      return _result.value();
     }
   };
 
@@ -1676,20 +1684,20 @@ namespace many {
   void from_json(const json& j, Result<T>& r) {
     if (j.contains("result")) {
       if (j["result"].contains("context")) {
-        r.context = j["result"]["context"].get<Context>();
+        r._context = j["result"]["context"].get<Context>();
       }
 
       if (j["result"].contains("value")) {
         if (!j["result"]["value"].is_null()) {
-          r.result = j["result"]["value"].get<T>();
+          r._result = j["result"]["value"].get<T>();
         }
       } else {
         if (!j["result"].is_null()) {
-          r.result = j["result"].get<T>();
+          r._result = j["result"].get<T>();
         }
       }
     } else if (j.contains("error")) {
-      r.error = j["error"].get<ResultError>();
+      r._error = j["error"].get<ResultError>();
     }
   }
 
