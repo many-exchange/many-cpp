@@ -1643,64 +1643,6 @@ namespace many {
 
   } // namespace libsodium
 
-  struct ResultError {
-    int64_t code;
-    std::string message;
-  };
-
-  void from_json(const json& j, ResultError& t) {
-    t.code = j["code"].get<int64_t>();
-    t.message = j["message"].get<std::string>();
-  }
-
-  template <typename T>
-  class Result {
-  public:
-
-    std::optional<Context> _context;
-    std::optional<T> _result;
-    std::optional<ResultError> _error;
-
-    Result() = default;
-
-    Result(T result) : _result(result) {}
-
-    Result(ResultError error) : _error(error) {}
-
-    bool ok() const {
-      return _result != std::nullopt;
-    }
-
-    T unwrap() {
-      if (_error) {
-        std::cerr << _error->message << std::endl;
-        throw std::runtime_error(_error->message);
-      }
-      return _result.value();
-    }
-  };
-
-  template <typename T>
-  void from_json(const json& j, Result<T>& r) {
-    if (j.contains("result")) {
-      if (j["result"].contains("context")) {
-        r._context = j["result"]["context"].get<Context>();
-      }
-
-      if (j["result"].contains("value")) {
-        if (!j["result"]["value"].is_null()) {
-          r._result = j["result"]["value"].get<T>();
-        }
-      } else {
-        if (!j["result"].is_null()) {
-          r._result = j["result"].get<T>();
-        }
-      }
-    } else if (j.contains("error")) {
-      r._error = j["error"].get<ResultError>();
-    }
-  }
-
   namespace websockets {
 
     class WebSocketClient {
