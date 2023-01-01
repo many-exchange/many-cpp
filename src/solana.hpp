@@ -34,8 +34,6 @@
 
 #include "common.hpp"
 
-using json = nlohmann::json;
-
 #define LAMPORTS_PER_SOL 1000000000
 
 #define NATIVE_MINT PublicKey("So11111111111111111111111111111111111111112")
@@ -55,6 +53,10 @@ using json = nlohmann::json;
 #define PRIVATE_KEY_LENGTH 64
 #define PUBLIC_KEY_LENGTH 32
 #define SIGNATURE_LENGTH 64
+
+using json = nlohmann::json;
+
+using namespace many;
 
 namespace solana {
 
