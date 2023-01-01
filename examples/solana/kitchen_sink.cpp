@@ -27,7 +27,7 @@ int main() {
   // Create connections to the clusters
   std::cout << "Connecting to clusters...";
   Connection mainnet_beta_connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  Connection devnet_connection(cluster_api_url(Cluster::Localnet), Commitment::Processed);
+  Connection devnet_connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
   std::cout << " done." << std::endl;
 
   // Get the current version
@@ -121,8 +121,17 @@ int main() {
 
   // Verify that the account was created
   std::cout << "get_account_info()...";
-  Account account = devnet_connection.get_account_info(associatedTokenAccount).unwrap();
-  ASSERT(account.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
+  for (int i = 0; i < 10; i++) {
+    Result<Account> result = devnet_connection.get_account_info(associatedTokenAccount);
+    if (result.ok()) {
+      Account account = result.unwrap();
+      ASSERT(account.owner.to_base58() == ASSOCIATED_TOKEN_PROGRAM_ID.to_base58());
+      goto DONE;
+    }
+    sleep(2);
+  }
+  throw std::runtime_error("Account not found");
+DONE:
   std::cout << " done." << std::endl;
 
   // Get the balance of the associated token account (should be 0)

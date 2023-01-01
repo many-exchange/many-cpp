@@ -1068,6 +1068,10 @@ namespace solana {
 
     Result(ResultError error) : error(error) {}
 
+    bool ok() const {
+      return result != std::nullopt;
+    }
+
     T unwrap() {
       if (error) {
         std::cerr << error->message << std::endl;
