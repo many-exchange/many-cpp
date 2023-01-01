@@ -1908,6 +1908,9 @@ namespace solana {
         {"method", "getProgramAccounts"},
         {"params", {
           programId.to_base58(),
+          // {
+          //   "encoding", "base64"
+          // }
         }},
       });
     }

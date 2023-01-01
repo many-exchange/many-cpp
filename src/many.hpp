@@ -20,7 +20,7 @@ namespace many {
 
   /**
    * Decodes a variable length integer
-   * 
+   *
    * @param bytes The bytes to decode
   */
   int decode_length(std::vector<uint8_t> bytes) {
@@ -40,7 +40,7 @@ namespace many {
 
   /**
    * Encodes a length as a variable length integer
-   * 
+   *
    * @param len The length to encode
    */
   std::vector<uint8_t> encode_length(int len) {
@@ -724,7 +724,7 @@ namespace many {
       char* response = client.post(request, &response_length);
       client.disconnect();
 
-      //std::cout << response << std::endl << std::endl;
+      std::cout << response << std::endl << std::endl;
 
       return json::parse(std::string(response, response_length));
     }

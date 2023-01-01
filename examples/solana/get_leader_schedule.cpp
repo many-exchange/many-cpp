@@ -6,7 +6,6 @@ using json = nlohmann::json;
 
 using namespace solana;
 
-// TODO test this example
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
   auto current_leader = connection.get_slot_leader().unwrap();
