@@ -8,7 +8,15 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  std::vector<Account> accounts = connection.get_multiple_accounts({PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA"), NATIVE_MINT}).unwrap();
+
+  std::vector<PublicKey> public_keys;
+  std::string public_key;
+  std::cout << "enter public keys: " << std::endl;
+  while (std::cin >> public_key) {
+      public_keys.push_back(PublicKey(public_key));
+  }
+
+  std::vector<Account> accounts = connection.get_multiple_accounts(public_keys).unwrap();
 
   for (Account account : accounts) {
     std::cout << "owner = " << account.owner.to_base58() << std::endl;

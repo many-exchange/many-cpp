@@ -9,7 +9,12 @@ using namespace solana;
 //TODO not working
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  AccountInfo programAccountInfo = connection.get_program_accounts(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s")).unwrap()[0];
+
+  std::string program_id;
+  std::cout << "Enter program ID: ";
+  std::cin >> program_id;
+
+  AccountInfo programAccountInfo = connection.get_program_accounts(PublicKey(program_id)).unwrap()[0];
   int subscriptionId = connection.on_program_account_change(programAccountInfo.pubkey, [&](Result<Account> result) {
     Account account = result.unwrap();
     std::cout << "owner = " << account.owner.to_base58() << std::endl;

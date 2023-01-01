@@ -8,7 +8,12 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  uint64_t balance = connection.get_balance(PublicKey("CFAkMBwYYpzVHkSzJ4bWYYV1GatZP1YjSkfvPfLq2ZzA")).unwrap();
+
+  std::string public_key;
+  std::cout << "Enter public key: ";
+  std::cin >> public_key;
+
+  uint64_t balance = connection.get_balance(PublicKey(public_key)).unwrap();
 
   std::cout << "balance = " << balance << std::endl;
 
