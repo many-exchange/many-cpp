@@ -2946,7 +2946,7 @@ namespace solana {
 
     public:
 
-      WebSocketClient(const std::string url, int port, const std::string interface = "")
+      WebSocketClient(const std::string url, const std::string interface = "")
         : _url(url),
         _interface(interface),
         _socket(-1),
@@ -3381,7 +3381,7 @@ std::cout << buffer << std::endl;
       : _commitment(commitment),
       _rpcEndpoint(endpoint),
       _rpcWsEndpoint(make_websocket_url(endpoint)),
-      _rpcWebSocket(_rpcWsEndpoint, 443)
+      _rpcWebSocket(_rpcWsEndpoint)
     {
       auto sodium_result = sodium_init();
       if (sodium_result == -1) {
