@@ -95,7 +95,7 @@ namespace solana {
 
   struct ConfirmOptions {
     Commitment commitment = Commitment::Finalized;
-    bool preflightCommitment = false;
+    bool preflight_commitment = false;
     bool encoding = "base64";
   };
 
@@ -277,8 +277,8 @@ namespace solana {
   }
 
   struct Keypair {
-    std::array<uint8_t, crypto_sign_SECRETKEYBYTES> secretKey;
-    PublicKey publicKey;
+    std::array<uint8_t, crypto_sign_SECRETKEYBYTES> secret_key;
+    PublicKey public_key;
 
     Keypair() {
       auto sodium_result = sodium_init();
@@ -286,9 +286,9 @@ namespace solana {
         throw std::runtime_error("Failed to initialize libsodium");
       }
       for (int i = 0; i < crypto_sign_SECRETKEYBYTES; i++) {
-        secretKey[i] = 0;
+        secret_key[i] = 0;
       }
-      publicKey = PublicKey();
+      public_key = PublicKey();
     }
 
     /**
@@ -300,15 +300,15 @@ namespace solana {
      *
      * @throws error if the provided secret key is invalid and validation is not skipped.
      *
-     * @param secretKey secret key byte array
+     * @param secret_key secret key byte array
      * @param options: skip secret key validation
      */
-    Keypair(std::array<char, PUBLIC_KEY_LENGTH> secretKey, bool skipValidation = false) {
+    Keypair(std::array<char, PUBLIC_KEY_LENGTH> secret_key, bool skipValidation = false) {
       auto sodium_result = sodium_init();
       if (sodium_result == -1) {
         throw std::runtime_error("Failed to initialize libsodium");
       }
-      if (!skipValidation && crypto_sign_ed25519_sk_to_pk((unsigned char *)publicKey.bytes.data(), (unsigned char *)secretKey.data()) != 0) {
+      if (!skipValidation && crypto_sign_ed25519_sk_to_pk((unsigned char *)public_key.bytes.data(), (unsigned char *)secret_key.data()) != 0) {
         throw std::runtime_error("invalid secret key");
       }
     }
@@ -330,8 +330,8 @@ namespace solana {
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
         if (size == crypto_sign_SECRETKEYBYTES) {
-          file.read((char *)result.secretKey.data(), size);
-          crypto_sign_ed25519_sk_to_pk((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
+          file.read((char *)result.secret_key.data(), size);
+          crypto_sign_ed25519_sk_to_pk((unsigned char *)result.public_key.bytes.data(), (unsigned char *)result.secret_key.data());
         } else {
           throw std::runtime_error("invalid secret key file");
         }
@@ -350,7 +350,7 @@ namespace solana {
      */
     static Keypair from_seed(const uint8_t *seed) {
       Keypair result = Keypair();
-      crypto_sign_seed_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data(), seed);
+      crypto_sign_seed_keypair((unsigned char *)result.public_key.bytes.data(), (unsigned char *)result.secret_key.data(), seed);
       return result;
     }
 
@@ -359,7 +359,7 @@ namespace solana {
      */
     static Keypair generate() {
       Keypair result = Keypair();
-      crypto_sign_keypair((unsigned char *)result.publicKey.bytes.data(), (unsigned char *)result.secretKey.data());
+      crypto_sign_keypair((unsigned char *)result.public_key.bytes.data(), (unsigned char *)result.secret_key.data());
       return result;
     }
 
@@ -371,7 +371,7 @@ namespace solana {
     std::string sign(const std::vector<uint8_t> message) const {
       uint8_t sig[crypto_sign_BYTES];
       unsigned long long sigSize;
-      if (0 != crypto_sign_detached(sig, &sigSize, message.data(), message.size(), secretKey.data())) {
+      if (0 != crypto_sign_detached(sig, &sigSize, message.data(), message.size(), secret_key.data())) {
         throw std::runtime_error("could not sign tx with private key");
       }
       return std::string((char*)sig, sigSize);
@@ -388,7 +388,7 @@ namespace solana {
     /** Boolean indicating if the account contains a program (and is strictly read-only) */
     bool executable;
     /** The epoch at which this account will next owe rent */
-    uint64_t rentEpoch;
+    uint64_t rent_epoch;
   };
 
   void from_json(const json& j, Account& account) {
@@ -404,7 +404,7 @@ namespace solana {
     }
 
     account.executable = j["executable"].get<bool>();
-    account.rentEpoch = j["rentEpoch"].get<uint64_t>();
+    account.rent_epoch = j["rentEpoch"].get<uint64_t>();
   }
 
   struct AccountInfo {
@@ -448,21 +448,21 @@ namespace solana {
     /** The software version of the node, if the version information is available */
     std::string version;
     /** The unique identifier of the node's feature set */
-    uint64_t featureSet;
+    uint64_t feature_set;
     /** The shred version the node has been configured to use */
-    uint64_t shredVersion;
+    uint64_t shred_version;
   };
 
   void from_json(const json& j, ClusterNode& cluster_node) {
     if (!j["featureSet"].is_null()) {
-      cluster_node.featureSet = j["featureSet"].get<uint64_t>();
+      cluster_node.feature_set = j["featureSet"].get<uint64_t>();
     }
     cluster_node.gossip = j["gossip"].get<std::string>();
     cluster_node.pubkey = j["pubkey"].get<PublicKey>();
     if (!j["rpc"].is_null()) {
       cluster_node.rpc = j["rpc"].get<std::string>();
     }
-    cluster_node.shredVersion = j["shredVersion"].get<uint64_t>();
+    cluster_node.shred_version = j["shredVersion"].get<uint64_t>();
     if (!j["tpu"].is_null()) {
       cluster_node.tpu = j["tpu"].get<std::string>();
     }
@@ -528,17 +528,17 @@ namespace solana {
         struct Parsed {
           struct Info {
             /** Boolean indicating if the account is native */
-            bool isNative;
+            bool is_native;
             /** The mint of the token */
             PublicKey mint;
             /** The Pubkey of the token account owner */
             PublicKey owner;
             /** The amount of tokens */
-            TokenBalance tokenAmount;
+            TokenBalance token_amount;
             /** The account this token account is delegated to */
             PublicKey delegate;
             /** Amount delegated */
-            TokenBalance delegatedAmount;
+            TokenBalance delegated_amount;
             /** State of the token account (ex: "initialized") */
             std::string state;
           } info;
@@ -553,18 +553,18 @@ namespace solana {
       /** Boolean indicating if the account contains a program (and is strictly read-only) */
       bool executable;
       /** The epoch at which this account will next owe rent */
-      uint64_t rentEpoch;
+      uint64_t rent_epoch;
     } account;
   };
 
   void from_json(const json& j, TokenAccount::Account::Data::Parsed::Info& parsedAccountInfo) {
-    parsedAccountInfo.isNative = j["isNative"].get<bool>();
+    parsedAccountInfo.is_native = j["isNative"].get<bool>();
     parsedAccountInfo.mint = j["mint"].get<PublicKey>();
     parsedAccountInfo.owner = j["owner"].get<PublicKey>();
-    parsedAccountInfo.tokenAmount = j["tokenAmount"].get<TokenBalance>();
+    parsedAccountInfo.token_amount = j["tokenAmount"].get<TokenBalance>();
     if (j.contains("delegate")) {
       parsedAccountInfo.delegate = j["account"]["data"]["parsed"]["info"]["delegate"].get<PublicKey>();
-      parsedAccountInfo.delegatedAmount = j["account"]["data"]["parsed"]["info"]["delegatedAmount"].get<TokenBalance>();
+      parsedAccountInfo.delegated_amount = j["account"]["data"]["parsed"]["info"]["delegatedAmount"].get<TokenBalance>();
     }
     parsedAccountInfo.state = j["state"].get<std::string>();
   }
@@ -587,7 +587,7 @@ namespace solana {
     account.data.parsed = j["data"]["parsed"].get<TokenAccount::Account::Data::Parsed>();
     account.data.space = j["data"]["space"].get<uint64_t>();
     account.executable = j["executable"].get<bool>();
-    account.rentEpoch = j["rentEpoch"].get<uint64_t>();
+    account.rent_epoch = j["rentEpoch"].get<uint64_t>();
   }
 
   void from_json(const json& j, TokenAccount& tokenAccount) {
@@ -597,17 +597,17 @@ namespace solana {
 
   struct TransactionMessageHeader {
     /** The number of signatures required to validate this transaction */
-    uint8_t numRequiredSignatures;
+    uint8_t num_required_signatures;
     /** The number of read-only signed accounts */
-    uint8_t numReadonlySignedAccounts;
+    uint8_t num_readonly_signed_accounts;
     /** The number of read-only unsigned accounts */
-    uint8_t numReadonlyUnsignedAccounts;
+    uint8_t num_readonly_unsigned_accounts;
   };
 
   void from_json(const json& j, TransactionMessageHeader& header) {
-    header.numRequiredSignatures = j["numRequiredSignatures"].get<uint8_t>();
-    header.numReadonlySignedAccounts = j["numReadonlySignedAccounts"].get<uint8_t>();
-    header.numReadonlyUnsignedAccounts = j["numReadonlyUnsignedAccounts"].get<uint8_t>();
+    header.num_required_signatures = j["numRequiredSignatures"].get<uint8_t>();
+    header.num_readonly_signed_accounts = j["numReadonlySignedAccounts"].get<uint8_t>();
+    header.num_readonly_unsigned_accounts = j["numReadonlyUnsignedAccounts"].get<uint8_t>();
   }
 
   struct CompiledTransaction {
@@ -617,16 +617,16 @@ namespace solana {
       TransactionMessageHeader header;
       /** List of base-58 encoded Pubkeys used by the transaction, including by the instructions and for signatures.
       The first message.header.numRequiredSignatures Pubkeys must sign the transaction. */
-      std::vector<PublicKey> accountKeys;
+      std::vector<PublicKey> account_keys;
       /** A base-58 encoded hash of a recent block in the ledger used to prevent transaction duplication and to give transactions lifetimes. */
-      PublicKey recentBlockhash;
+      PublicKey recent_blockhash;
       struct Instruction {
         /** Ordered indices into the `message.accountKeys` array indicating which accounts to pass to the program */
         std::vector<uint8_t> accounts;
         /** The program input data */
         std::vector<uint8_t> data;
         /** Index into the `message.accountKeys` array indicating the program account that executes this instruction */
-        uint8_t programIdIndex;
+        uint8_t program_id_index;
       };
       /** List of program instructions that will be executed in sequence and committed in one atomic transaction if all succeed. */
       std::vector<Instruction> instructions;
@@ -635,27 +635,27 @@ namespace solana {
         if (serialized_message.size() > 0) {
           throw new std::runtime_error("Message is already serialized");
         }
-        if (header.numRequiredSignatures == 0) {
+        if (header.num_required_signatures == 0) {
           throw new std::runtime_error("Message must have at least one signature");
         }
-        serialized_message.push_back(header.numRequiredSignatures);
-        serialized_message.push_back(header.numReadonlySignedAccounts);
-        serialized_message.push_back(header.numReadonlyUnsignedAccounts);
+        serialized_message.push_back(header.num_required_signatures);
+        serialized_message.push_back(header.num_readonly_signed_accounts);
+        serialized_message.push_back(header.num_readonly_unsigned_accounts);
 
-        auto keyCount = encode_length(accountKeys.size());
+        auto keyCount = encode_length(account_keys.size());
         serialized_message.insert(serialized_message.end(), keyCount.begin(), keyCount.end());
 
-        for (auto& key : accountKeys) {
+        for (auto& key : account_keys) {
           serialized_message.insert(serialized_message.end(), key.bytes.begin(), key.bytes.end());
         }
 
-        serialized_message.insert(serialized_message.end(), recentBlockhash.bytes.begin(), recentBlockhash.bytes.end());
+        serialized_message.insert(serialized_message.end(), recent_blockhash.bytes.begin(), recent_blockhash.bytes.end());
 
         auto instructionCount = encode_length(instructions.size());
         serialized_message.insert(serialized_message.end(), instructionCount.begin(), instructionCount.end());
 
         for (auto& instruction : instructions) {
-          serialized_message.push_back(instruction.programIdIndex);
+          serialized_message.push_back(instruction.program_id_index);
 
           auto keyIndicesCount = encode_length(instruction.accounts.size());
           serialized_message.insert(serialized_message.end(), keyIndicesCount.begin(), keyIndicesCount.end());
@@ -679,8 +679,8 @@ namespace solana {
      */
     std::vector<uint8_t> serialize(std::vector<uint8_t>& serialized_message) {
       std::vector<uint8_t> buffer;
-      std::vector<uint8_t> signaturesLength = encode_length(signatures.size());
-      buffer.insert(buffer.end(), signaturesLength.begin(), signaturesLength.end());
+      std::vector<uint8_t> signatures_length = encode_length(signatures.size());
+      buffer.insert(buffer.end(), signatures_length.begin(), signatures_length.end());
       for (auto& signature : signatures) {
         ASSERT(signature.size() == 64);
         buffer.insert(buffer.end(), signature.begin(), signature.end());
@@ -698,7 +698,7 @@ namespace solana {
     void sign(const std::vector<uint8_t>& serialized_message, const std::vector<Keypair>& signers) {
       ASSERT(signatures.size() == 0);
       for (auto& signer : signers) {
-        //signatures.insert(signer.publicKey, signer.sign(serialized_message));
+        //signatures.insert(signer.public_key, signer.sign(serialized_message));
         signatures.push_back(signer.sign(serialized_message));
       }
     }
@@ -707,16 +707,16 @@ namespace solana {
   void from_json(const json& j, CompiledTransaction::Message::Instruction& instruction) {
     instruction.accounts = j["accounts"].get<std::vector<uint8_t>>();
     instruction.data = base64::decode(j["data"].get<std::string>());
-    instruction.programIdIndex = j["programIdIndex"].get<uint8_t>();
+    instruction.program_id_index = j["programIdIndex"].get<uint8_t>();
   }
 
   void from_json(const json& j, CompiledTransaction::Message& message) {
-    message.accountKeys = j["accountKeys"].get<std::vector<PublicKey>>();
-    message.header.numReadonlySignedAccounts = j["header"]["numReadonlySignedAccounts"].get<uint8_t>();
-    message.header.numReadonlyUnsignedAccounts = j["header"]["numReadonlyUnsignedAccounts"].get<uint8_t>();
-    message.header.numRequiredSignatures = j["header"]["numRequiredSignatures"].get<uint8_t>();
+    message.account_keys = j["accountKeys"].get<std::vector<PublicKey>>();
+    message.header.num_readonly_signed_accounts = j["header"]["numReadonlySignedAccounts"].get<uint8_t>();
+    message.header.num_readonly_unsigned_accounts = j["header"]["numReadonlyUnsignedAccounts"].get<uint8_t>();
+    message.header.num_required_signatures = j["header"]["numRequiredSignatures"].get<uint8_t>();
     message.instructions = j["instructions"].get<std::vector<CompiledTransaction::Message::Instruction>>();
-    message.recentBlockhash = PublicKey(j["recentBlockhash"].get<std::string>());
+    message.recent_blockhash = PublicKey(j["recentBlockhash"].get<std::string>());
   }
 
   void from_json(const json& j, CompiledTransaction& transaction) {
@@ -732,20 +732,20 @@ namespace solana {
       /** The message header */
       TransactionMessageHeader header;
       /** The account keys used by this transaction */
-      std::vector<PublicKey> accountKeys;
+      std::vector<PublicKey> account_keys;
       /** Recent blockhash */
-      PublicKey recentBlockhash;
+      PublicKey recent_blockhash;
       struct Instruction {
         /** The program id that executes this instruction */
-        PublicKey programId;
+        PublicKey program_id;
         /** Account metadata used to define instructions */
         struct AccountMeta {
           /** An account's Pubkey */
           PublicKey pubkey;
           /** True if an instruction requires a transaction signature matching `pubkey` */
-          bool isSigner;
+          bool is_signer;
           /** True if the Pubkey can be loaded as a read-write account. */
-          bool isWritable;
+          bool is_writable;
 
           bool operator==(const AccountMeta& other) const {
             return pubkey == other.pubkey;
@@ -776,102 +776,102 @@ namespace solana {
           throw std::runtime_error("No signers provided");
         }
 
-        std::vector<Transaction::Message::Instruction::AccountMeta> accountMetas;
+        std::vector<Transaction::Message::Instruction::AccountMeta> account_metas;
         for (auto& instruction : instructions) {
           for (auto& account : instruction.accounts) {
             //TODO there is a bug here, if the same account is used twice with different signer or writable flags.
-            if (std::find(accountMetas.begin(), accountMetas.end(), account) == accountMetas.end()) {
-              accountMetas.push_back(account);
+            if (std::find(account_metas.begin(), account_metas.end(), account) == account_metas.end()) {
+              account_metas.push_back(account);
             }
           }
         }
 
         std::vector<PublicKey> programIds;
         for (auto& instruction : instructions) {
-          auto programId = instruction.programId;
+          auto programId = instruction.program_id;
           if (std::find(programIds.begin(), programIds.end(), programId) == programIds.end()) {
             programIds.push_back(programId);
-            accountMetas.push_back({programId, false, false});
+            account_metas.push_back({programId, false, false});
           }
         }
 
         // Sort. Prioritizing first by signer, then by writable
-        std::sort(accountMetas.begin(), accountMetas.end(), [](const auto& a, const auto& b) {
-          if (a.isSigner != b.isSigner) {
-            return a.isSigner;
+        std::sort(account_metas.begin(), account_metas.end(), [](const auto& a, const auto& b) {
+          if (a.is_signer != b.is_signer) {
+            return a.is_signer;
           }
-          if (a.isWritable != b.isWritable) {
-            return a.isWritable;
+          if (a.is_writable != b.is_writable) {
+            return a.is_writable;
           }
           return a.pubkey < b.pubkey;
         });
 
         // Use implicit fee payer
-        auto fee_payer = signers[0].publicKey;
+        auto fee_payer = signers[0].public_key;
 
         // Move fee payer to the front
-        auto feePayerIndex = std::find(accountMetas.begin(), accountMetas.end(), fee_payer);
-        if (feePayerIndex != accountMetas.end()) {
-          auto payerMeta = *feePayerIndex;
-          accountMetas.erase(feePayerIndex);
-          payerMeta.isSigner = true;
-          payerMeta.isWritable = true;
-          accountMetas.insert(accountMetas.begin(), payerMeta);
+        auto fee_payer_index = std::find(account_metas.begin(), account_metas.end(), fee_payer);
+        if (fee_payer_index != account_metas.end()) {
+          auto payerMeta = *fee_payer_index;
+          account_metas.erase(fee_payer_index);
+          payerMeta.is_signer = true;
+          payerMeta.is_writable = true;
+          account_metas.insert(account_metas.begin(), payerMeta);
         } else {
-          accountMetas.insert(accountMetas.begin(), {fee_payer, true, true});
+          account_metas.insert(account_metas.begin(), {fee_payer, true, true});
         }
 
-        uint8_t numRequiredSignatures = 0;
-        uint8_t numReadonlySignedAccounts = 0;
-        uint8_t numReadonlyUnsignedAccounts = 0;
+        uint8_t num_required_signatures = 0;
+        uint8_t num_readonly_signed_accounts = 0;
+        uint8_t num_readonly_unsigned_accounts = 0;
 
         // Split out signing from non-signing keys and count header values
-        std::vector<PublicKey> signedKeys;
-        std::vector<PublicKey> unsignedKeys;
-        for (auto& accountMeta : accountMetas) {
-          if (accountMeta.isSigner) {
-            signedKeys.push_back(accountMeta.pubkey);
-            numRequiredSignatures += 1;
-            if (!accountMeta.isWritable) {
-              numReadonlySignedAccounts += 1;
+        std::vector<PublicKey> signed_keys;
+        std::vector<PublicKey> unsigned_keys;
+        for (auto& account_meta : account_metas) {
+          if (account_meta.is_signer) {
+            signed_keys.push_back(account_meta.pubkey);
+            num_required_signatures += 1;
+            if (!account_meta.is_writable) {
+              num_readonly_signed_accounts += 1;
             }
           } else {
-            unsignedKeys.push_back(accountMeta.pubkey);
-            if (!accountMeta.isWritable) {
-              numReadonlyUnsignedAccounts += 1;
+            unsigned_keys.push_back(account_meta.pubkey);
+            if (!account_meta.is_writable) {
+              num_readonly_unsigned_accounts += 1;
             }
           }
         }
 
-        auto accountKeys = signedKeys;
-        accountKeys.insert(accountKeys.end(), unsignedKeys.begin(), unsignedKeys.end());
+        auto account_keys = signed_keys;
+        account_keys.insert(account_keys.end(), unsigned_keys.begin(), unsigned_keys.end());
 
-        std::vector<CompiledTransaction::Message::Instruction> compiledInstructions;
+        std::vector<CompiledTransaction::Message::Instruction> compiled_instructions;
         for (auto& instruction : instructions) {
-          std::vector<uint8_t> accountsIndexes;
+          std::vector<uint8_t> accounts_indexes;
           for (auto& account : instruction.accounts) {
-            auto index = std::find(accountKeys.begin(), accountKeys.end(), account.pubkey);
-            if (index == accountKeys.end()) {
+            auto index = std::find(account_keys.begin(), account_keys.end(), account.pubkey);
+            if (index == account_keys.end()) {
               throw std::runtime_error("Unknown account");
             }
-            accountsIndexes.push_back(index - accountKeys.begin());
+            accounts_indexes.push_back(index - account_keys.begin());
           }
-          compiledInstructions.push_back(CompiledTransaction::Message::Instruction {
-            .accounts = accountsIndexes,
+          compiled_instructions.push_back(CompiledTransaction::Message::Instruction {
+            .accounts = accounts_indexes,
             .data = instruction.data,
-            .programIdIndex = (uint8_t)(std::find(accountKeys.begin(), accountKeys.end(), instruction.programId) - accountKeys.begin()),
+            .program_id_index = (uint8_t)(std::find(account_keys.begin(), account_keys.end(), instruction.program_id) - account_keys.begin()),
           });
         }
 
         return {
           {
-            numRequiredSignatures,
-            numReadonlySignedAccounts,
-            numReadonlyUnsignedAccounts,
+            num_required_signatures,
+            num_readonly_signed_accounts,
+            num_readonly_unsigned_accounts,
           },
-          accountKeys,
-          recentBlockhash,
-          compiledInstructions
+          account_keys,
+          recent_blockhash,
+          compiled_instructions
         };
       }
     } message;
@@ -888,19 +888,19 @@ namespace solana {
 
   void from_json(const json& j, Transaction::Message::Instruction::AccountMeta& accountMeta) {
     accountMeta.pubkey = j["pubkey"].get<PublicKey>();
-    accountMeta.isSigner = j["isSigner"].get<bool>();
-    accountMeta.isWritable = j["isWritable"].get<bool>();
+    accountMeta.is_signer = j["isSigner"].get<bool>();
+    accountMeta.is_writable = j["isWritable"].get<bool>();
   }
 
   struct TransactionResponseReturnData {
     /** The program that generated the return data */
-    PublicKey programId;
+    PublicKey program_d;
     /** The return data itself */
     std::string data;
   };
 
   void from_json(const json& j, TransactionResponseReturnData& transactionReturnData) {
-    transactionReturnData.programId = j["programId"].get<PublicKey>();
+    transactionReturnData.program_d = j["programId"].get<PublicKey>();
     transactionReturnData.data = j["data"].get<std::string>();
   }
 
@@ -908,7 +908,7 @@ namespace solana {
     /** The slot this transaction was processed in */
     uint64_t slot;
     /** The estimated production time of when the transaction was processed. */
-    uint64_t blockTime;
+    uint64_t block_time;
     /** The transaction */
     CompiledTransaction transaction;
     /** Transaction status metadata object */
@@ -924,7 +924,7 @@ namespace solana {
         /** Ordered list of inner program instructions that were invoked during a single transaction instruction. */
         struct Instruction {
           /** Index into the message.accountKeys array indicating the program account that executes this instruction */
-          uint64_t programIdIndex;
+          uint64_t program_id_index;
           /** List of ordered indices into the message.accountKeys array indicating which accounts to pass to the program. */
           std::vector<uint64_t> accounts;
           /** The program input data encoded in a base-58 string. */
@@ -932,24 +932,24 @@ namespace solana {
         };
         std::vector<Instruction> instructions;
       };
-      std::vector<InnerInstruction> innerInstructions;
+      std::vector<InnerInstruction> inner_instructions;
       /** Pubkeys for loaded accounts */
       struct LoadedAddresses {
         /** Ordered list of Pubkeys for writable loaded accounts */
         std::vector<PublicKey> writable;
         /** Ordered list of Pubkeys for read-only loaded accounts */
         std::vector<PublicKey> readonly;
-      } loadedAddresses;
+      } loaded_addresses;
       /** Array of log messages if log message recording was enabled during this transaction */
-      std::vector<std::string> logMessages;
+      std::vector<std::string> log_messages;
       /** Array of u64 account balances from before the transaction was processed */
-      std::vector<uint64_t> preBalances;
+      std::vector<uint64_t> pre_balances;
       /** List of token balances from before the transaction was processed */
-      std::vector<TokenBalance> preTokenBalances;
+      std::vector<TokenBalance> pre_token_balances;
       /** Array of u64 account balances from after the transaction was processed */
-      std::vector<uint64_t> postBalances;
+      std::vector<uint64_t> post_balances;
       /** List of token balances from after the transaction was processed */
-      std::vector<TokenBalance> postTokenBalances;
+      std::vector<TokenBalance> post_token_balances;
       /** Transaction-level rewards, populated if rewards are requested */
       struct TransactionReward {
         /** The Pubkey of the account that received the reward */
@@ -957,20 +957,20 @@ namespace solana {
         /** The number of reward lamports credited or debited by the account */
         uint64_t lamports;
         /** The account balance in lamports after the reward was applied */
-        uint64_t postBalance;
+        uint64_t post_balance;
         /** The type of reward */
-        std::string rewardType;
+        std::string reward_type;
         /** Vote account commission when the reward was credited, only present for voting and staking rewards */
         uint8_t commission;
       };
       std::vector<TransactionReward> rewards;
     } meta;
     /** The return data for the transaction */
-    TransactionResponseReturnData returnData;
+    TransactionResponseReturnData return_data;
   };
 
   void from_json(const json& j, TransactionResponse::Meta::InnerInstruction::Instruction& metaInstruction) {
-    metaInstruction.programIdIndex = j["programIdIndex"].get<uint64_t>();
+    metaInstruction.program_id_index = j["programIdIndex"].get<uint64_t>();
     metaInstruction.accounts = j["accounts"].get<std::vector<uint64_t>>();
     metaInstruction.data = j["data"].get<std::string>();
   }
@@ -983,8 +983,8 @@ namespace solana {
   void from_json(const json& j, TransactionResponse::Meta::TransactionReward& reward) {
     reward.pubkey = j["pubkey"].get<PublicKey>();
     reward.lamports = j["lamports"].get<uint64_t>();
-    reward.postBalance = j["postBalance"].get<uint64_t>();
-    reward.rewardType = j["rewardType"].get<std::string>();
+    reward.post_balance = j["postBalance"].get<uint64_t>();
+    reward.reward_type = j["rewardType"].get<std::string>();
     if (j.find("commission") != j.end()) {
       reward.commission = j["commission"].get<uint8_t>();
     }
@@ -1002,23 +1002,23 @@ namespace solana {
       meta.err = "";
     }
     meta.fee = j["fee"].get<uint64_t>();
-    meta.innerInstructions = j["innerInstructions"].get<std::vector<TransactionResponse::Meta::InnerInstruction>>();
-    meta.logMessages = j["logMessages"].get<std::vector<std::string>>();
-    meta.loadedAddresses = j["loadedAddresses"].get<TransactionResponse::Meta::LoadedAddresses>();
-    meta.postBalances = j["postBalances"].get<std::vector<uint64_t>>();
-    meta.postTokenBalances = j["postTokenBalances"].get<std::vector<TokenBalance>>();
-    meta.preBalances = j["preBalances"].get<std::vector<uint64_t>>();
-    meta.preTokenBalances = j["preTokenBalances"].get<std::vector<TokenBalance>>();
+    meta.inner_instructions = j["innerInstructions"].get<std::vector<TransactionResponse::Meta::InnerInstruction>>();
+    meta.log_messages = j["logMessages"].get<std::vector<std::string>>();
+    meta.loaded_addresses = j["loadedAddresses"].get<TransactionResponse::Meta::LoadedAddresses>();
+    meta.post_balances = j["postBalances"].get<std::vector<uint64_t>>();
+    meta.post_token_balances = j["postTokenBalances"].get<std::vector<TokenBalance>>();
+    meta.pre_balances = j["preBalances"].get<std::vector<uint64_t>>();
+    meta.pre_token_balances = j["preTokenBalances"].get<std::vector<TokenBalance>>();
     meta.rewards = j["rewards"].get<std::vector<TransactionResponse::Meta::TransactionReward>>();
   }
 
   void from_json(const json& j, TransactionResponse& transactionResponse) {
     transactionResponse.slot = j["slot"].get<uint64_t>();
-    transactionResponse.blockTime = j["blockTime"].get<uint64_t>();
+    transactionResponse.block_time = j["blockTime"].get<uint64_t>();
     transactionResponse.transaction = j["transaction"].get<CompiledTransaction>();
     transactionResponse.meta = j["meta"].get<TransactionResponse::Meta>();
     if (j.contains("returnData")) {
-      transactionResponse.returnData = j["returnData"].get<TransactionResponseReturnData>();
+      transactionResponse.return_data = j["returnData"].get<TransactionResponseReturnData>();
     }
   }
 
@@ -1030,24 +1030,24 @@ namespace solana {
     /** Array of accounts with the same length as the accounts.addresses array in the request */
     std::vector<AccountInfo> accounts;
     /** The number of compute budget units consumed during the processing of this transaction */
-    uint64_t unitsConsumed;
+    uint64_t units_consumed;
     /** The return data for the simulated transaction */
-    TransactionResponseReturnData returnData;
+    TransactionResponseReturnData return_data;
   };
 
   void from_json(const json& j, SimulatedTransactionResponse& simulatedTransactoinResponse) {
     simulatedTransactoinResponse.err = j["value"]["err"].get<std::string>();
     simulatedTransactoinResponse.logs = j["value"]["logs"].get<std::vector<std::string>>();
     simulatedTransactoinResponse.accounts = j["value"]["accounts"].get<std::vector<AccountInfo>>();
-    simulatedTransactoinResponse.unitsConsumed = j["value"]["unitsConsumed"].get<uint64_t>();
-    simulatedTransactoinResponse.returnData = j["value"]["returnData"].get<TransactionResponseReturnData>();
+    simulatedTransactoinResponse.units_consumed = j["value"]["unitsConsumed"].get<uint64_t>();
+    simulatedTransactoinResponse.return_data = j["value"]["returnData"].get<TransactionResponseReturnData>();
   }
 
   class Connection {
     Commitment _commitment;
-    std::string _rpcEndpoint;
-    std::string _rpcWsEndpoint;
-    websockets::WebSocketClient _rpcWebSocket;
+    std::string _rpc_endpoint;
+    std::string _rpc_ws_endpoint;
+    websockets::WebSocketClient _rpc_web_socket;
 
     static std::string make_websocket_url(std::string endpoint) {
       auto url = endpoint;
@@ -1059,9 +1059,9 @@ namespace solana {
 
     Connection(std::string endpoint, Commitment commitment)
       : _commitment(commitment),
-      _rpcEndpoint(endpoint),
-      _rpcWsEndpoint(make_websocket_url(endpoint)),
-      _rpcWebSocket(_rpcWsEndpoint)
+      _rpc_endpoint(endpoint),
+      _rpc_ws_endpoint(make_websocket_url(endpoint)),
+      _rpc_web_socket(_rpc_ws_endpoint)
     {
       auto sodium_result = sodium_init();
       if (sodium_result == -1) {
@@ -1083,15 +1083,15 @@ namespace solana {
     /**
      * Returns all information associated with the account of provided Pubkey.
      *
-     * @param publicKey The Pubkey of account to query
+     * @param public_key The Pubkey of account to query
      */
-    Result<Account> get_account_info(const PublicKey& publicKey) {
-      return http::post(_rpcEndpoint, {
+    Result<Account> get_account_info(const PublicKey& public_key) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getAccountInfo"},
         {"params", {
-          publicKey.to_base58(),
+          public_key.to_base58(),
           {
             {"encoding", "base64"},
           },
@@ -1102,15 +1102,15 @@ namespace solana {
     /**
      * Returns the balance of the account of provided Pubkey.
      *
-     * @param publicKey The Pubkey of the account to query
+     * @param public_key The Pubkey of the account to query
      */
-    Result<uint64_t> get_balance(const PublicKey& publicKey) {
-      return http::post(_rpcEndpoint, {
+    Result<uint64_t> get_balance(const PublicKey& public_key) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getBalance"},
         {"params", {
-          publicKey.to_base58(),
+          public_key.to_base58(),
         }},
       });
     }
@@ -1119,7 +1119,7 @@ namespace solana {
      * Returns information about all the nodes participating in the cluster.
      */
     Result<std::vector<ClusterNode>> get_cluster_nodes() {
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getClusterNodes"},
@@ -1130,7 +1130,7 @@ namespace solana {
      * Returns the identity Pubkey of the current node.
      */
     Result<Identity> get_identity() {
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getIdentity"},
@@ -1141,7 +1141,7 @@ namespace solana {
      * Returns the latest blockhash.
      */
     Result<Blockhash> get_latest_blockhash() const {
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getLatestBlockhash"},
@@ -1151,16 +1151,16 @@ namespace solana {
     /**
      * Returns the schedule for a given leader, for the current epoch.
      *
-     * @param leaderAddress The Pubkey of the leader to query
+     * @param leader_address The Pubkey of the leader to query
      */
-    Result<LeaderSchedule> get_leader_schedule(const PublicKey& leaderAddress) {
-      return http::post(_rpcEndpoint, {
+    Result<LeaderSchedule> get_leader_schedule(const PublicKey& leader_address) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getLeaderSchedule"},
         {"params", {
           {
-            {"identity", leaderAddress.to_base58()},
+            {"identity", leader_address.to_base58()},
           },
         }},
       });
@@ -1169,14 +1169,14 @@ namespace solana {
     /**
      * Returns the account information for a list of Pubkeys.
      *
-     * @param publicKeys The Pubkeys of the accounts to query
+     * @param public_keys The Pubkeys of the accounts to query
      */
-    Result<std::vector<Account>> get_multiple_accounts(const std::vector<PublicKey>& publicKeys) {
+    Result<std::vector<Account>> get_multiple_accounts(const std::vector<PublicKey>& public_keys) {
       std::vector<std::string> base58Keys;
-      for (auto publicKey : publicKeys) {
-        base58Keys.push_back(publicKey.to_base58());
+      for (auto public_key : public_keys) {
+        base58Keys.push_back(public_key.to_base58());
       }
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getMultipleAccounts"},
@@ -1192,15 +1192,15 @@ namespace solana {
     /**
      * Returns all accounts owned by the provided program Pubkey.
      *
-     * @param programId The Pubkey of the program to query
+     * @param program_id The Pubkey of the program to query
      */
-    Result<std::vector<AccountInfo>> get_program_accounts(const PublicKey& programId) {
-      return http::post(_rpcEndpoint, {
+    Result<std::vector<AccountInfo>> get_program_accounts(const PublicKey& program_id) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getProgramAccounts"},
         {"params", {
-          programId.to_base58(),
+          program_id.to_base58(),
           // {
           //   "encoding", "base64"
           // }
@@ -1212,7 +1212,7 @@ namespace solana {
      * Returns the slot that has reached the given or default commitment level.
      */
     Result<uint64_t> get_slot(const Commitment& commitment = Commitment::Finalized) {
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getSlot"},
@@ -1223,7 +1223,7 @@ namespace solana {
      * Returns the current slot leader.
      */
     Result<PublicKey> get_slot_leader() {
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getSlotLeader"},
@@ -1233,15 +1233,15 @@ namespace solana {
     /**
      * Returns the token balance of an SPL Token account.
      *
-     * @param tokenAddress The Pubkey of the token account to query
+     * @param token_address The Pubkey of the token account to query
      */
-    Result<TokenBalance> get_token_account_balance(const PublicKey& tokenAddress) {
-      return http::post(_rpcEndpoint, {
+    Result<TokenBalance> get_token_account_balance(const PublicKey& token_address) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountBalance"},
         {"params", {
-          tokenAddress.to_base58(),
+          token_address.to_base58(),
         }},
       });
     }
@@ -1249,15 +1249,15 @@ namespace solana {
     /**
      * Returns all SPL Token accounts by token owner.
      *
-     * @param ownerAddress The Pubkey of account owner to query
+     * @param owner_address The Pubkey of account owner to query
      */
-    Result<std::vector<TokenAccount>> get_token_accounts_by_owner(const PublicKey& ownerAddress) {
-      return http::post(_rpcEndpoint, {
+    Result<std::vector<TokenAccount>> get_token_accounts_by_owner(const PublicKey& owner_address) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountsByOwner"},
         {"params", {
-          ownerAddress.to_base58(),
+          owner_address.to_base58(),
           {
             {"programId", TOKEN_PROGRAM_ID.to_base58()},
           },
@@ -1271,18 +1271,18 @@ namespace solana {
     /**
      * Returns SPL Token accounts for a given mint by token owner.
      *
-     * @param ownerAddress The Pubkey of account owner to query
-     * @param mintAddress The mint of the token to query
+     * @param owner_address The Pubkey of account owner to query
+     * @param token_mint The mint of the token to query
      */
-    Result<std::vector<TokenAccount>> get_token_accounts_by_owner(const PublicKey& ownerAddress, const PublicKey& tokenMint) {
-      return http::post(_rpcEndpoint, {
+    Result<std::vector<TokenAccount>> get_token_accounts_by_owner(const PublicKey& owner_address, const PublicKey& token_mint) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenAccountsByOwner"},
         {"params", {
-          ownerAddress.to_base58(),
+          owner_address.to_base58(),
           {
-            {"mint", tokenMint.to_base58()},
+            {"mint", token_mint.to_base58()},
           },
           {
             {"encoding", "jsonParsed"},
@@ -1294,15 +1294,15 @@ namespace solana {
     /**
      * Returns the total supply of an SPL Token type.
      *
-     * @param tokenMintAddress The Pubkey of the token mint to query
+     * @param token_mint The Pubkey of the token mint to query
      */
-    Result<TokenBalance> get_token_supply(const PublicKey& tokenMintAddress) {
-      return http::post(_rpcEndpoint, {
+    Result<TokenBalance> get_token_supply(const PublicKey& token_mint) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTokenSupply"},
         {"params", {
-          tokenMintAddress.to_base58(),
+          token_mint.to_base58(),
         }},
       });
     }
@@ -1310,17 +1310,17 @@ namespace solana {
     /**
      * Returns transaction details for a confirmed transaction.
      *
-     * @param transactionSignature The signature of the transaction to query
+     * @param transaction_signature The signature of the transaction to query
      */
-    Result<TransactionResponse> get_transaction(const std::string& transactionSignature) {
+    Result<TransactionResponse> get_transaction(const std::string& transaction_signature) {
       //TODO commitment
 
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getTransaction"},
         {"params", {
-          transactionSignature
+          transaction_signature
         }},
       });
     }
@@ -1329,7 +1329,7 @@ namespace solana {
      * Returns the current solana versions running on the node.
      */
     Result<Version> get_version() {
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getVersion"},
@@ -1339,16 +1339,16 @@ namespace solana {
     /**
      * Requests an airdrop of lamports to a Pubkey
      *
-     * @param recipientAddress The Pubkey to airdrop lamports to
+     * @param recipient_address The Pubkey to airdrop lamports to
      * @param lamports The number of lamports to airdrop
      */
-    Result<std::string> request_airdrop(const PublicKey& recipientAddress, const uint64_t& lamports = LAMPORTS_PER_SOL) {
-      return http::post(_rpcEndpoint, {
+    Result<std::string> request_airdrop(const PublicKey& recipient_address, const uint64_t& lamports = LAMPORTS_PER_SOL) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "requestAirdrop"},
         {"params", {
-          recipientAddress.to_base58(),
+          recipient_address.to_base58(),
           lamports,
         }},
       });
@@ -1362,7 +1362,7 @@ namespace solana {
      * @param options Options for sending the transaction
      */
     Result<std::string> sign_and_send_transaction(Transaction& transaction, const std::vector<Keypair>& signers) const {
-      transaction.message.recentBlockhash = get_latest_blockhash().unwrap().blockhash;
+      transaction.message.recent_blockhash = get_latest_blockhash().unwrap().blockhash;
 
       auto compiled_message = transaction.message.compile(signers);
       CompiledTransaction compiled_transaction = {
@@ -1376,7 +1376,7 @@ namespace solana {
 
       std::vector<uint8_t> serialized_transaction = compiled_transaction.serialize(serialized_message);
 
-      return http::post(_rpcEndpoint, {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "sendTransaction"},
@@ -1392,15 +1392,15 @@ namespace solana {
     /**
      * Simulate sending a transaction.
      *
-     * @param signedTransaction The signed transaction to simulate
+     * @param signed_transaction The signed transaction to simulate
      */
-    Result<SimulatedTransactionResponse> simulate_transaction(const std::string& signedTransaction) {
-      return http::post(_rpcEndpoint, {
+    Result<SimulatedTransactionResponse> simulate_transaction(const std::string& signed_transaction) {
+      return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "simulateTransaction"},
         {"params", {
-          signedTransaction,
+          signed_transaction,
           {
             {"encoding", "base64"},
           },
@@ -1411,29 +1411,29 @@ namespace solana {
     //-------- Websocket methods --------------------------------------------------------------------
 
     bool is_connected() {
-      return _rpcWebSocket.is_connected();
+      return _rpc_web_socket.is_connected();
     }
 
     /**
      * Poll the websocket for new messages.
      */
     void poll() {
-      if (_rpcWebSocket.is_connected()) {
-        _rpcWebSocket.poll();
+      if (_rpc_web_socket.is_connected()) {
+        _rpc_web_socket.poll();
       }
     }
 
     /**
      * Add an account change listener.
      *
-     * @param accountId The account to listen for changes
+     * @param account_id The account to listen for changes
      * @param callback The callback function to call when the account changes
      *
-     * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
+     * @return The subscription ID. This can be used to remove the listener with remove_account_change_listener
     */
-    int on_account_change(PublicKey accountId, std::function<void(Result<Account>)> callback) {
-      return _rpcWebSocket.subscribe("accountSubscribe", {
-          accountId.to_base58(),
+    int on_account_change(PublicKey account_id, std::function<void(Result<Account>)> callback) {
+      return _rpc_web_socket.subscribe("accountSubscribe", {
+          account_id.to_base58(),
           {
             {"encoding", "base64"},
             {"commitment", _commitment},
@@ -1444,27 +1444,27 @@ namespace solana {
     /**
      * Remove an account change listener.
      *
-     * @param subscriptionId The subscription id returned by on_account_change
+     * @param subscription_id The subscription id returned by on_account_change
      *
-     * @return True if the listener was removed, false if the subscriptionId was not found
+     * @return True if the listener was removed, false if the subscription_id was not found
     */
-    void remove_account_listener(int subscriptionId) {
-      _rpcWebSocket.unsubscribe(subscriptionId, "accountUnsubscribe");
+    void remove_account_listener(int subscription_id) {
+      _rpc_web_socket.unsubscribe(subscription_id, "accountUnsubscribe");
     }
 
     /**
      * Add a logs listener.
      *
-     * @param accountId The account to listen for logs on
+     * @param account_id The account to listen for logs on
      * @param callback The callback function to call when logs are received
      *
-     * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
+     * @return The subscription ID. This can be used to remove the listener with remove_on_logs_listener
     */
-    int on_logs(PublicKey accountId, std::function<void(Result<Logs>)> callback) {
-      return _rpcWebSocket.subscribe("programSubscribe", { 
+    int on_logs(PublicKey account_id, std::function<void(Result<Logs>)> callback) {
+      return _rpc_web_socket.subscribe("programSubscribe", { 
           "mentions", 
           {
-            {"mentions", accountId.to_base58()}
+            {"mentions", account_id.to_base58()}
           }, 
           {
             {"commitment", _commitment }
@@ -1476,25 +1476,25 @@ namespace solana {
     /**
      * Remove a logs listener.
      *
-     * @param subscriptionId The subscription id returned by on_logs
+     * @param subscription_id The subscription id returned by on_logs
      *
-     * @return true if the listener was removed, false if the subscriptionId was not found
+     * @return true if the listener was removed, false if the subscription_id was not found
     */
-    void remove_on_logs_listener(int subscriptionId) {
-      _rpcWebSocket.unsubscribe(subscriptionId, "logsUnsubscribe");
+    void remove_on_logs_listener(int subscription_id) {
+      _rpc_web_socket.unsubscribe(subscription_id, "logsUnsubscribe");
     }
 
     /**
      * Add a program account change listener.
      *
-     * @param programId The program id to listen for
+     * @param program_id The program id to listen for
      * @param callback The callback function to call when a program account changes
      *
-     * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
+     * @return The subscription ID. This can be used to remove the listener with remove_program_account_listener
     */
-    int on_program_account_change(PublicKey programId, std::function<void(Result<Account>)> callback) {
-      return _rpcWebSocket.subscribe("programSubscribe", {
-          programId.to_base58(),
+    int on_program_account_change(PublicKey program_id, std::function<void(Result<Account>)> callback) {
+      return _rpc_web_socket.subscribe("programSubscribe", {
+          program_id.to_base58(),
           {
             {"encoding", "base64"},
             {"commitment", _commitment},
@@ -1505,12 +1505,12 @@ namespace solana {
     /**
      * Remove a program account change listener.
      *
-     * @param subscriptionId The subscription id returned by on_program_account_change
+     * @param subscription_id The subscription id returned by on_program_account_change
      *
-     * @return true if the listener was removed, false if the subscriptionId was not found
+     * @return true if the listener was removed, false if the subscription_id was not found
     */
-    void remove_program_account_change_listnener(int subscriptionId) {
-      _rpcWebSocket.unsubscribe(subscriptionId, "programUnsubscribe");
+    void remove_program_account_change_listnener(int subscription_id) {
+      _rpc_web_socket.unsubscribe(subscription_id, "programUnsubscribe");
     }
 
     /**
@@ -1518,21 +1518,21 @@ namespace solana {
      *
      * @param callback The callback function to call when a slot changes
      *
-     * @return The subscription id. This can be used to remove the listener with remove_slot_change_listener
+     * @return The subscription ID. This can be used to remove the listener with remove_slot_change_listener
     */
     int on_slot_change(std::function<void(SlotInfo slotInfo)> callback) {
-      return _rpcWebSocket.subscribe("slotSubscribe", {}, &callback);
+      return _rpc_web_socket.subscribe("slotSubscribe", {}, &callback);
     }
 
     /**
      * Remove a slot change listener.
      *
-     * @param subscriptionId The subscription id to remove (returned by on_slot_change)
+     * @param subscription_id The subscription id to remove (returned by on_slot_change)
      *
-     * @return true if the listener was removed, false if the subscriptionId was not found
+     * @return true if the listener was removed, false if the subscription_id was not found
     */
-    void remove_slot_change_listener(int subscriptionId) {
-      _rpcWebSocket.unsubscribe(subscriptionId, "slotUnsubscribe");
+    void remove_slot_change_listener(int subscription_id) {
+      _rpc_web_socket.unsubscribe(subscription_id, "slotUnsubscribe");
     }
 
   };
@@ -1543,19 +1543,19 @@ namespace solana {
      * Returns an Instruction to create an Associated Token Account
      *
      * @param payer Payer of the initialization fees
-     * @param associatedToken New associated token account
+     * @param associated_token New associated token account
      * @param owner Owner of the new account
      * @param mint Token mint account
-     * @param programId SPL Token program account
-     * @param associatedTokenProgramId SPL Associated Token program account
+     * @param program_id SPL Token program account
+     * @param associated_token_program_id SPL Associated Token program account
      */
     Transaction::Message::Instruction create_associated_token_account_instruction(
       const PublicKey& payer,
-      const PublicKey& associatedToken,
+      const PublicKey& associated_token,
       const PublicKey& owner,
       const PublicKey& mint,
-      const PublicKey& programId = TOKEN_PROGRAM_ID,
-      const PublicKey& associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID
+      const PublicKey& program_id = TOKEN_PROGRAM_ID,
+      const PublicKey& associated_token_program_id = ASSOCIATED_TOKEN_PROGRAM_ID
     ) {
       json accounts = {
         {
@@ -1564,7 +1564,7 @@ namespace solana {
           { "isWritable", true },
         },
         {
-          { "pubkey", associatedToken.to_base58() },
+          { "pubkey", associated_token.to_base58() },
           { "isSigner", false },
           { "isWritable", true },
         },
@@ -1584,14 +1584,14 @@ namespace solana {
           { "isWritable", false },
         },
         {
-          { "pubkey", programId.to_base58() },
+          { "pubkey", program_id.to_base58() },
           { "isSigner", false },
           { "isWritable", false },
         },
       };
 
       return {
-        associatedTokenProgramId,
+        associated_token_program_id,
         accounts,
         {}
       };
@@ -1601,29 +1601,29 @@ namespace solana {
      * Returns a Transaction to create an Associated Token Account
      *
      * @param payer Payer of the initialization fees
-     * @param associatedToken New associated token account
+     * @param associated_token New associated token account
      * @param owner Owner of the new account
      * @param mint Token mint account
-     * @param programId SPL Token program account
-     * @param associatedTokenProgramId SPL Associated Token program account
+     * @param program_id SPL Token program account
+     * @param associated_token_program_id SPL Associated Token program account
      */
     Transaction create_associated_token_account_transaction(
       const PublicKey& payer,
-      const PublicKey& associatedToken,
+      const PublicKey& associated_token,
       const PublicKey& owner,
       const PublicKey& mint,
-      const PublicKey& programId = TOKEN_PROGRAM_ID,
-      const PublicKey& associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID
+      const PublicKey& program_id = TOKEN_PROGRAM_ID,
+      const PublicKey& associated_token_program_id = ASSOCIATED_TOKEN_PROGRAM_ID
     ) {
       Transaction tx;
       tx.add(
         create_associated_token_account_instruction(
           payer,
-          associatedToken,
+          associated_token,
           owner,
           mint,
-          programId,
-          associatedTokenProgramId
+          program_id,
+          associated_token_program_id
         )
       );
 
@@ -1635,28 +1635,28 @@ namespace solana {
      *
      * @param mint                     Token mint account
      * @param owner                    Owner of the new account
-     * @param allowOwnerOffCurve       Allow the owner account to be a PDA (Program Derived Address)
-     * @param programId                SPL Token program account
-     * @param associatedTokenProgramId SPL Associated Token program account
+     * @param allow_owner_off_curve       Allow the owner account to be a PDA (Program Derived Address)
+     * @param program_id                SPL Token program account
+     * @param associated_token_program_id SPL Associated Token program account
      */
     PublicKey get_associated_token_address(
       const PublicKey& mint,
       const PublicKey& owner,
-      const bool& allowOwnerOffCurve = false,
-      const PublicKey& programId = TOKEN_PROGRAM_ID,
-      const PublicKey& associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID
+      const bool& allow_owner_off_curve = false,
+      const PublicKey& program_id = TOKEN_PROGRAM_ID,
+      const PublicKey& associated_token_program_id = ASSOCIATED_TOKEN_PROGRAM_ID
     ) {
-      if (!allowOwnerOffCurve && !owner.is_on_curve()) {
+      if (!allow_owner_off_curve && !owner.is_on_curve()) {
         throw std::runtime_error("Token owner is off curve.");
       }
 
       std::tuple<PublicKey, uint8_t> pda = PublicKey::find_program_address(
         {
           owner.to_buffer(),
-          programId.to_buffer(),
+          program_id.to_buffer(),
           mint.to_buffer()
         },
-        associatedTokenProgramId
+        associated_token_program_id
       );
 
       return std::get<0>(pda);
@@ -1669,28 +1669,28 @@ namespace solana {
     * @param payer Payer of the transaction and initialization fees
     * @param mint Mint for the account
     * @param owner Owner of the new account
-    * @param confirmOptions Options for confirming the transaction
-    * @param programId SPL Token program account
-    * @param associatedTokenProgramId SPL Associated Token program account
+    * @param confirm_options Options for confirming the transaction
+    * @param program_id SPL Token program account
+    * @param associated_token_program_id SPL Associated Token program account
     */
     Result<PublicKey> create_associated_token_account(
       const Connection& connection,
       const Keypair& payer,
       const PublicKey& mint,
       const PublicKey& owner,
-      const ConfirmOptions& confirmOptions = {},
-      const PublicKey& programId = TOKEN_PROGRAM_ID,
-      const PublicKey& associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID
+      const ConfirmOptions& confirm_options = {},
+      const PublicKey& program_id = TOKEN_PROGRAM_ID,
+      const PublicKey& associated_token_program_id = ASSOCIATED_TOKEN_PROGRAM_ID
     ) {
-      const PublicKey associatedToken = get_associated_token_address(mint, owner, false, programId, associatedTokenProgramId);
+      const PublicKey associated_token = get_associated_token_address(mint, owner, false, program_id, associated_token_program_id);
 
       Transaction transaction = create_associated_token_account_transaction(
-        payer.publicKey,
-        associatedToken,
+        payer.public_key,
+        associated_token,
         owner,
         mint,
-        programId,
-        associatedTokenProgramId
+        program_id,
+        associated_token_program_id
       );
 
       Result<std::string> result = connection.sign_and_send_transaction(transaction, {payer});
@@ -1700,7 +1700,7 @@ namespace solana {
 
       std::cout << result.unwrap() << std::endl;
 
-      return Result<PublicKey>(associatedToken);;
+      return Result<PublicKey>(associated_token);;
     }
 
   }

@@ -14,28 +14,28 @@ int main() {
   auto keypair = Keypair::generate();
 
   // Request an airdrop
-  std::string tx_hash = connection.request_airdrop(keypair.publicKey).unwrap();
+  std::string tx_hash = connection.request_airdrop(keypair.public_key).unwrap();
   std::cout << "tx_hash = " << tx_hash << std::endl;
 
   uint64_t lamports = 0;
   while (lamports == 0) {
     sleep(3);
-    lamports = connection.get_balance(keypair.publicKey).unwrap();
+    lamports = connection.get_balance(keypair.public_key).unwrap();
   }
   std::cout << "lamports = " << lamports << std::endl;
 
   // Create associated token account
-  PublicKey associatedTokenAccount = token::create_associated_token_account(
+  PublicKey associated_token_account = token::create_associated_token_account(
     connection,
     keypair,
     NATIVE_MINT,
-    keypair.publicKey
+    keypair.public_key
   ).unwrap();
-  std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl;
+  std::cout << "associated token account = " << associated_token_account.to_base58() << std::endl;
 
   for (int i = 0; i < 10; i++) {
     // Verify that the account was created
-    Result<Account> result = connection.get_account_info(associatedTokenAccount);
+    Result<Account> result = connection.get_account_info(associated_token_account);
 
     if (result.result) { //TODO I don't like this syntax
       Account& account = result.result.value(); //TODO I don't like this syntax

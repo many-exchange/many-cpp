@@ -30,13 +30,13 @@ int main() {
   auto keypair = Keypair::generate();
 
   // Request an airdrop
-  std::string tx_hash = connection.request_airdrop(keypair.publicKey);
+  std::string tx_hash = connection.request_airdrop(keypair.public_key);
   std::cout << "tx_hash = " << tx_hash << std::endl;
 
   uint64_t lamports = 0;
   while (lamports == 0) {
     sleep(3);
-    lamports = connection.get_balance(keypair.publicKey);
+    lamports = connection.get_balance(keypair.public_key);
   }
   std::cout << "lamports = " << lamports << std::endl;
 
@@ -45,7 +45,7 @@ int main() {
     connection,
     keypair,
     NATIVE_MINT,
-    keypair.publicKey
+    keypair.public_key
   );
   std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl;
 

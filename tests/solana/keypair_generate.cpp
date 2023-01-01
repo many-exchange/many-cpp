@@ -12,11 +12,11 @@ using namespace solana;
 TEST_CASE("Keypair::generate") {
   auto mint = Keypair::generate();
   auto owner = Keypair::generate();
-  ASSERT(owner.publicKey.is_on_curve());
+  ASSERT(owner.public_key.is_on_curve());
 
-  std::cout << "mint = " << mint.publicKey.to_base58() << std::endl;
-  std::cout << "owner = " << owner.publicKey.to_base58() << std::endl;
+  std::cout << "mint = " << mint.public_key.to_base58() << std::endl;
+  std::cout << "owner = " << owner.public_key.to_base58() << std::endl;
 
-  const PublicKey associatedToken = token::get_associated_token_address(mint.publicKey, owner.publicKey);
+  const PublicKey associatedToken = token::get_associated_token_address(mint.public_key, owner.public_key);
   std::cout << "associatedToken = " << associatedToken.to_base58() << std::endl;
 }
