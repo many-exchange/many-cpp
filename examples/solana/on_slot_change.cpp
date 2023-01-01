@@ -7,7 +7,7 @@ using json = nlohmann::json;
 using namespace solana;
 
 int main() {
-  Connection connection(cluster_api_url(Cluster::Localnet), Commitment::Processed);
+  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   int subscriptionId = connection.on_slot_change([&](SlotInfo slotInfo) {
     std::cout << "slot = " << slotInfo.slot << std::endl;
   });
