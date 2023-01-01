@@ -8,7 +8,8 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  int subscriptionId = connection.on_slot_change([&](SlotInfo slotInfo) {
+  int subscriptionId = connection.on_slot_change([&](Result<SlotInfo> result) {
+    SlotInfo slotInfo = result.unwrap();
     std::cout << "slot = " << slotInfo.slot << std::endl;
   });
   ASSERT(connection.is_connected());

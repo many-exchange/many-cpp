@@ -13,7 +13,7 @@ int main() {
   std::cout << "owner = " << account.owner.to_base58() << std::endl;
   std::cout << "lamports = " << account.lamports << std::endl;
   std::cout << "data = " << account.data << std::endl;
-  std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl << std::endl;
+  std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl;
 
   return 0;
 }

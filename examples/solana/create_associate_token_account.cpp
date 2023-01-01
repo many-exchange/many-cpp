@@ -15,14 +15,14 @@ int main() {
 
   // Request an airdrop
   std::string tx_hash = connection.request_airdrop(keypair.publicKey).unwrap();
-  std::cout << "tx_hash = " << tx_hash << std::endl << std::endl;
+  std::cout << "tx_hash = " << tx_hash << std::endl;
 
   uint64_t lamports = 0;
   while (lamports == 0) {
     sleep(3);
     lamports = connection.get_balance(keypair.publicKey).unwrap();
   }
-  std::cout << "lamports = " << lamports << std::endl << std::endl;
+  std::cout << "lamports = " << lamports << std::endl;
 
   // Create associated token account
   PublicKey associatedTokenAccount = token::create_associated_token_account(
@@ -31,7 +31,7 @@ int main() {
     NATIVE_MINT,
     keypair.publicKey
   ).unwrap();
-  std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl << std::endl;
+  std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl;
 
   for (int i = 0; i < 10; i++) {
     // Verify that the account was created
@@ -42,7 +42,7 @@ int main() {
       std::cout << "owner = " << account.owner.to_base58() << std::endl;
       std::cout << "lamports = " << account.lamports << std::endl;
       std::cout << "data = " << account.data << std::endl;
-      std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl << std::endl;
+      std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl;
       return 0;
     }
 

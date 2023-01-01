@@ -31,14 +31,14 @@ int main() {
 
   // Request an airdrop
   std::string tx_hash = connection.request_airdrop(keypair.publicKey);
-  std::cout << "tx_hash = " << tx_hash << std::endl << std::endl;
+  std::cout << "tx_hash = " << tx_hash << std::endl;
 
   uint64_t lamports = 0;
   while (lamports == 0) {
     sleep(3);
     lamports = connection.get_balance(keypair.publicKey);
   }
-  std::cout << "lamports = " << lamports << std::endl << std::endl;
+  std::cout << "lamports = " << lamports << std::endl;
 
   // Create associated token account
   PublicKey associatedTokenAccount = token::create_associated_token_account(
@@ -47,11 +47,11 @@ int main() {
     NATIVE_MINT,
     keypair.publicKey
   );
-  std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl << std::endl;
+  std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl;
 
   // Verify that the account was created
   AccountInfo accountInfo = connection.get_account_info(associatedTokenAccount);
-  std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl << std::endl;
+  std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl;
 
   return 0;
 }

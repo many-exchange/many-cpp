@@ -1512,31 +1512,16 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
     */
-    int on_logs(PublicKey accountId, std::function<void(Context context, Logs logs)> callback) {
-      return -1;
-      // if (!_rpcWebSocket.is_connected()) {
-      //   _rpcWebSocket.connect();
-      // }
-      // int subscriptionId = ++_nextSubscriptionId;
-      // _rpcWebSocket.subscribe({
-      //   {"jsonrpc", "2.0"},
-      //   {"id", subscriptionId},
-      //   {"method", "logsSubscribe"},
-      //   {"params", {
-      //     "mentions",
-      //     {
-      //       {"mentions", accountId.to_base58()},
-      //     },
-      //     {
-      //       {"commitment", _commitment},
-      //     },
-      //   }},
-      // });
-      // Subscription subscription;
-      // subscription.type = SubscriptionType::LOG;
-      // subscription.logs = &callback;
-      // _rpcWebSocket._subscriptions[subscriptionId] = subscription;
-      // return subscriptionId;
+    int on_logs(PublicKey accountId, std::function<void(Result<Logs>)> callback) {
+      return _rpcWebSocket.subscribe("programSubscribe", { 
+          "mentions", 
+          {
+            {"mentions", accountId.to_base58()}
+          }, 
+          {
+            {"commitment", _commitment }
+          },
+        },  &callback);
     }
 
 
@@ -1560,7 +1545,13 @@ namespace solana {
      * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
     */
     int on_program_account_change(PublicKey programId, std::function<void(Result<Account>)> callback) {
-      return _rpcWebSocket.subscribe("programSubscribe", { programId.to_base58(), {{"encoding", "base64"}, {"commitment", _commitment} } }, &callback);
+      return _rpcWebSocket.subscribe("programSubscribe", {
+          programId.to_base58(),
+          {
+            {"encoding", "base64"},
+            {"commitment", _commitment},
+          },
+        }, &callback);
     }
 
     /**
