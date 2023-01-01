@@ -1,11 +1,21 @@
 .vscode/settings.json
 
-examples/solana/*
-!examples/solana/*.cpp
 examples/ethereum/*
 !examples/ethereum/*.cpp
+!examples/ethereum/*.h
+!examples/ethereum/*.hpp
+
+examples/solana/*
+!examples/solana/*.cpp
+!examples/solana/*.h
+!examples/solana/*.hpp
+
+tests/ethereum/*
+!tests/ethereum/*.cpp
+!tests/ethereum/*.h
+!tests/ethereum/*.hpp
 
 tests/solana/*
 !tests/solana/*.cpp
-tests/ethereum/*
-!tests/ethereum/*.cpp
+!tests/solana/*.h
+!tests/solana/*.hpp
