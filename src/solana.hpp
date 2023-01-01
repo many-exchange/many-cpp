@@ -33,6 +33,10 @@
 #include <vector>
 
 #include "common.hpp"
+#include "json.hpp"
+
+using namespace common;
+using json = nlohmann::json;
 
 #define LAMPORTS_PER_SOL 1000000000
 
@@ -54,11 +58,42 @@
 #define PUBLIC_KEY_LENGTH 32
 #define SIGNATURE_LENGTH 64
 
-using json = nlohmann::json;
-
-using namespace many;
-
 namespace solana {
+
+  enum class Cluster {
+    MainnetBeta,
+    Devnet,
+    Testnet,
+    Localnet
+  };
+
+  enum class Commitment {
+    Processed,
+    Confirmed,
+    Finalized,
+  };
+
+  struct ConfirmOptions {
+    Commitment commitment = Commitment::Finalized;
+    bool preflightCommitment = false;
+    bool encoding = "base64";
+  };
+
+  struct Context {
+    uint64_t slot;
+  };
+
+  void from_json(const json& j, Context& context) {
+    context.slot = j["slot"].get<uint64_t>();
+  }
+
+  struct Blockhash {
+    std::string blockhash;
+  };
+
+  void from_json(const json& j, Blockhash& blockhash) {
+    blockhash.blockhash = j["blockhash"].get<std::string>();
+  }
 
   struct PublicKey {
     /** An array of bytes representing the Pubkey */
@@ -346,14 +381,6 @@ namespace solana {
     accountInfo.account = j["account"].get<Account>();
   }
 
-  struct Context {
-    uint64_t slot;
-  };
-
-  void from_json(const json& j, Context& context) {
-    context.slot = j["slot"].get<uint64_t>();
-  }
-
   struct TokenBalance {
     /** The raw balance without decimals, as a string representation */
     uint64_t amount;
@@ -372,21 +399,6 @@ namespace solana {
     tokenAmount.amount = stol(j["amount"].get<std::string>());
     tokenAmount.decimals = j["decimals"].get<uint64_t>();
   }
-
-  struct Blockhash {
-    std::string blockhash;
-  };
-
-  void from_json(const json& j, Blockhash& blockhash) {
-    blockhash.blockhash = j["blockhash"].get<std::string>();
-  }
-
-  enum class Cluster {
-    MainnetBeta,
-    Devnet,
-    Testnet,
-    Localnet
-  };
 
   /**
    * Returns a default cluster API URL for a given cluster.
@@ -441,51 +453,6 @@ namespace solana {
     if (!j["version"].is_null()) {
       cluster_node.version = j["version"].get<std::string>();
     }
-  }
-
-  enum class Commitment {
-    Processed,
-    Confirmed,
-    Finalized,
-  };
-
-  struct ConfirmOptions {
-    Commitment commitment = Commitment::Finalized;
-    bool preflightCommitment = false;
-    bool encoding = "base64";
-  };
-
-  int decode_length(std::vector<uint8_t> bytes) {
-    int len = 0;
-    int size = 0;
-    while (bytes.size() > 0) {
-      int elem = bytes.front();
-      bytes.erase(bytes.begin());
-      len |= (elem & 0x7f) << (size * 7);
-      size += 1;
-      if ((elem & 0x80) == 0) {
-        break;
-      }
-    }
-    return len;
-  }
-
-  std::vector<uint8_t> encode_length(int len) {
-    std::vector<uint8_t> bytes;
-    int rem_len = len;
-    for (;;) {
-      int elem = rem_len & 0x7f;
-      rem_len >>= 7;
-      if (rem_len == 0) {
-        bytes.push_back(elem);
-        break;
-      } else {
-        elem |= 0x80;
-        bytes.push_back(elem);
-      }
-    }
-    ASSERT(bytes.size() <= 2);
-    return bytes;
   }
 
   struct Identity {

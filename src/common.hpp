@@ -14,7 +14,50 @@
     }                                                           \
   } while( 0 )
 
-namespace many {
+namespace common {
+
+  /**
+   * Decodes a variable length integer
+   * 
+   * @param bytes The bytes to decode
+  */
+  int decode_length(std::vector<uint8_t> bytes) {
+    int len = 0;
+    int size = 0;
+    while (bytes.size() > 0) {
+      int elem = bytes.front();
+      bytes.erase(bytes.begin());
+      len |= (elem & 0x7f) << (size * 7);
+      size += 1;
+      if ((elem & 0x80) == 0) {
+        break;
+      }
+    }
+    return len;
+  }
+
+  /**
+   * Encodes a length as a variable length integer
+   * 
+   * @param len The length to encode
+   */
+  std::vector<uint8_t> encode_length(int len) {
+    std::vector<uint8_t> bytes;
+    int rem_len = len;
+    for (;;) {
+      int elem = rem_len & 0x7f;
+      rem_len >>= 7;
+      if (rem_len == 0) {
+        bytes.push_back(elem);
+        break;
+      } else {
+        elem |= 0x80;
+        bytes.push_back(elem);
+      }
+    }
+    ASSERT(bytes.size() <= 2);
+    return bytes;
+  }
 
   namespace base58 {
 
