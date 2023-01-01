@@ -7,8 +7,8 @@ using json = nlohmann::json;
 using namespace solana;
 
 int main() {
-  Connection connection(cluster_api_url(Cluster::Localnet), Commitment::Processed);
-  auto programAccounts = connection.get_program_accounts(TOKEN_PROGRAM_ID).unwrap();
+  Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  auto programAccounts = connection.get_program_accounts(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s")).unwrap();
 
   for (AccountInfo programAccount : programAccounts) {
     std::cout << "owner = " << programAccount.account.owner.to_base58() << std::endl;
