@@ -1,3 +1,8 @@
+//  _______ _____ _____ __ __
+// |   |   |  _  |   | |  |  | Many Exchange C++ SDK
+// | | | | |     | | | |\   /  version 0.0.1
+// |_|___|_|__|__|_|___| |_|   https://github.com/many-exchange/many-exchange-cpp
+//
 // Copyright (c) 2022-2023 Many Exchange
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
