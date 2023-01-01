@@ -1,4 +1,4 @@
-# C++ SDKs for DeFi
+# Low-latency C++ for DeFi
 **EVM support coming soon*<br>
 If you'd like to help contribute or report a problem, submit a PR or email us at [many.defi@gmail.com](mailto:many.defi@gmail.com) 🤘
 
