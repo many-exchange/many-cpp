@@ -1,7 +1,7 @@
 //  ____ _____ __    _____ _____ _____
 // |  __|     |  |  |  _  |   | |  _  |  Solana C++ SDK
 // |__  |  |  |  |__|     | | | |     |  version 0.0.1
-// |____|_____|_____|__|__|_|___|__|__|  https://github.com/many-exchange/solana-sdk-cpp
+// |____|_____|_____|__|__|_|___|__|__|  https://github.com/many-exchange/many-exchange-cpp
 //
 // Copyright (c) 2022-2023 Many Exchange
 //
@@ -32,10 +32,10 @@
 #include <unistd.h>
 #include <vector>
 
-#include "common.hpp"
+#include "many.hpp"
 #include "json.hpp"
 
-using namespace common;
+using namespace many;
 using json = nlohmann::json;
 
 #define LAMPORTS_PER_SOL 1000000000
@@ -67,6 +67,26 @@ namespace solana {
     Localnet
   };
 
+  /**
+   * Returns a default cluster API URL for a given cluster.
+   *
+   * @param cluster The cluster to get the default API URL for
+  */
+  std::string cluster_api_url(Cluster cluster) {
+    switch (cluster) {
+      case Cluster::MainnetBeta:
+        return "https://api.mainnet-beta.solana.com";
+      case Cluster::Devnet:
+        return "https://api.devnet.solana.com";
+      case Cluster::Testnet:
+        return "https://api.testnet.solana.com";
+      case Cluster::Localnet:
+        return "http://127.0.0.1:8899";
+      default:
+        throw std::runtime_error("Invalid cluster.");
+    }
+  }
+
   enum class Commitment {
     Processed,
     Confirmed,
@@ -93,6 +113,22 @@ namespace solana {
 
   void from_json(const json& j, Blockhash& blockhash) {
     blockhash.blockhash = j["blockhash"].get<std::string>();
+  }
+
+  struct Version {
+    /** The current solana feature set enabled */
+    uint64_t feature_set;
+    /** The current solana version */
+    std::string version;
+  };
+
+  void from_json(const json& j, Version& version) {
+    if (j.contains("feature-set")) {
+      version.feature_set = j["feature-set"].get<uint64_t>();
+    }
+    if (j.contains("solana-core")) {
+      version.version = j["solana-core"].get<std::string>();
+    }
   }
 
   struct PublicKey {
@@ -400,26 +436,6 @@ namespace solana {
     tokenAmount.decimals = j["decimals"].get<uint64_t>();
   }
 
-  /**
-   * Returns a default cluster API URL for a given cluster.
-   *
-   * @param cluster The cluster to get the default API URL for
-  */
-  std::string cluster_api_url(Cluster cluster) {
-    switch (cluster) {
-      case Cluster::MainnetBeta:
-        return "https://api.mainnet-beta.solana.com";
-      case Cluster::Devnet:
-        return "https://api.devnet.solana.com";
-      case Cluster::Testnet:
-        return "https://api.testnet.solana.com";
-      case Cluster::Localnet:
-        return "http://127.0.0.1:8899";
-      default:
-        throw std::runtime_error("Invalid cluster.");
-    }
-  }
-
   struct ClusterNode {
     /** Node public key */
     PublicKey pubkey;
@@ -475,7 +491,6 @@ namespace solana {
   }
 
   struct Logs {
-    //TODO err: TransactionError | null;
     std::vector<std::string> logs;
     std::string signature;
   };
@@ -1026,22 +1041,6 @@ namespace solana {
     simulatedTransactoinResponse.accounts = j["value"]["accounts"].get<std::vector<AccountInfo>>();
     simulatedTransactoinResponse.unitsConsumed = j["value"]["unitsConsumed"].get<uint64_t>();
     simulatedTransactoinResponse.returnData = j["value"]["returnData"].get<TransactionResponseReturnData>();
-  }
-
-  struct Version {
-    /** The current solana feature set enabled */
-    uint64_t feature_set;
-    /** The current solana version */
-    std::string version;
-  };
-
-  void from_json(const json& j, Version& version) {
-    if (j.contains("feature-set")) {
-      version.feature_set = j["feature-set"].get<uint64_t>();
-    }
-    if (j.contains("solana-core")) {
-      version.version = j["solana-core"].get<std::string>();
-    }
   }
 
   /** Connection method results / error handling */
