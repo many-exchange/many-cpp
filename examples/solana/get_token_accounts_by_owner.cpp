@@ -14,7 +14,7 @@ int main() {
     std::cout << "pubkey = " << tokenAccount.pubkey.to_base58() << std::endl;
     std::cout << "owner = " << tokenAccount.account.owner.to_base58() << std::endl;
     std::cout << "mint = " << tokenAccount.account.data.parsed.info.mint.to_base58() << std::endl;
-    std::cout << "tokens = " << tokenAccount.account.data.parsed.info.tokenAmount.tokens() << std::endl << std::endl;
+    std::cout << "tokens = " << tokenAccount.account.data.parsed.info.tokenAmount.tokens() << std::endl;
   }
 
   return 0;

@@ -6,12 +6,12 @@ using json = nlohmann::json;
 
 using namespace solana;
 
-// TODO test this example
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
-  int subscriptionId = connection.on_logs(TOKEN_PROGRAM_ID, [&](Context context, Logs logs) {
+  int subscriptionId = connection.on_logs(TOKEN_PROGRAM_ID, [&](Result<Logs> result) {
+    Logs logs = result.unwrap();
     std::cout << "signature = " << logs.signature << std::endl;
-    for (auto& log : logs.logs) {
+    for (auto log : logs.logs) {
       std::cout << "  " << log << std::endl;
     }
   });
