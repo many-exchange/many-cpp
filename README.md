@@ -1,16 +1,20 @@
-# Solana C++ SDK
+# C++ SDKs for DeFi
+**EVM support coming soon*<br>
+If you'd like to help contribute or report a problem, submit a PR or email us at [many.defi@gmail.com](mailto:many.defi@gmail.com) 🤘
+
+# Solana
 A Solana C++ SDK built on the [JSON RPC API](https://docs.solana.com/apps/jsonrpc-api)<br>
 *You may notice small differences where we saw a benefit to changing the API.*
 
-### Dependencies
+#### Dependencies
 You'll need to make sure you have [libsodium](https://formulae.brew.sh/formula/libsodium#default) and [openssl@3](https://formulae.brew.sh/formula/openssl@3) installed, as well as a copy of [JSON for Modern C++](https://github.com/nlohmann/json).
 
-### Usage
+#### Usage
 `solana.hpp` is the main header file and contains the `Connection` class, which connects to and interacts with with Solana's JSON RPC API.
 Refer to their [docs](https://docs.solana.com/apps/jsonrpc-api) or look through the header file to see what's currently supported.<br>
 `tokens.hpp` can be used in conjunction for easy interaction with the SPL Token Program.
 
-### Example
+#### Example
 ```c++
 #include "../src/json.hpp"
 #include "../src/solana.hpp"
@@ -52,6 +56,3 @@ int main() {
   return 0;
 }
 ```
-
-### Contributing
-If you'd like to help contribute or report a problem, submit a PR or email us at [many.defi@gmail.com](mailto:many.defi@gmail.com) 🤘
