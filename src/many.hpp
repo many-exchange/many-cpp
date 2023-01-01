@@ -1739,7 +1739,7 @@ namespace many {
       static const uint8_t MASK_FLAG     = 0x80;
 
       int _nextSubscriptionId = 0;
-      std::map<int, void*> _subscriptions;
+      std::map<int, std::function<void(json)>> _subscriptions;
       std::map<int, int> _subscription_map;
 
       void send_message(uint8_t opcode, const char* message, size_t message_size) {
@@ -2239,9 +2239,7 @@ namespace many {
                   if (_subscription_map.find(subscription) != _subscription_map.end()) {
                     int subscription_id = _subscription_map[subscription];
                     if (_subscriptions.find(subscription_id) != _subscriptions.end()) {
-                      auto result_params = j["params"]["result"];
-                      std::function<void(nlohmann::json)>* callback = (std::function<void(nlohmann::json)>*)_subscriptions[subscription_id];
-                      (*callback)(result_params);
+                      _subscriptions[subscription_id](j["params"]);
                     }
                   }
                 } else if (j.contains("id") && j.contains("result")) {
@@ -2287,7 +2285,7 @@ namespace many {
         }
       }
 
-      int subscribe(std::string method, json params, void* callback) {
+      int subscribe(std::string method, json params, std::function<void(json)> callback) {
         if (!is_connected()) {
           connect();
         }

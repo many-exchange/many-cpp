@@ -1428,7 +1428,10 @@ namespace solana {
             {"encoding", "base64"},
             {"commitment", _commitment},
           },
-        }, &callback);
+        }, [callback](const json& j) {
+          callback(Result<Account>(j));
+        }
+      );
     }
 
     /**
@@ -1451,15 +1454,18 @@ namespace solana {
      * @return The subscription id. This can be used to remove the listener with remove_on_logs_listener
     */
     int on_logs(PublicKey accountId, std::function<void(Result<Logs>)> callback) {
-      return _rpcWebSocket.subscribe("programSubscribe", { 
-          "mentions", 
+      return _rpcWebSocket.subscribe("programSubscribe", {
+          "mentions",
           {
             {"mentions", accountId.to_base58()}
-          }, 
+          },
           {
             {"commitment", _commitment }
           },
-        },  &callback);
+        }, [callback](const json& j) {
+          callback(Result<Logs>(j));
+        }
+      );
     }
 
 
@@ -1489,7 +1495,10 @@ namespace solana {
             {"encoding", "base64"},
             {"commitment", _commitment},
           },
-        }, &callback);
+        }, [callback](const json& j) {
+          callback(Result<Account>(j));
+        }
+      );
     }
 
     /**
@@ -1510,8 +1519,12 @@ namespace solana {
      *
      * @return The subscription id. This can be used to remove the listener with remove_slot_change_listener
     */
-    int on_slot_change(std::function<void(SlotInfo slotInfo)> callback) {
-      return _rpcWebSocket.subscribe("slotSubscribe", {}, &callback);
+    int on_slot_change(std::function<void(Result<SlotInfo>)> callback) {
+      return _rpcWebSocket.subscribe("slotSubscribe", {
+        }, [callback](const json& j) {
+          callback(j);
+        }
+      );
     }
 
     /**
