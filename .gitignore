@@ -1,7 +1,11 @@
 .vscode/settings.json
 
-examples/*
-!examples/*.cpp
+examples/solana/*
+!examples/solana/*.cpp
+examples/evm/*
+!examples/evm/*.cpp
 
-tests/*
-!tests/*.cpp
+tests/solana/*
+!tests/solana/*.cpp
+tests/evm/*
+!tests/evm/*.cpp
