@@ -1,8 +1,11 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "./doctest.h"
+#include "../doctest.h"
 
-#include "../src/json.hpp"
-#include "../src/solana.hpp"
+#include "../../src/json.hpp"
+
+using json = nlohmann::json;
+
+#include "../../src/solana.hpp"
 
 using namespace solana;
 

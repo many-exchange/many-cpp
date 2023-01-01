@@ -2,10 +2,10 @@
 
 examples/solana/*
 !examples/solana/*.cpp
-examples/evm/*
-!examples/evm/*.cpp
+examples/ethereum/*
+!examples/ethereum/*.cpp
 
 tests/solana/*
 !tests/solana/*.cpp
-tests/evm/*
-!tests/evm/*.cpp
+tests/ethereum/*
+!tests/ethereum/*.cpp

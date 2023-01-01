@@ -1,6 +1,8 @@
-#include "../src/json.hpp"
-#include "../src/solana.hpp"
-#include "../src/tokens.hpp"
+#include "../../src/json.hpp"
+
+using json = nlohmann::json;
+
+#include "../../src/solana.hpp"
 
 using namespace solana;
 

@@ -32,7 +32,9 @@
 #include <unistd.h>
 #include <vector>
 
-#include "common.hpp"
+#include "many.hpp"
+
+using namespace many;
 
 #define LAMPORTS_PER_SOL 1000000000
 
@@ -53,10 +55,6 @@
 #define PRIVATE_KEY_LENGTH 64
 #define PUBLIC_KEY_LENGTH 32
 #define SIGNATURE_LENGTH 64
-
-using json = nlohmann::json;
-
-using namespace many;
 
 namespace solana {
 
