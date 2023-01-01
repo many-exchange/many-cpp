@@ -5,12 +5,12 @@ using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  int subscriptionId = connection.on_account_change(PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix"), [&](Context context, AccountInfo accountInfo) {
-    std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl;
-    std::cout << "owner = " << accountInfo.account.owner.to_base58() << std::endl;
-    std::cout << "lamports = " << accountInfo.account.lamports << std::endl;
-    std::cout << "data = " << accountInfo.account.data << std::endl;
-    std::cout << "executable = " << (accountInfo.account.executable ? "true" : "false") << std::endl << std::endl;
+  int subscriptionId = connection.on_account_change(PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix"), [&](Result<Account> result) {
+    Account account = result.unwrap();
+    std::cout << "owner = " << account.owner.to_base58() << std::endl;
+    std::cout << "lamports = " << account.lamports << std::endl;
+    std::cout << "data = " << account.data << std::endl;
+    std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl << std::endl;
   });
   ASSERT(connection.is_connected());
 

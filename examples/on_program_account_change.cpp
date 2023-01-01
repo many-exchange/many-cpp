@@ -7,7 +7,7 @@ using namespace solana;
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
   AccountInfo programAccountInfo = connection.get_program_accounts(TOKEN_PROGRAM_ID).unwrap()[0];
-  int subscriptionId = connection.on_program_account_change(programAccountInfo.pubkey, [&](Context context, AccountInfo accountInfo) {
+  int subscriptionId = connection.on_program_account_change(programAccountInfo.pubkey, [&](Result<Account>) {
     std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl;
     std::cout << "owner = " << accountInfo.account.owner.to_base58() << std::endl;
     std::cout << "lamports = " << accountInfo.account.lamports << std::endl;

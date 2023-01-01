@@ -2802,24 +2802,24 @@ namespace solana {
           end++;
 
           if (buffer[end] == '\n') {
-            if (strncmp(&buffer[start], "Connection: ", 12) == 0) {
-              if (strncmp(&buffer[start], "Connection: Upgrade", 19) != 0 && strncmp(&buffer[start], "Connection: upgrade", 19) != 0) {
+            if (strncasecmp(&buffer[start], "Connection: ", 12) == 0) {
+              if (strncasecmp(&buffer[start], "Connection: Upgrade", 19) != 0 && strncasecmp(&buffer[start], "Connection: upgrade", 19) != 0) {
                 return false;
               }
             }
-            else if (strncmp(&buffer[start], "Upgrade: ", 9) == 0) {
-              if (strncmp(&buffer[start], "Upgrade: websocket", 18) != 0) {
+            else if (strncasecmp(&buffer[start], "Upgrade: ", 9) == 0) {
+              if (strncasecmp(&buffer[start], "Upgrade: websocket", 18) != 0) {
                 return false;
               }
             }
-            else if (strncmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0) {
+            else if (strncasecmp(&buffer[start], "Sec-WebSocket-Accept: ", 22) == 0) {
               std::string key = base64::encode(_nonce.begin(), 16) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
               char sha1[20];
               SHA1((const unsigned char *)key.data(), key.size(), (unsigned char *)sha1);
               std::string hash = base64::encode((unsigned char *)sha1, 20);
 
-              accept = (strncmp(&buffer[start + 22], hash.c_str(), 20) == 0);
+              accept = (strncasecmp(&buffer[start + 22], hash.c_str(), 20) == 0);
             }
 
             start = end + 1;
@@ -3134,7 +3134,6 @@ namespace solana {
             }
             else {
               //end_read(0);
-std::cout << buffer << std::endl;
               std::cerr << "HANDSHAKE FAILED" << std::endl;
               disconnect();
               return false;
@@ -3265,8 +3264,10 @@ std::cout << buffer << std::endl;
                         SlotInfo slotInfo = j["params"]["result"].get<SlotInfo>();
                         std::function<void(SlotInfo slotInfo)>* callback = (std::function<void(SlotInfo slotInfo)>*)_subscriptions[subscription_id];
                         (*callback)(slotInfo);
-                      } else if (method == "???") {
-                        //TODO add other notifications
+                      } else if (method == "accountNotification") {
+                        Result<Account> result = j["params"].get<Result<Account>>();
+                        std::function<void(Result<Account>)>* callback = (std::function<void(Result<Account>)>*)_subscriptions[subscription_id];
+                        (*callback)(result);
                       } else {
                         std::cerr << "Unknown notification: " << method << std::endl;
                       }
@@ -3748,7 +3749,7 @@ std::cout << buffer << std::endl;
      *
      * @return The subscription id. This can be used to remove the listener with remove_account_change_listener
     */
-    int on_account_change(PublicKey accountId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    int on_account_change(PublicKey accountId, std::function<void(Result<Account>)> callback) {
       return _rpcWebSocket.subscribe("accountSubscribe", {
           accountId.to_base58(),
           {
@@ -3824,7 +3825,7 @@ std::cout << buffer << std::endl;
      *
      * @return The subscription id. This can be used to remove the listener with remove_program_account_listener
     */
-    int on_program_account_change(PublicKey programId, std::function<void(Context context, AccountInfo accountInfo)> callback) {
+    int on_program_account_change(PublicKey programId, std::function<void(Result<Account>)> callback) {
       return _rpcWebSocket.subscribe("programSubscribe", { programId.to_base58(), {{"encoding", "base64"}, {"commitment", _commitment} } }, &callback);
     }
 
