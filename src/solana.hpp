@@ -3112,7 +3112,7 @@ namespace solana {
 
         int send_length = 0;
         send_length += sprintf(&_send_buffer[send_length], "GET / HTTP/1.1\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "Host: %s:%u\r\n", hostname.c_str(), port);
+        send_length += sprintf(&_send_buffer[send_length], "Host: %s\r\n", hostname.c_str());
         send_length += sprintf(&_send_buffer[send_length], "Upgrade: websocket\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Connection: Upgrade\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Sec-WebSocket-Key: %s\r\n", websocket_key.c_str());
