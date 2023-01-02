@@ -7,7 +7,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace solana;
+using namespace many::solana;
 
 TEST_CASE("Keypair::generate") {
   auto mint = Keypair::generate();

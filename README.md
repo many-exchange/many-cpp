@@ -20,7 +20,7 @@ Refer to their [docs](https://docs.solana.com/apps/jsonrpc-api) or look through 
 #include "../src/solana.hpp"
 #include "../src/tokens.hpp"
 
-using namespace solana;
+using namespace many::solana;
 
 int main() {
   // Create a connection to the cluster

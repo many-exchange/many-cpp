@@ -7,7 +7,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace solana;
+using namespace many::solana;
 
 #define USDC_MINT PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 
