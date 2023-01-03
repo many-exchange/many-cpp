@@ -10,6 +10,26 @@
 
 #pragma once
 
+#include <algorithm>
+#include <arpa/inet.h>
+#include <array>
+#include <fcntl.h>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <netdb.h>
+#include <openssl/err.h>
+#include <openssl/sha.h>
+#include <openssl/ssl.h>
+#include <sodium.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdexcept>
+#include <stdint.h>
+#include <string>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <vector>
 
 namespace many {
@@ -424,6 +444,8 @@ namespace many {
     class HttpClient {
       const std::string _interface;
       const std::string _url;
+      std::string _host;
+      std::string _resource; //TODO this is a bit of a hack.
 
       int _socket;
       bool _use_ssl = false;
@@ -526,15 +548,16 @@ namespace many {
         int port = _use_ssl ? 443 : 80;
         index += 3; // "://"
         std::size_t end = _url.find("/", index + 1);
-        std::string hostname = _url.substr(index, end - index);
-        index = hostname.find(":");
+        _host = _url.substr(index, end - index);
+        index = _host.find(":");
         if (index != std::string::npos) {
-          port = std::stoi(hostname.substr(index + 1));
-          hostname = hostname.substr(0, index);
+          port = std::stoi(_host.substr(index + 1));
+          _host = _host.substr(0, index);
         }
+        _resource = _url.substr(end);
 
         struct hostent *server;
-        server = gethostbyname(hostname.c_str());
+        server = gethostbyname(_host.c_str());
         if (server == NULL) {
           std::cerr << "Error: gethostbyname() failed" << std::endl;
           return false;
@@ -544,7 +567,7 @@ namespace many {
 
         int i = 0;
         while (server->h_addr_list[i] != NULL) {
-          if (connect(hostname, (struct in_addr*)server->h_addr_list[i], port)) {
+          if (connect(_host, (struct in_addr*)server->h_addr_list[i], port)) {
             return true;
           }
           i++;
@@ -673,8 +696,9 @@ namespace many {
         std::string json_string = request.dump();
 
         int send_length = 0;
-        send_length += sprintf(&_send_buffer[send_length], "POST / HTTP/1.1\r\n");
-        send_length += sprintf(&_send_buffer[send_length], "Content-Type: application/json\r\n");
+        send_length += sprintf(&_send_buffer[send_length], "POST %s HTTP/1.1\r\n", _resource.c_str());
+        send_length += sprintf(&_send_buffer[send_length], "Host: %s\r\n", _host.c_str());
+        send_length += sprintf(&_send_buffer[send_length], "Content-Type: application/x-www-form-urlencoded\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Content-Length: %d\r\n", (int)json_string.size());
         send_length += sprintf(&_send_buffer[send_length], "\r\n");
         memcpy(&_send_buffer[send_length], json_string.c_str(), json_string.size());

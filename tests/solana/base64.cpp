@@ -7,7 +7,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace solana;
+using namespace many::solana;
 
 TEST_CASE("Encode base64") {
   std::string encoded = base64::encode("hello");

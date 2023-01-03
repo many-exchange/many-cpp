@@ -4,7 +4,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace solana;
+using namespace many::solana;
 
 //TODO not working
 int main() {

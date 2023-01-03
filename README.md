@@ -22,7 +22,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace solana;
+using namespace many::solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
