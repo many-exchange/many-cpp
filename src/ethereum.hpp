@@ -32,12 +32,15 @@ namespace many {
     "result": "Mist/v0.9.3/darwin/go1.4.1"
   }
       */
+      /**
+       * Returns the current client version.
+       */
       json web3_client_version() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "web3_clientVersion"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -52,6 +55,9 @@ namespace many {
     "result": "0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad"
   }
       */
+      /**
+       * Returns Keccak-256 (not the standardized SHA3-256) of the given data.
+       */
       json web3_sha3(const std::string sha3) {
         int id = 0;
         return http::post(_url, {
@@ -74,12 +80,15 @@ namespace many {
     "result": "3"
   }
       */
+      /**
+       * Returns the current network id.
+       */
       json net_version() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "net_version"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -94,12 +103,15 @@ namespace many {
     "result":true
   }
       */
+      /**
+       * Returns true if client is actively listening for network connections.
+       */
       json net_listening() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "net_listening"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -114,12 +126,15 @@ namespace many {
     "result": "0x2" // 2
   }
       */
+      /**
+       * Returns number of peers currently connected to the client.
+       */
       json net_peer_count() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "net_peerCount"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -134,12 +149,15 @@ namespace many {
     "result": "54"
   }
       */
+      /**
+       * Returns the current ethereum protocol version.
+       */
       json eth_protocol_version() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_protocolVersion"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -164,12 +182,15 @@ namespace many {
     "result": false
   }
       */
+      /**
+       * Returns an object with data about the sync status or false.
+       */
       json eth_syncing() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_syncing"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -184,12 +205,15 @@ namespace many {
     "result": "0x407d73d8a49eeb85d32cf465507dd71d507100c1"
   }
       */
+      /**
+       * Returns the client coinbase address.
+       */
       json eth_coinbase() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_coinbase"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -204,12 +228,15 @@ namespace many {
     "result": true
   }
       */
+      /**
+       * Returns true if client is actively mining new blocks.
+       */
       json eth_mining() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_mining"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -224,12 +251,15 @@ namespace many {
     "result": "0x38a"
   }
       */
+      /**
+       * Returns the number of hashes per second that the node is mining with.
+       */
       json eth_hashrate() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_hashrate"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -244,63 +274,57 @@ namespace many {
     "result": "0x1dfd14000" // 8049999872 Wei
   }
       */
+      /**
+       * Returns the current price per gas in wei.
+       */
       json eth_gas_price() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_gasPrice"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
 
-      /*
-  // Request
-  curl -X POST --data '{"jsonrpc":"2.0","method":"eth_accounts","params":[],"id":1}'
-  // Result
-  {
-    "id":1,
-    "jsonrpc": "2.0",
-    "result": ["0x407d73d8a49eeb85d32cf465507dd71d507100c1"]
-  }
-      */
+      /**
+       * Returns a list of addresses owned by client.
+       */
       json eth_accounts() {
-        int id = 0;
+        int id = 1;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_accounts"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
 
+      /**
+       * Returns the number of most recent block.
+       */
       json eth_block_number() {
-        std::vector<std::string> params;
         int id = 1;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_blockNumber"},
-          {"params", params},
+          {"params", json::array()},
           {"id", id},
         });
       }
 
-      /*
-  // Request
-  curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0x407d73d8a49eeb85d32cf465507dd71d507100c1", "latest"],"id":1}'
-  // Result
-  {
-    "id":1,
-    "jsonrpc": "2.0",
-    "result": "0x0234c8a3397aab58" // 158972490234375000
-  }
-      */
+      /**
+       * Returns the balance of the account of given address.
+       */
       json eth_get_balance() {
-        int id = 0;
+        int id = 1;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getBalance"},
-          {"params", {}},
+          {"params", {
+            "0x407d73d8a49eeb85d32cf465507dd71d507100c1",
+            "latest"
+          }},
           {"id", id},
         });
       }
@@ -309,12 +333,15 @@ namespace many {
   curl -X POST --data '{"jsonrpc":"2.0", "method": "eth_getStorageAt", "params": ["0x295a70b2de5e3953354a6a8344e616ed314d7251", "0x0", "latest"], "id": 1}' localhost:8545
   {"jsonrpc":"2.0","id":1,"result":"0x00000000000000000000000000000000000000000000000000000000000004d2"}
       */
+      /**
+       * Returns the value from a storage position at a given address.
+       */
       json eth_get_storage_at() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getStorageAt"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -329,12 +356,15 @@ namespace many {
     "result": "0x1" // 1
   }
       */
+      /**
+       * Returns the number of transactions sent from an address.
+       */
       json eth_get_transaction_count() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getTransactionCount"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -349,12 +379,15 @@ namespace many {
     "result": "0xb" // 11
   }
       */
+      /**
+       * Returns the number of transactions in a block from a block matching the given block hash.
+       */
       json eth_get_block_transaction_count_by_hash() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getBlockTransactionCountByHash"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -369,12 +402,15 @@ namespace many {
     "result": "0xa" // 10
   }
       */
+      /**
+       * Returns the number of transactions in a block from a block matching the given block number.
+       */
       json eth_get_block_transaction_count_by_number() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getBlockTransactionCountByNumber"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -389,12 +425,15 @@ namespace many {
     "result": "0x1" // 1
   }
       */
+      /**
+       * Returns the number of uncles in a block from a block matching the given block hash.
+       */
       json eth_get_uncle_count_by_block_hash() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getUncleCountByBlockHash"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -409,12 +448,15 @@ namespace many {
     "result": "0x1" // 1
   }
       */
+      /**
+       * Returns the number of uncles in a block from a block matching the given block number.
+       */
       json eth_get_uncle_count_by_block_number() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getUncleCountByBlockNumber"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -429,12 +471,15 @@ namespace many {
     "result": "0x600160008035811a818181146012578301005b601b6001356025565b8060005260206000f25b600060078202905091905056"
   }
       */
+      /**
+       * Returns code at a given address.
+       */
       json eth_get_code() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getCode"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -449,12 +494,15 @@ namespace many {
     "result": "0xa3f20717a250c2b0b729b7e5becbff67fdaef7e0699da4de7ca5895b02a170a12d887fd3b17bfdce3481f10bea41f45ba9f709d39ce8325427b57afcfc994cee1b"
   }
       */
+      /**
+       * The sign method calculates an Ethereum specific signature with: sign(keccak256("\x19Ethereum Signed Message:\n" + len(message) + message))).
+       */
       json eth_sign() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_sign"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -469,12 +517,15 @@ namespace many {
       "result": "0xa3f20717a250c2b0b729b7e5becbff67fdaef7e0699da4de7ca5895b02a170a12d887fd3b17bfdce3481f10bea41f45ba9f709d39ce8325427b57afcfc994cee1b"
   }
       */
+      /**
+       * Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.
+       */
       json eth_sign_transaction() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_signTransaction"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -489,12 +540,15 @@ namespace many {
     "result": "0xe670ec64341771606e55d6b4ca35a1a6b75ee3d5145a99d05921026d1527331"
   }
       */
+      /**
+       * Creates new message call transaction or a contract creation, if the data field contains code.
+       */
       json eth_send_transaction() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_sendTransaction"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -509,12 +563,15 @@ namespace many {
     "result": "0xe670ec64341771606e55d6b4ca35a1a6b75ee3d5145a99d05921026d1527331"
   }
       */
+      /**
+       * Creates new message call transaction or a contract creation for signed transactions.
+       */
       json eth_send_raw_transaction() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_sendRawTransaction"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -529,12 +586,15 @@ namespace many {
     "result": "0x"
   }
       */
+      /**
+       * Executes a new message call immediately without creating a transaction on the block chain.
+       */
       json eth_call() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_call"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -549,12 +609,15 @@ namespace many {
     "result": "0x5208" // 21000
   }
       */
+      /**
+       * Generates and returns an estimate of how much gas is necessary to allow the transaction to complete.
+       */
       json eth_estimate_gas() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_estimateGas"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -593,12 +656,15 @@ namespace many {
   }
   }
       */
+      /**
+       * Returns information about a block by hash.
+       */
       json eth_get_block_by_hash() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getBlockByHash"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -607,12 +673,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x1b4", true],"id":1}'
       */
+      /**
+       * Returns information about a block by block number.
+       */
       json eth_get_block_by_number() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getBlockByNumber"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -642,12 +711,15 @@ namespace many {
     }
   }
       */
+      /**
+       * Returns the information about a transaction requested by transaction hash.
+       */
       json eth_get_transaction_by_hash() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getTransactionByHash"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -656,12 +728,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getTransactionByBlockHashAndIndex","params":["0xc6ef2fc5426d6ad6fd9e2a26abeab0aa2411b7ab17f30a99d3cb96aed1d1055b", "0x0"],"id":1}'
       */
+      /**
+       * Returns information about a transaction by block hash and transaction index position.
+       */
       json eth_get_transaction_by_block_hash_and_index() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getTransactionByBlockHashAndIndex"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -670,12 +745,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getTransactionByBlockNumberAndIndex","params":["0x29c", "0x0"],"id":1}'
       */
+      /**
+       * Returns information about a transaction by block number and transaction index position.
+       */
       json eth_get_transaction_by_block_number_and_index() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getTransactionByBlockNumberAndIndex"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -709,12 +787,15 @@ namespace many {
     }
   }
       */
+      /**
+       * Returns the receipt of a transaction by transaction hash.
+       */
       json eth_get_transaction_receipt() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getTransactionReceipt"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -723,12 +804,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getUncleByBlockHashAndIndex","params":["0xc6ef2fc5426d6ad6fd9e2a26abeab0aa2411b7ab17f30a99d3cb96aed1d1055b", "0x0"],"id":1}'
       */
+      /**
+       * Returns information about a uncle of a block by hash and uncle index position.
+       */
       json eth_get_uncle_by_block_hash_and_index() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getUncleByBlockHashAndIndex"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -737,12 +821,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getUncleByBlockNumberAndIndex","params":["0x29c", "0x0"],"id":1}'
       */
+      /**
+       * Returns information about a uncle of a block by number and uncle index position.
+       */
       json eth_get_uncle_by_block_number_and_index() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getUncleByBlockNumberAndIndex"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -757,12 +844,15 @@ namespace many {
     "result": ["solidity", "lll", "serpent"]
   }
       */
+      /**
+       * Returns a list of available compilers in the client.
+       */
       json eth_get_compilers() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getCompilers"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -809,12 +899,15 @@ namespace many {
         }
   }
       */
+      /**
+       * Returns compiled solidity code.
+       */
       json eth_compile_solidity() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_compileSolidity"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -829,12 +922,15 @@ namespace many {
     "result": "0x603880600c6000396000f3006001600060e060020a600035048063c6888fa114601857005b6021600435602b565b8060005260206000f35b600081600702905091905056" // the compiled source code
   }
       */
+      /**
+       * Returns compiled LLL code.
+       */
       json eth_compile_LLL() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_compileLLL"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -849,12 +945,15 @@ namespace many {
     "result": "0x603880600c6000396000f3006001600060e060020a600035048063c6888fa114601857005b6021600435602b565b8060005260206000f35b600081600702905091905056" // the compiled source code
   }
       */
+      /**
+       * Returns compiled serpent code.
+       */
       json eth_compile_serpent() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_compileSerpent"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -869,12 +968,16 @@ namespace many {
     "result": "0x1" // 1
   }
       */
+      /**
+       * Creates a filter object, based on filter options, to notify when the state changes (logs).
+       * To check if the state has changed, call eth_getFilterChanges.
+       */
       json eth_new_filter() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_newFilter"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -889,12 +992,16 @@ namespace many {
     "result": "0x1" // 1
   }
       */
+      /**
+       * Creates a filter in the node, to notify when a new block arrives.
+       * To check if the state has changed, call eth_getFilterChanges.
+       */
       json eth_new_block_filter() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_newBlockFilter"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -909,12 +1016,16 @@ namespace many {
     "result": "0x1" // 1
   }
       */
+      /**
+       * Creates a filter in the node, to notify when new pending transactions arrive.
+       * To check if the state has changed, call eth_getFilterChanges.
+       */
       json eth_new_pending_transaction_filter() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_newPendingTransactionFilter"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -929,12 +1040,17 @@ namespace many {
     "result": true
   }
       */
+      /**
+       * Uninstalls a filter with given id.
+       * Should always be called when watch is no longer needed.
+       * Additonally Filters timeout when they aren't requested with eth_getFilterChanges for a period of time.
+       */
       json eth_uninstall_filter() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_uninstallFilter"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -960,12 +1076,15 @@ namespace many {
       }]
   }
       */
+      /**
+       * Polling method for a filter, which returns an array of logs which occurred since last poll.
+       */
       json eth_get_filter_changes() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getFilterChanges"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -974,12 +1093,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getFilterLogs","params":["0x16"],"id":74}'
       */
+      /**
+       * Returns an array of all logs matching filter with given id.
+       */
       json eth_get_filter_logs() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getFilterLogs"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -988,12 +1110,15 @@ namespace many {
   // Request
   curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"topics":["0x000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b"]}],"id":74}'
       */
+      /**
+       * Returns an array of all logs matching a given filter object.
+       */
       json eth_get_logs() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getLogs"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -1012,12 +1137,15 @@ namespace many {
       ]
   }
       */
+      /**
+       * Returns the hash of the current block, the seedHash, and the boundary condition to be met ("target").
+       */
       json eth_get_work() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_getWork"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -1032,12 +1160,15 @@ namespace many {
     "result": true
   }
       */
+      /**
+       * Used for submitting a proof-of-work solution.
+       */
       json eth_submit_work() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_submitWork"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
@@ -1052,24 +1183,35 @@ namespace many {
     "result": true
   }
       */
+      /**
+       * Used for submitting mining hashrate.
+       */
       json eth_submit_hashrate() {
         int id = 0;
         return http::post(_url, {
           {"jsonrpc", "2.0"},
           {"method", "eth_submitHashrate"},
-          {"params", {}},
+          {"params", json::array()},
           {"id", id},
         });
       }
 
     };
 
-    class Wallet {
+    class Signer {
     public:
 
       Provider& provider;
 
-      Wallet(const std::vector<uint8_t> privateKey, Provider& provider): provider(provider) {
+      Signer(const std::vector<uint8_t> privateKey, Provider& provider): provider(provider) {
+      }
+
+    };
+
+    class Contract {
+    public:
+
+      Contract() {
       }
 
     };
