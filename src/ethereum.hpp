@@ -1,15 +1,20 @@
-// Copyright (c) 2023 Many Exchange
+//  ____ _____ _____ ____ _____ ____ __ __ __ _ __
+// |  __|_   _|  |  |  __|  _  |  __|  |  |       |  Ethereum C++ SDK
+// |  __| | | |     |  __|    \|  __|  |  |  | |  |  version 0.0.1
+// |____| |_| |__|__|____|__|__|____|_____|__|_|__|  https://github.com/many-exchange/many-exchange-cpp
+//
+// Copyright (c) 2022-2023 Many Exchange
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
 #pragma once
 
-#include <stdint.h>
-#include <string>
-#include <vector>
-
 #include "many.hpp"
+
+using namespace many;
+
+#define WEI_PER_ETH 1000000000000000000
 
 namespace many {
 

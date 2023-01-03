@@ -517,8 +517,7 @@ namespace many {
         _interface(interface),
         _socket(-1),
         _ssl_ctx(nullptr),
-        _ssl(nullptr)
-      {
+        _ssl(nullptr) {
         _send_buffer = (char*)malloc(65536);
         _recv_buffer = (char*)malloc(8388608);
       }
@@ -1906,8 +1905,7 @@ namespace many {
         _interface(interface),
         _socket(-1),
         _ssl_ctx(nullptr),
-        _ssl(nullptr)
-      {
+        _ssl(nullptr) {
         _nonce[16] = 0;
 
         _send_buffer = (char*)malloc(SEND_BUFFER_SIZE);
