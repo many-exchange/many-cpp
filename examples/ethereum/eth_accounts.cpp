@@ -7,11 +7,11 @@ using json = nlohmann::json;
 using namespace many::ethereum;
 
 int main() {
-  Provider provider("https://rpc.ankr.com/eth");
+  JsonRpcProvider provider("https://rpc.ankr.com/eth");
 
   auto eth_accounts = provider.eth_accounts();
 
-  std::cout << "eth_accounts = " << eth_accounts["result"] << std::endl;
+  std::cout << "eth_accounts = " << eth_accounts.unwrap().size() << std::endl;
 
   return 0;
 }

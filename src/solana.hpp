@@ -12,8 +12,6 @@
 
 #include "many.hpp"
 
-using namespace many;
-
 #define LAMPORTS_PER_SOL 1000000000
 
 #define NATIVE_MINT PublicKey("So11111111111111111111111111111111111111112")

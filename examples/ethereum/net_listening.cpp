@@ -9,9 +9,9 @@ using namespace many::ethereum;
 int main() {
   JsonRpcProvider provider("https://rpc.ankr.com/eth");
 
-  auto eth_block_number = provider.eth_block_number();
+  auto net_listening = provider.net_listening();
 
-  std::cout << "eth_block_number = " << eth_block_number.unwrap() << std::endl;
+  std::cout << "net_listening = " << net_listening.unwrap() << std::endl;
 
   return 0;
 }

@@ -9,9 +9,9 @@ using namespace many::ethereum;
 int main() {
   JsonRpcProvider provider("https://rpc.ankr.com/eth");
 
-  auto eth_block_number = provider.eth_block_number();
+  auto eth_gas_price = provider.eth_gas_price();
 
-  std::cout << "eth_block_number = " << eth_block_number.unwrap() << std::endl;
+  std::cout << "eth_gas_price = " << eth_gas_price.unwrap() << std::endl;
 
   return 0;
 }

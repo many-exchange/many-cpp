@@ -43,6 +43,25 @@ namespace many {
     }                                                           \
   } while(0)
 
+  uint64_t from_hex(std::string sz) {
+    uint64_t i;
+    std::stringstream stream(sz);
+    stream >> std::hex >> i;
+    return i;
+  }
+
+  std::string to_hex(int i) {
+    std::stringstream stream;
+    stream << "0x" << std::hex << i;
+    return stream.str();
+  }
+
+  std::string to_hex(uint64_t i) {
+    std::stringstream stream;
+    stream << "0x" << std::hex << i;
+    return stream.str();
+  }
+
   /**
    * Decodes a variable length integer
    *
@@ -761,7 +780,8 @@ namespace many {
       char* response = client.post(request, &response_length);
       client.disconnect();
 
-      // std::cout << response << std::endl << std::endl;
+      std::cout << request.dump() << std::endl << std::endl;
+      std::cout << response << std::endl << std::endl;
 
       return json::parse(std::string(response, response_length));
     }
