@@ -536,8 +536,7 @@ namespace many {
         _interface(interface),
         _socket(-1),
         _ssl_ctx(nullptr),
-        _ssl(nullptr)
-      {
+        _ssl(nullptr) {
         _send_buffer = (char*)malloc(65536);
         _recv_buffer = (char*)malloc(8388608);
       }
@@ -628,7 +627,7 @@ namespace many {
           std::cerr << "CONNECT FAILED" << std::endl;
           std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
           std::cerr << "  address = " << address << std::endl;
-          std::cerr << "  port = " << std::to_string(port) << std::endl << std::endl;
+          std::cerr << "  port = " << std::to_string(port) << std::endl;
           disconnect();
           return false;
         }
@@ -685,7 +684,7 @@ namespace many {
         // std::cout << "CONNECT" << std::endl;
         // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
         // std::cout << "  tcp_address = " << tcp_address << std::endl;
-        // std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl << std::endl;
+        // std::cout << "  tcp_port = " << std::to_string(tcp_port) << std::endl;
 
         return true;
       }
@@ -780,8 +779,8 @@ namespace many {
       char* response = client.post(request, &response_length);
       client.disconnect();
 
-      std::cout << request.dump() << std::endl << std::endl;
-      std::cout << response << std::endl << std::endl;
+      // std::cout << request.dump() << std::endl << std::endl;
+      // std::cout << response << std::endl << std::endl;
 
       return json::parse(std::string(response, response_length));
     }
@@ -1926,8 +1925,7 @@ namespace many {
         _interface(interface),
         _socket(-1),
         _ssl_ctx(nullptr),
-        _ssl(nullptr)
-      {
+        _ssl(nullptr) {
         _nonce[16] = 0;
 
         _send_buffer = (char*)malloc(SEND_BUFFER_SIZE);
@@ -2023,7 +2021,7 @@ namespace many {
           std::cerr << "CONNECT FAILED" << std::endl;
           std::cerr << "  socket = " << std::to_string(_socket) << std::endl;
           std::cerr << "  address = " << address << std::endl;
-          std::cerr << "  port = " << std::to_string(port) << std::endl << std::endl;
+          std::cerr << "  port = " << std::to_string(port) << std::endl;
           disconnect();
           return false;
         }
@@ -2080,7 +2078,7 @@ namespace many {
         // std::cout << "CONNECT" << std::endl;
         // std::cout << "  socket = " << std::to_string(_socket) << std::endl;
         // std::cout << "  address = " << address << std::endl;
-        // std::cout << "  port = " << std::to_string(port) << std::endl << std::endl;
+        // std::cout << "  port = " << std::to_string(port) << std::endl;
 
         std::generate(_nonce.begin(), _nonce.end(), []() { return (uint8_t)std::rand(); });
         std::string websocket_key = base64::encode(_nonce.begin(), 16);

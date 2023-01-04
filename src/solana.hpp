@@ -1087,8 +1087,7 @@ namespace many {
         : _commitment(commitment),
         _rpc_endpoint(endpoint),
         _rpc_ws_endpoint(make_websocket_url(endpoint)),
-        _rpc_web_socket(_rpc_ws_endpoint)
-      {
+        _rpc_web_socket(_rpc_ws_endpoint) {
         auto sodium_result = sodium_init();
         if (sodium_result == -1) {
           throw std::runtime_error("Failed to initialize libsodium");

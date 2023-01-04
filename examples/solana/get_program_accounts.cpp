@@ -8,7 +8,12 @@ using namespace many::solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  std::vector<AccountInfo> program_accounts = connection.get_program_accounts(PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s")).unwrap();
+
+  std::string program_id;
+  std::cout << "Enter program ID: ";
+  std::cin >> program_id;
+
+  std::vector<AccountInfo> program_accounts = connection.get_program_accounts(PublicKey(program_id)).unwrap();
 
   for (AccountInfo program_account : program_accounts) {
     std::cout << "owner = " << program_account.account.owner.to_base58() << std::endl;

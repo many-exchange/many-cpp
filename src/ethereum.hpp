@@ -1,4 +1,9 @@
-// Copyright (c) 2023 Many Exchange
+//  ____ _____ _____ ____ _____ ____ __ __ __ _ __
+// |  __|_   _|  |  |  __|  _  |  __|  |  |       |  Ethereum C++ SDK
+// |  __| | | |     |  __|    \|  __|  |  |  | |  |  version 0.0.1
+// |____| |_| |__|__|____|__|__|____|_____|__|_|__|  https://github.com/many-exchange/many-exchange-cpp
+//
+// Copyright (c) 2022-2023 Many Exchange
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -7,33 +12,9 @@
 
 #include "many.hpp"
 
-/*
-// Look up the current block number
-await provider.getBlockNumber()
-// 15785491
+using namespace many;
 
-// Get the balance of an account (by address or ENS name, if supported by network)
-balance = await provider.getBalance("ethers.eth")
-// { BigNumber: "182826475815887608" }
-
-// Often you need to format the output to something more user-friendly,
-// such as in ether (instead of wei)
-ethers.utils.formatEther(balance)
-// '0.182826475815887608'
-
-// If a user enters a string in an input field, you may need
-// to convert it from ether (as a string) to wei (as a BigNumber)
-ethers.utils.parseEther("1.0")
-// { BigNumber: "1000000000000000000" }
-*/
-
-/*
-// Send 1 ether to an ens name.
-const tx = signer.sendTransaction({
-    to: "ricmoo.firefly.eth",
-    value: ethers.utils.parseEther("1.0")
-});
-*/
+#define WEI_PER_ETH 1000000000000000000
 
 namespace many {
 

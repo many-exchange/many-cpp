@@ -16,42 +16,27 @@ Refer to their [docs](https://docs.solana.com/apps/jsonrpc-api) or look through 
 
 #### Example
 ```c++
-#include "../src/json.hpp"
-#include "../src/solana.hpp"
-#include "../src/tokens.hpp"
+#include "../../src/json.hpp"
+
+using json = nlohmann::json;
+
+#include "../../src/solana.hpp"
 
 using namespace many::solana;
 
 int main() {
-  // Create a connection to the cluster
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  
+  std::string public_key;
+  std::cout << "Enter public key: ";
+  std::cin >> public_key;
 
-  // Generate a new keypair
-  auto keypair = Keypair::generate();
+  Account account = connection.get_account_info(PublicKey(public_key)).unwrap();
 
-  // Request an airdrop
-  std::string tx_hash = connection.request_airdrop(keypair.public_key);
-  std::cout << "tx_hash = " << tx_hash << std::endl;
-
-  uint64_t lamports = 0;
-  while (lamports == 0) {
-    sleep(3);
-    lamports = connection.get_balance(keypair.public_key);
-  }
-  std::cout << "lamports = " << lamports << std::endl;
-
-  // Create associated token account
-  PublicKey associatedTokenAccount = token::create_associated_token_account(
-    connection,
-    keypair,
-    NATIVE_MINT,
-    keypair.public_key
-  );
-  std::cout << "associatedTokenAccount = " << associatedTokenAccount.to_base58() << std::endl;
-
-  // Verify that the account was created
-  AccountInfo accountInfo = connection.get_account_info(associatedTokenAccount);
-  std::cout << "pubkey = " << accountInfo.pubkey.to_base58() << std::endl;
+  std::cout << "owner = " << account.owner.to_base58() << std::endl;
+  std::cout << "lamports = " << account.lamports << std::endl;
+  std::cout << "data = " << account.data << std::endl;
+  std::cout << "executable = " << (account.executable ? "true" : "false") << std::endl;
 
   return 0;
 }
