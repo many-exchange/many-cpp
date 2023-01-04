@@ -11,8 +11,7 @@ You'll need to make sure you have [libsodium](https://formulae.brew.sh/formula/l
 
 #### Usage
 `solana.hpp` is the main header file and contains the `Connection` class, which connects to and interacts with with Solana's JSON RPC API.
-Refer to their [docs](https://docs.solana.com/apps/jsonrpc-api) or look through the header file to see what's currently supported.<br>
-`tokens.hpp` can be used in conjunction for easy interaction with the SPL Token Program.
+Refer to their [docs](https://docs.solana.com/apps/jsonrpc-api) or look through the header file to see what's currently supported.
 
 #### Example
 ```c++
