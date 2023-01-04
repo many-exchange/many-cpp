@@ -1,3 +1,8 @@
+//  ____ _____ __    _   _  ____ _____ _____
+// | __ |     |  |  | |_| |/ ___|     |   | |  Polygon C++ SDK
+// |  __|  |  |  |__ \   /| |_  |  |  | | | |  version 0.0.1
+// |_|  |_____|_____| |_|  \____|_____|_|___|  https://github.com/many-exchange/many-exchange-cpp
+//
 // Copyright (c) 2023 Many Exchange
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
