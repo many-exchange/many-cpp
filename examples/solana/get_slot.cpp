@@ -1,8 +1,6 @@
-#include "../../src/json.hpp"
+// clang++ get_slot.cpp -o get_slot -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
+#include "solana.hpp"
 
 using namespace solana;
 

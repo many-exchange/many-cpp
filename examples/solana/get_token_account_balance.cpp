@@ -1,8 +1,6 @@
-#include "../../src/json.hpp"
+// clang++ get_token_account_balance.cpp -o get_token_account_balance -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
+#include "solana.hpp"
 
 using namespace solana;
 
@@ -18,7 +16,7 @@ int main() {
     std::cout << "No token accounts found." << std::endl;
     return 1;
   }
-  
+
   TokenBalance token_balance = connection.get_token_account_balance(token_accounts[0].pubkey).unwrap();
 
   std::cout << "balance = " << token_balance.tokens() << std::endl;

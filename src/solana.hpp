@@ -10,31 +10,12 @@
 
 #pragma once
 
-#include <algorithm>
-#include <arpa/inet.h>
-#include <array>
-#include <fcntl.h>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <netdb.h>
-#include <openssl/err.h>
-#include <openssl/sha.h>
-#include <openssl/ssl.h>
-#include <sodium.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdexcept>
-#include <stdint.h>
-#include <string>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <vector>
+#ifndef INCLUDE_NLOHMANN_JSON_HPP_
+  #include "json.hpp"
+  using json = nlohmann::json;
+#endif
 
 #include "many.hpp"
-
-using namespace many;
 
 #define LAMPORTS_PER_SOL 1000000000
 
@@ -1105,12 +1086,11 @@ namespace solana {
 
   public:
 
-    Connection(std::string endpoint, Commitment commitment)
+    Connection(std::string endpoint, Commitment commitment = Commitment::Processed)
       : _commitment(commitment),
       _rpc_endpoint(endpoint),
       _rpc_ws_endpoint(make_websocket_url(endpoint)),
-      _rpc_web_socket(_rpc_ws_endpoint)
-    {
+      _rpc_web_socket(_rpc_ws_endpoint) {
       auto sodium_result = sodium_init();
       if (sodium_result == -1) {
         throw std::runtime_error("Failed to initialize libsodium");

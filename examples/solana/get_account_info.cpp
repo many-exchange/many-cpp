@@ -1,14 +1,12 @@
-#include "../../src/json.hpp"
+// clang++ get_account_info.cpp -o get_account_info -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
+#include "solana.hpp"
 
 using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  
+
   std::string public_key;
   std::cout << "Enter public key: ";
   std::cin >> public_key;

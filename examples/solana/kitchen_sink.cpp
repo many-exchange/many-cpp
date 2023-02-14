@@ -1,11 +1,9 @@
+// clang++ kitchen_sink.cpp -o kitchen_sink -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
+
 #include <algorithm>
 #include <chrono>
 
-#include "../../src/json.hpp"
-
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
+#include "solana.hpp"
 
 using namespace solana;
 

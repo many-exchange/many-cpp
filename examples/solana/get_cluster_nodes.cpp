@@ -1,8 +1,6 @@
-#include "../../src/json.hpp"
+// clang++ get_cluster_nodes.cpp -o get_cluster_nodes -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
+#include "solana.hpp"
 
 using namespace solana;
 
