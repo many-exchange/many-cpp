@@ -22,11 +22,11 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace many::solana;
+using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
-  
+
   std::string public_key;
   std::cout << "Enter public key: ";
   std::cin >> public_key;

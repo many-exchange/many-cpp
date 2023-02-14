@@ -1,10 +1,8 @@
-#include "../../src/json.hpp"
+// clang++ get_leader_schedule.cpp -o get_leader_schedule -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
+#include "solana.hpp"
 
-#include "../../src/solana.hpp"
-
-using namespace many::solana;
+using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);

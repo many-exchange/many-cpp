@@ -572,7 +572,7 @@ namespace many {
           port = std::stoi(_host.substr(index + 1));
           _host = _host.substr(0, index);
         }
-        _resource = _url.substr(end);
+        _resource = (end == std::string::npos) ? "/" : _url.substr(end);
 
         struct hostent *server;
         server = gethostbyname(_host.c_str());
@@ -716,7 +716,7 @@ namespace many {
         int send_length = 0;
         send_length += sprintf(&_send_buffer[send_length], "POST %s HTTP/1.1\r\n", _resource.c_str());
         send_length += sprintf(&_send_buffer[send_length], "Host: %s\r\n", _host.c_str());
-        send_length += sprintf(&_send_buffer[send_length], "Content-Type: application/x-www-form-urlencoded\r\n");
+        send_length += sprintf(&_send_buffer[send_length], "Content-Type: application/json\r\n");
         send_length += sprintf(&_send_buffer[send_length], "Content-Length: %d\r\n", (int)json_string.size());
         send_length += sprintf(&_send_buffer[send_length], "\r\n");
         memcpy(&_send_buffer[send_length], json_string.c_str(), json_string.size());

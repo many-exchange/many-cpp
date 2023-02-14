@@ -1,11 +1,6 @@
-#include "../../src/json.hpp"
-
-using json = nlohmann::json;
-
 #include "../../src/polygon.hpp"
 
-using namespace many;
-using namespace many::polygon;
+using namespace polygon;
 
 int main() {
   JsonRpcProvider provider("https://rpc.ankr.com/polygon");

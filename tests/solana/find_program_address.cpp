@@ -7,7 +7,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace many::solana;
+using namespace solana;
 
 TEST_CASE("find_program_address") {
   PublicKey program_id("6Cust2JhvweKLh4CVo1dt21s2PJ86uNGkziudpkNPaCj");

@@ -1,13 +1,11 @@
+// clang++ kitchen_sink.cpp -o kitchen_sink -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
+
 #include <algorithm>
 #include <chrono>
 
-#include "../../src/json.hpp"
+#include "solana.hpp"
 
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
-
-using namespace many::solana;
+using namespace solana;
 
 #define USDC_MINT PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 

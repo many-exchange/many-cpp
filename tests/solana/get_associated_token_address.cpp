@@ -7,7 +7,7 @@ using json = nlohmann::json;
 
 #include "../../src/solana.hpp"
 
-using namespace many::solana;
+using namespace solana;
 
 PublicKey program_id("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 PublicKey mint("So11111111111111111111111111111111111111112");

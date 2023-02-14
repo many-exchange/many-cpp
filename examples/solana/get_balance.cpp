@@ -1,20 +1,18 @@
-#include "../../src/json.hpp"
+// clang++ get_balance.cpp -o get_balance -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
+#include "solana.hpp"
 
-#include "../../src/solana.hpp"
-
-using namespace many::solana;
+using namespace solana;
 
 int main() {
-  Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
+  Connection connection("https://api.devnet.solana.com");
 
-  std::string public_key;
-  std::cout << "Enter public key: ";
-  std::cin >> public_key;
+  auto key_pair = Keypair::generate();
 
-  uint64_t balance = connection.get_balance(PublicKey(public_key)).unwrap();
+  auto public_key = key_pair.public_key;
+  std::cout << "public_key = " << public_key.to_base58() << std::endl;
 
+  uint64_t balance = connection.get_balance(public_key).unwrap();
   std::cout << "balance = " << balance << std::endl;
 
   return 0;

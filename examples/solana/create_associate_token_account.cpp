@@ -1,10 +1,8 @@
-#include "../../src/json.hpp"
+// clang++ create_associate_token_account.cpp -o create_associate_token_account -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
+#include "solana.hpp"
 
-#include "../../src/solana.hpp"
-
-using namespace many::solana;
+using namespace solana;
 
 int main() {
   // Create a connection to the cluster

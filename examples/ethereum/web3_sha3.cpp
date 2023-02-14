@@ -1,10 +1,6 @@
-#include "../../src/json.hpp"
-
-using json = nlohmann::json;
-
 #include "../../src/ethereum.hpp"
 
-using namespace many::ethereum;
+using namespace ethereum;
 
 int main() {
   JsonRpcProvider provider("https://rpc.ankr.com/eth");

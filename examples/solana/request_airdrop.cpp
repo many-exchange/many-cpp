@@ -1,19 +1,15 @@
-#include "../../src/json.hpp"
+// clang++ request_airdrop.cpp -o request_airdrop -std=c++17 -I ../../src/ -lssl -lcrypto -lsodium
 
-using json = nlohmann::json;
+#include "solana.hpp"
 
-#include "../../src/solana.hpp"
-
-using namespace many::solana;
+using namespace solana;
 
 int main() {
-  Connection connection(cluster_api_url(Cluster::Devnet), Commitment::Processed);
+  Connection connection("https://api.devnet.solana.com");
 
-  std::string public_key;
-  std::cout << "Enter public key: ";
-  std::cin >> public_key;
+  auto key_pair = Keypair::generate();
 
-  std::string tx_hash = connection.request_airdrop(PublicKey(public_key)).unwrap();
+  std::string tx_hash = connection.request_airdrop(key_pair.public_key).unwrap();
 
   std::cout << "tx hash = " << tx_hash << std::endl;
 

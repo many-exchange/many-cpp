@@ -1,10 +1,6 @@
-#include "../../src/json.hpp"
+#include "solana.hpp"
 
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
-
-using namespace many::solana;
+using namespace solana;
 
 int main() {
   Connection connection(cluster_api_url(Cluster::MainnetBeta), Commitment::Processed);
