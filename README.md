@@ -15,11 +15,7 @@ Refer to their [docs](https://docs.solana.com/apps/jsonrpc-api) or look through 
 
 #### Example
 ```c++
-#include "../../src/json.hpp"
-
-using json = nlohmann::json;
-
-#include "../../src/solana.hpp"
+#include "solana.hpp"
 
 using namespace solana;
 

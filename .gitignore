@@ -1,9 +1,20 @@
 .vscode/settings.json
 
+examples/anchor/*
+!examples/anchor/*.cpp
+!examples/anchor/*.h
+!examples/anchor/*.hpp
+!examples/anchor/*.json
+
 examples/ethereum/*
 !examples/ethereum/*.cpp
 !examples/ethereum/*.h
 !examples/ethereum/*.hpp
+
+examples/polygon/*
+!examples/polygon/*.cpp
+!examples/polygon/*.h
+!examples/polygon/*.hpp
 
 examples/solana/*
 !examples/solana/*.cpp
@@ -14,6 +25,11 @@ tests/ethereum/*
 !tests/ethereum/*.cpp
 !tests/ethereum/*.h
 !tests/ethereum/*.hpp
+
+tests/polygon/*
+!tests/polygon/*.cpp
+!tests/polygon/*.h
+!tests/polygon/*.hpp
 
 tests/solana/*
 !tests/solana/*.cpp

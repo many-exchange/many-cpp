@@ -17,6 +17,8 @@
 
 #include "many.hpp"
 
+using namespace many;
+
 namespace polygon {
 
   struct ResultError {

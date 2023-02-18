@@ -17,6 +17,8 @@
 
 #include "many.hpp"
 
+using namespace many;
+
 #define LAMPORTS_PER_SOL 1000000000
 
 #define NATIVE_MINT PublicKey("So11111111111111111111111111111111111111112")
@@ -245,6 +247,15 @@ namespace solana {
 
   void from_json(const nlohmann::json& j, PublicKey& pubkey) {
     pubkey = PublicKey(j.get<std::string>());
+  }
+
+  void to_json(nlohmann::json& j, const PublicKey& pubkey) {
+    j = pubkey.to_base58();
+  }
+
+  std::ostream& operator<<(std::ostream& os, const PublicKey& pubkey) {
+    os << pubkey.to_base58();
+    return os;
   }
 
   struct Keypair {
@@ -517,7 +528,7 @@ namespace solana {
 
       if (j["result"].contains("value")) {
         if (!j["result"]["value"].is_null()) {
-          r._result = j["result"]["value"].get<T>();
+          r._result = j["result"]["value"];
         }
       } else {
         if (!j["result"].is_null()) {
@@ -921,6 +932,47 @@ namespace solana {
     accountMeta.is_writable = j["isWritable"].get<bool>();
   }
 
+  std::ostream& operator<<(std::ostream& os, const TransactionMessageHeader& header) {
+    //os << "num_required_signatures: " << (int)header.num_required_signatures << ", num_readonly_signed_accounts: " << (int)header.num_readonly_signed_accounts << ", num_readonly_unsigned_accounts: " << (int)header.num_readonly_unsigned_accounts;
+    return os;
+  }
+
+  std::ostream& operator<<(std::ostream& os, const Transaction::Message::Instruction::AccountMeta& accountMeta) {
+    os << "pubkey: " << accountMeta.pubkey << ", is_signer: " << accountMeta.is_signer << ", is_writable: " << accountMeta.is_writable;
+    return os;
+  }
+
+  std::ostream& operator<<(std::ostream& os, const Transaction::Message::Instruction& instruction) {
+    os << "accounts: [";
+    for (auto& account : instruction.accounts) {
+      os << account << ", ";
+    }
+    os << "], data: " << instruction.data.data() << ", program_id: " << instruction.program_id;
+    return os;
+  }
+
+  std::ostream& operator<<(std::ostream& os, const Transaction::Message& message) {
+    os << "header: " << message.header << ", account_keys: [";
+    for (auto& account_key : message.account_keys) {
+      os << account_key << ", ";
+    }
+    os << "], recent_blockhash: " << message.recent_blockhash << ", instructions: [";
+    for (auto& instruction : message.instructions) {
+      os << instruction << ", ";
+    }
+    os << "]";
+    return os;
+  }
+
+  std::ostream& operator<<(std::ostream& os, const Transaction& transaction) {
+    os << "signatures: [";
+    for (auto& signature : transaction.signatures) {
+      os << signature << ", ";
+    }
+    os << "], message: " << transaction.message;
+    return os;
+  }
+
   struct TransactionResponseReturnData {
     /** The program that generated the return data */
     PublicKey program_d;
@@ -1014,7 +1066,7 @@ namespace solana {
     reward.lamports = j["lamports"].get<uint64_t>();
     reward.post_balance = j["postBalance"].get<uint64_t>();
     reward.reward_type = j["rewardType"].get<std::string>();
-    if (j.find("commission") != j.end()) {
+    if (j.contains("commission")) {
       reward.commission = j["commission"].get<uint8_t>();
     }
   }
@@ -1139,6 +1191,10 @@ namespace solana {
         {"method", "getBalance"},
         {"params", {
           public_key.to_base58(),
+          //TODO
+          {
+            {"commitment", "finalized"},
+          },
         }},
       });
     }
@@ -1173,7 +1229,24 @@ namespace solana {
         {"jsonrpc", "2.0"},
         {"id", 1},
         {"method", "getLatestBlockhash"},
+        //TODO
+        {"params", {
+          {
+            {"commitment", "finalized"},
+          },
+        }},
       });
+      /*
+  {
+    "id":1,
+    "jsonrpc":"2.0",
+    "method":"getLatestBlockhash",
+    "params":[
+      {
+        "commitment":"processed"
+      }
+    ]
+  }      */
     }
 
     /**
@@ -1382,6 +1455,15 @@ namespace solana {
       });
     };
 
+    void require_airdrop(const PublicKey& recipient_address, const uint64_t& lamports = LAMPORTS_PER_SOL) {
+      request_airdrop(recipient_address, lamports);
+      uint64_t balance = get_balance(recipient_address).unwrap();
+      while (balance == 0) {
+        sleep(1);
+        balance = get_balance(recipient_address).unwrap();
+      }
+    };
+
     /**
      * Signs and submits a transaction to the cluster for processing.
      *
@@ -1403,6 +1485,7 @@ namespace solana {
       compiled_transaction.sign(serialized_message, signers);
 
       std::vector<uint8_t> serialized_transaction = compiled_transaction.serialize(serialized_message);
+      //std::cout << "Serialized transaction: " << base64::encode(serialized_transaction) << std::endl;
 
       return http::post(_rpc_endpoint, {
         {"jsonrpc", "2.0"},
@@ -1578,6 +1661,15 @@ namespace solana {
 
   };
 
+  class SystemProgram {
+  public:
+    /**
+     * Public key that identifies the System program
+     */
+    static const PublicKey program_id;
+  };
+  const PublicKey SystemProgram::program_id = PublicKey("11111111111111111111111111111111");
+
   namespace token {
 
     /**
@@ -1667,7 +1759,6 @@ namespace solana {
           associated_token_program_id
         )
       );
-
       return tx;
     }
 
@@ -1736,7 +1827,7 @@ namespace solana {
 
       std::string txid = connection.sign_and_send_transaction(transaction, {payer}).unwrap();
 
-      return Result<PublicKey>(associated_token);;
+      return Result<PublicKey>(associated_token);
     }
 
   }

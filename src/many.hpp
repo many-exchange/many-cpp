@@ -417,20 +417,14 @@ namespace many {
       return output_length;
     }
 
-    std::string decode(const char *data, size_t input_length) {
-      int output_length = input_length / 4 * 3;
-      char output[output_length + 1];
-      output[output_length] = '\0';
-      output_length = decode(data, input_length, output, output_length);
-      output[output_length] = '\0';
-      return output;
-    }
-
     std::vector<uint8_t> decode(const std::string& input) {
-      std::string decoded = decode(input.c_str(), input.size());
-      return std::vector<uint8_t>(decoded.begin(), decoded.end());
+      int input_length = input.size();
+      int output_length = input_length / 4 * 3;
+      std::vector<uint8_t> buffer(output_length, 0);
+      output_length = decode(input.c_str(), input_length, (char *)buffer.data(), output_length);
+      buffer.resize(output_length);
+      return buffer;
     }
-
   } // namespace base64
 
   struct Context {
