@@ -1,7 +1,7 @@
 //  _______ _____ _____ __ __
 // |   |   |  _  |   | |  |  | Many Exchange C++ SDK
 // | | | | |     | | | |\   /  version 0.0.1
-// |_|___|_|__|__|_|___| |_|   https://github.com/many-exchange/many-exchange-cpp
+// |_|___|_|__|__|_|___| |_|   https://github.com/many-exchange/many-cpp
 //
 // Copyright (c) 2022-2023 Many Exchange
 //

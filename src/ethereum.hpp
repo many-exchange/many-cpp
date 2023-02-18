@@ -1,7 +1,7 @@
 //  ____ _____ _____ ____ _____ ____ __ __ __ _ __
 // |  __|_   _|  |  |  __|  _  |  __|  |  |       |  Ethereum C++ SDK
 // |  __| | | |     |  __|    \|  __|  |  |  | |  |  version 0.0.1
-// |____| |_| |__|__|____|__|__|____|_____|__|_|__|  https://github.com/many-exchange/many-exchange-cpp
+// |____| |_| |__|__|____|__|__|____|_____|__|_|__|  https://github.com/many-exchange/many-cpp
 //
 // Copyright (c) 2022-2023 Many Exchange
 //

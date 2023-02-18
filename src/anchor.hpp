@@ -1,7 +1,7 @@
 //  _____ _____ ____ _   _ _____ _____
 // |  _  |   | |  __| |_| |     |  _  |  Solana C++ SDK
 // |     | | | | |__|  _  |  |  |    \   version 0.0.1
-// |__|__|_|___|____|_| |_|_____|__|__|  https://github.com/many-exchange/many-exchange-cpp
+// |__|__|_|___|____|_| |_|_____|__|__|  https://github.com/many-exchange/many-cpp
 //
 // Copyright (c) 2022-2023 Many Exchange
 //
