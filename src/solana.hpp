@@ -7,6 +7,7 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+//
 
 #pragma once
 
@@ -1199,7 +1200,206 @@ namespace solana {
       });
     }
 
-    /**
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0","id":1,
+    "method":"getBlockHeight"
+  }
+'    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": 1233,
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0","id":1,
+    "method":"getBlock",
+    "params": [
+      430,
+      {
+        "encoding": "json",
+        "maxSupportedTransactionVersion":0,
+        "transactionDetails":"full",
+        "rewards":false
+      }
+    ]
+  }
+'    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "blockHeight": 428,
+    "blockTime": null,
+    "blockhash": "3Eq21vXNB5s86c62bVuUfTeaMif1N2kUqRPBmGRJhyTA",
+    "parentSlot": 429,
+    "previousBlockhash": "mfcyqEXB3DnHXki6KjjmZck6YjmZLvpAByy2fj4nh6B",
+    "transactions": [
+      {
+        "meta": {
+          "err": null,
+          "fee": 5000,
+          "innerInstructions": [],
+          "logMessages": [],
+          "postBalances": [499998932500, 26858640, 1, 1, 1],
+          "postTokenBalances": [],
+          "preBalances": [499998937500, 26858640, 1, 1, 1],
+          "preTokenBalances": [],
+          "rewards": null,
+          "status": {
+            "Ok": null
+          }
+        },
+        "transaction": {
+          "message": {
+            "accountKeys": [
+              "3UVYmECPPMZSCqWKfENfuoTv51fTDTWicX9xmBD2euKe",
+              "AjozzgE83A3x1sHNUR64hfH7zaEBWeMaFuAN9kQgujrc",
+              "SysvarS1otHashes111111111111111111111111111",
+              "SysvarC1ock11111111111111111111111111111111",
+              "Vote111111111111111111111111111111111111111"
+            ],
+            "header": {
+              "numReadonlySignedAccounts": 0,
+              "numReadonlyUnsignedAccounts": 3,
+              "numRequiredSignatures": 1
+            },
+            "instructions": [
+              {
+                "accounts": [1, 2, 3, 0],
+                "data": "37u9WtQpcm6ULa3WRQHmj49EPs4if7o9f1jSRVZpm2dvihR9C8jY4NqEwXUbLwx15HBSNcP1",
+                "programIdIndex": 4
+              }
+            ],
+            "recentBlockhash": "mfcyqEXB3DnHXki6KjjmZck6YjmZLvpAByy2fj4nh6B"
+          },
+          "signatures": [
+            "2nBhEBYYvfaAe16UMNqRHre4YNSskvuYgx3M6E4JP1oDYvZEJHvoPzyUidNgNX5r9sTyN1J9UxtbCXy2rqYcuyuv"
+          ]
+        }
+      }
+    ]
+  },
+  "id": 1
+}    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getBlockProduction"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 9887
+    },
+    "value": {
+      "byIdentity": {
+        "85iYT5RuzRTDgjyRa3cP8SYhM2j21fj7NhfJ3peu1DPr": [9888, 9886]
+      },
+      "range": {
+        "firstSlot": 0,
+        "lastSlot": 9887
+      }
+    }
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0", "id": 1,
+    "method": "getBlockCommitment",
+    "params":[5]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "commitment": [
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 10, 32
+    ],
+    "totalStake": 42
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0", "id": 1,
+    "method": "getBlocks",
+    "params": [
+      5, 10
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [5, 6, 7, 8, 9, 10],
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id":1,
+    "method":"getBlocksWithLimit",
+    "params":[5, 3]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [5, 6, 7],
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0", "id":1,
+    "method": "getBlockTime",
+    "params":[5]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": 1574721591,
+  "id": 1
+}
+    */
+
+   /**
      * Returns information about all the nodes participating in the cluster.
      */
     Result<std::vector<ClusterNode>> get_cluster_nodes() {
@@ -1209,6 +1409,159 @@ namespace solana {
         {"method", "getClusterNodes"},
       });
     }
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getEpochInfo"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "absoluteSlot": 166598,
+    "blockHeight": 166500,
+    "epoch": 27,
+    "slotIndex": 2790,
+    "slotsInEpoch": 8192,
+    "transactionCount": 22661093
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0","id":1,
+    "method":"getEpochSchedule"
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "firstNormalEpoch": 8,
+    "firstNormalSlot": 8160,
+    "leaderScheduleSlotOffset": 8192,
+    "slotsPerEpoch": 8192,
+    "warmup": true
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+{
+  "id":1,
+  "jsonrpc":"2.0",
+  "method":"getFeeForMessage",
+  "params":[
+    "AQABAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQAA",
+    {
+      "commitment":"processed"
+    }
+  ]
+}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": { "context": { "slot": 5068 }, "value": 5000 },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0","id":1,
+    "method":"getFirstAvailableBlock"
+  }
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 250000, "id": 1 }
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getGenesisHash"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": "GH7ome3EiwEr7tu9JuTh2dpYWBJK3z69Xm1ZE3MEE6JC",
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getHealth"}
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": "ok", "id": 1 }
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32005,
+    "message": "Node is unhealthy",
+    "data": {}
+  },
+  "id": 1
+}
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32005,
+    "message": "Node is behind by 42 slots",
+    "data": {
+      "numSlotsBehind": 42
+    }
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1,"method":"getHighestSnapshotSlot"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "full": 100,
+    "incremental": 110
+  },
+  "id": 1
+}
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "error": { "code": -32008, "message": "No snapshot" },
+  "id": 1
+}
+    */
 
     /**
      * Returns the identity Pubkey of the current node.
@@ -1220,6 +1573,170 @@ namespace solana {
         {"method", "getIdentity"},
       });
     }
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getInflationGovernor"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "foundation": 0.05,
+    "foundationTerm": 7,
+    "initial": 0.15,
+    "taper": 0.15,
+    "terminal": 0.015
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getInflationRate"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "epoch": 100,
+    "foundation": 0.001,
+    "total": 0.149,
+    "validator": 0.148
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getInflationReward",
+    "params": [
+      [
+        "6dmNQ5jwLeLk5REvio1JcMshcbvkYMwy26sJ8pbkvStu",
+        "BGsqMegLpV6n6Ve146sSX2dTjUMj3M92HnU8BbNRMhF2"
+      ],
+      {"epoch": 2}
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "amount": 2500,
+      "effectiveSlot": 224,
+      "epoch": 2,
+      "postBalance": 499999442500
+    },
+    null
+  ],
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getLargestAccounts"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 54
+    },
+    "value": [
+      {
+        "lamports": 999974,
+        "address": "99P8ZgtJYe1buSK8JXkvpLh8xPsCFuLYhz9hQFNw93WJ"
+      },
+      {
+        "lamports": 42,
+        "address": "uPwWLo16MVehpyWqsLkK3Ka8nLowWvAHbBChqv2FZeL"
+      },
+      {
+        "lamports": 42,
+        "address": "aYJCgU7REfu3XF8b3QhkqgqQvLizx8zxuLBHA25PzDS"
+      },
+      {
+        "lamports": 42,
+        "address": "CTvHVtQ4gd4gUcw3bdVgZJJqApXE9nCbbbP4VTS5wE1D"
+      },
+      {
+        "lamports": 20,
+        "address": "4fq3xJ6kfrh9RkJQsmVd5gNMvJbuSHfErywvEjNQDPxu"
+      },
+      {
+        "lamports": 4,
+        "address": "AXJADheGVp9cruP8WYu46oNkRbeASngN5fPCMVGQqNHa"
+      },
+      {
+        "lamports": 2,
+        "address": "8NT8yS6LiwNprgW4yM1jPPow7CwRUotddBVkrkWgYp24"
+      },
+      {
+        "lamports": 1,
+        "address": "SysvarEpochSchedu1e111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "11111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "Stake11111111111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "SysvarC1ock11111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "StakeConfig11111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "SysvarRent111111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "Config1111111111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "SysvarStakeHistory1111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "SysvarRecentB1ockHashes11111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "SysvarFees111111111111111111111111111111111"
+      },
+      {
+        "lamports": 1,
+        "address": "Vote111111111111111111111111111111111111111"
+      }
+    ]
+  },
+  "id": 1
+}
+    */
 
     /**
      * Returns the latest blockhash.
@@ -1267,6 +1784,40 @@ namespace solana {
       });
     }
 
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getMaxRetransmitSlot"}
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 1234, "id": 1 }
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getMaxShredInsertSlot"}
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 1234, "id": 1 }
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0", "id": 1,
+    "method": "getMinimumBalanceForRentExemption",
+    "params": [50]
+  }
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 500, "id": 1 }
+    */
+
     /**
      * Returns the account information for a list of Pubkeys.
      *
@@ -1309,6 +1860,167 @@ namespace solana {
       });
     }
 
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0", "id":1,
+    "method": "getRecentPerformanceSamples",
+    "params": [4]}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "numSlots": 126,
+      "numTransactions": 126,
+      "numNonVoteTransaction": 1,
+      "samplePeriodSecs": 60,
+      "slot": 348125
+    },
+    {
+      "numSlots": 126,
+      "numTransactions": 126,
+      "numNonVoteTransaction": 1,
+      "samplePeriodSecs": 60,
+      "slot": 347999
+    },
+    {
+      "numSlots": 125,
+      "numTransactions": 125,
+      "numNonVoteTransaction": 0,
+      "samplePeriodSecs": 60,
+      "slot": 347873
+    },
+    {
+      "numSlots": 125,
+      "numTransactions": 125,
+      "numNonVoteTransaction": 0,
+      "samplePeriodSecs": 60,
+      "slot": 347748
+    }
+  ],
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0", "id":1,
+    "method": "getRecentPrioritizationFees",
+    "params": [
+      ["CxELquR1gPP8wHe33gZ4QxqGB3sZ9RSwsJ2KshVewkFY"]
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "slot": 348125,
+      "prioritizationFee": 0
+    },
+    {
+      "slot": 348126,
+      "prioritizationFee": 1000
+    },
+    {
+      "slot": 348127,
+      "prioritizationFee": 500
+    },
+    {
+      "slot": 348128,
+      "prioritizationFee": 0
+    },
+    {
+      "slot": 348129,
+      "prioritizationFee": 1234
+    }
+  ],
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getSignaturesForAddress",
+    "params": [
+      "Vote111111111111111111111111111111111111111",
+      {
+        "limit": 1
+      }
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "err": null,
+      "memo": null,
+      "signature": "5h6xBEauJ3PK6SWCZ1PGjBvj8vDdWG3KpwATGy1ARAXFSDwt8GFXM7W5Ncn16wmqokgpiKRLuS83KUxyZyv2sUYv",
+      "slot": 114,
+      "blockTime": null
+    }
+  ],
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getSignatureStatuses",
+    "params": [
+      [
+        "5VERv8NMvzbJMEkV8xnrLkEaWRtSz9CosKDYjCJjBRnbJLgp8uirBgmQpjKhoR4tjF3ZpRzrFmBV6UjKdiSZkQUW"
+      ],
+      {
+        "searchTransactionHistory": true
+      }
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 82
+    },
+    "value": [
+      {
+        "slot": 48,
+        "confirmations": null,
+        "err": null,
+        "status": {
+          "Ok": null
+        },
+        "confirmationStatus": "finalized"
+      },
+      null
+    ]
+  },
+  "id": 1
+}
+    */
+
     /**
      * Returns the slot that has reached the given or default commitment level.
      */
@@ -1331,6 +2043,35 @@ namespace solana {
       });
     }
 
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0", "id": 1,
+    "method": "getSlotLeaders",
+    "params": [100, 10]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": [
+    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
+    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
+    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
+    "ChorusmmK7i1AxXeiTtQgQZhQNiXYU84ULeaYF1EH15n",
+    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
+    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
+    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
+    "Awes4Tr6TX8JDzEhCZY2QVNimT6iD1zWHzf1vNyGvpLM",
+    "DWvDTSh3qfn88UoQTEKRV2JnLt5jtJAVoiCo3ivtMwXP",
+    "DWvDTSh3qfn88UoQTEKRV2JnLt5jtJAVoiCo3ivtMwXP"
+  ],
+  "id": 1
+}
+    */
+
     /**
      * Returns the token balance of an SPL Token account.
      *
@@ -1346,6 +2087,184 @@ namespace solana {
         }},
       });
     }
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getStakeActivation",
+    "params": [
+      "CYRJWqiSjLitBAcRxPvWpgX3s5TvmN2SuRY3eEYypFvT",
+      {
+        "epoch": 4
+      }
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "active": 124429280,
+    "inactive": 73287840,
+    "state": "activating"
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc":"2.0", "id":1,
+    "method": "getStakeMinimumDelegation"
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 501
+    },
+    "value": 1000000000
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0", "id":1, "method":"getSupply"}
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 1114
+    },
+    "value": {
+      "circulating": 16000,
+      "nonCirculating": 1000000,
+      "nonCirculatingAccounts": [
+        "FEy8pTbP5fEoqMV1GdTz83byuA8EKByqYat1PKDgVAq5",
+        "9huDUZfxoJ7wGMTffUE7vh1xePqef7gyrLJu9NApncqA",
+        "3mi1GmwEE3zo2jmfDuzvjSX9ovRXsDUKHvsntpkhuLJ9",
+        "BYxEJTDerkaRWBem3XgnVcdhppktBXa2HbkHPKj2Ui4Z"
+      ],
+      "total": 1016000
+    }
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0", "id": 1,
+    "method": "getTokenAccountBalance",
+    "params": [
+      "7fUAJdStEuGbc3sM84cKRL6yYaaSstyLSU4ve5oovLS7"
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 1114
+    },
+    "value": {
+      "amount": "9864",
+      "decimals": 2,
+      "uiAmount": 98.64,
+      "uiAmountString": "98.64"
+    },
+    "id": 1
+  }
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getTokenAccountsByDelegate",
+    "params": [
+      "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+      {
+        "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      },
+      {
+        "encoding": "jsonParsed"
+      }
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 1114
+    },
+    "value": [
+      {
+        "account": {
+          "data": {
+            "program": "spl-token",
+            "parsed": {
+              "info": {
+                "tokenAmount": {
+                  "amount": "1",
+                  "decimals": 1,
+                  "uiAmount": 0.1,
+                  "uiAmountString": "0.1"
+                },
+                "delegate": "4Nd1mBQtrMJVYVfKf2PJy9NZUZdTAsp7D4xWLs4gDB4T",
+                "delegatedAmount": {
+                  "amount": "1",
+                  "decimals": 1,
+                  "uiAmount": 0.1,
+                  "uiAmountString": "0.1"
+                },
+                "state": "initialized",
+                "isNative": false,
+                "mint": "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E",
+                "owner": "CnPoSPKXu7wJqxe59Fs72tkBeALovhsCxYeFwPCQH9TD"
+              },
+              "type": "account"
+            },
+            "space": 165
+          },
+          "executable": false,
+          "lamports": 1726080,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 4,
+          "space": 165
+        },
+        "pubkey": "28YTZEwqtMHWrhWcvv34se7pjS7wctgqzCPB3gReCFKp"
+      }
+    ]
+  },
+  "id": 1
+}
+    */
 
     /**
      * Returns all SPL Token accounts by token owner.
@@ -1392,6 +2311,46 @@ namespace solana {
       });
     }
 
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0", "id": 1,
+    "method": "getTokenLargestAccounts",
+    "params": [
+      "3wyAj7Rt1TWVPZVteFJPLa26JmLvdb1CAKEFZm3NY75E"
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 1114
+    },
+    "value": [
+      {
+        "address": "FYjHNoFtSQ5uijKrZFyYAxvEr87hsKXkXcxkcmkBAf4r",
+        "amount": "771",
+        "decimals": 2,
+        "uiAmount": 7.71,
+        "uiAmountString": "7.71"
+      },
+      {
+        "address": "BnsywxTcaYeNUtzrPxQUvzAWxfzZe3ZLUJ4wMMuLESnu",
+        "amount": "229",
+        "decimals": 2,
+        "uiAmount": 2.29,
+        "uiAmountString": "2.29"
+      }
+    ]
+  },
+  "id": 1
+}
+    */
+
     /**
      * Returns the total supply of an SPL Token type.
      *
@@ -1426,6 +2385,16 @@ namespace solana {
       });
     }
 
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"getTransactionCount"}
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 268, "id": 1 }
+    */
+
     /**
      * Returns the current solana versions running on the node.
      */
@@ -1436,6 +2405,82 @@ namespace solana {
         {"method", "getVersion"},
       });
     }
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getVoteAccounts",
+    "params": [
+      {
+        "votePubkey": "3ZT31jkAGhUaw8jsy4bTknwBMP8i4Eueh52By4zXcsVw"
+      }
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "current": [
+      {
+        "commission": 0,
+        "epochVoteAccount": true,
+        "epochCredits": [
+          [1, 64, 0],
+          [2, 192, 64]
+        ],
+        "nodePubkey": "B97CCUW3AEZFGy6uUg6zUdnNYvnVq5VG8PUtb2HayTDD",
+        "lastVote": 147,
+        "activatedStake": 42,
+        "votePubkey": "3ZT31jkAGhUaw8jsy4bTknwBMP8i4Eueh52By4zXcsVw"
+      }
+    ],
+    "delinquent": []
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {
+    "id":45,
+    "jsonrpc":"2.0",
+    "method":"isBlockhashValid",
+    "params":[
+      "J7rBdM6AecPDEZp8aPq5iPSNKVkU5Q76F3oAV4eW5wsW",
+      {"commitment":"processed"}
+    ]
+  }
+'
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "context": {
+      "slot": 2483
+    },
+    "value": false
+  },
+  "id": 1
+}
+    */
+
+    //TODO
+    /*
+curl http://localhost:8899 -X POST -H "Content-Type: application/json" -d '
+  {"jsonrpc":"2.0","id":1, "method":"minimumLedgerSlot"}
+'
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 1234, "id": 1 }
+    */
 
     /**
      * Requests an airdrop of lamports to a Pubkey
@@ -1566,6 +2611,34 @@ namespace solana {
       _rpc_web_socket.unsubscribe(subscription_id, "accountUnsubscribe");
     }
 
+    //TODO
+    /*
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "method": "blockSubscribe",
+  "params": ["all"]
+}
+    */
+    /*
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "method": "blockSubscribe",
+  "params": [
+    {
+      "mentionsAccountOrProgram": "LieKvPRE8XeX3Y2xVNHjKlpAScD12lYySBVQ4HqoJ5op"
+    },
+    {
+      "commitment": "confirmed",
+      "encoding": "base64",
+      "showRewards": true,
+      "transactionDetails": "full"
+    }
+  ]
+}
+    */
+
     /**
      * Add a logs listener.
      *
@@ -1575,7 +2648,7 @@ namespace solana {
      * @return The subscription ID. This can be used to remove the listener with remove_on_logs_listener
     */
     int on_logs(PublicKey account_id, std::function<void(Result<Logs>)> callback) {
-      return _rpc_web_socket.subscribe("programSubscribe", {
+      return _rpc_web_socket.subscribe("logsSubscribe", {
           "mentions",
           {
             {"mentions", account_id.to_base58()}
@@ -1658,6 +2731,48 @@ namespace solana {
     void remove_slot_change_listener(int subscription_id) {
       _rpc_web_socket.unsubscribe(subscription_id, "slotUnsubscribe");
     }
+
+    //TODO
+    /*
+{ "jsonrpc": "2.0", "id": 1, "method": "slotsUpdatesSubscribe" }
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 0, "id": 1 }
+    */
+
+    //TODO
+    /*
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "slotsUpdatesUnsubscribe",
+  "params": [0]
+}
+    */
+    /*
+{ "jsonrpc": "2.0", "result": true, "id": 1 }
+    */
+
+    //TODO
+    /*
+{ "jsonrpc": "2.0", "id": 1, "method": "voteSubscribe" }
+    */
+    /*
+{ "jsonrpc": "2.0", "result": 0, "id": 1 }
+    */
+
+    //TODO
+    /*
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "voteUnsubscribe",
+  "params": [0]
+}
+    */
+    /*
+{ "jsonrpc": "2.0", "result": true, "id": 1 }
+    */
 
   };
 

@@ -1,5 +1,5 @@
-//  ____ _____ __    _   _  ____ _____ _____
-// | __ |     |  |  | |_| |/ ___|     |   | |  Polygon C++ SDK
+//  ____ _____ __    __ __  ____ _____ _____
+// | __ |     |  |  |  |  |/ ___|     |   | |  Polygon C++ SDK
 // |  __|  |  |  |__ \   /| |_  |  |  | | | |  version 0.0.1
 // |_|  |_____|_____| |_|  \____|_____|_|___|  https://github.com/many-exchange/many-cpp
 //
@@ -7,6 +7,7 @@
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+//
 
 #pragma once
 
